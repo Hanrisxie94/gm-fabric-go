@@ -13,35 +13,74 @@ Grey Matter Fabric Golang Software Development Kit
 
 ## Packages
 
-| Package                            | Description                                                    |
-|------------------------------------|----------------------------------------------------------------|
-| [consul](consul/README.md)         | Easy integration with Hashicorps service discovery system      |
-| [dbutil](dbutil/README.md)         | Utilities for configuration/interaction with Mongo and Redis   |
-| [events](events/README.md)         | Prototyped event streaming                                     |
-| [gk](gk/README.md)                 | Gatekeeper service announcement utility                        |
-| [metrics](metrics/README.md)       | GM Fabric metrics (HTTP, gRPC)                                 |
-| [middleware](middleware/README.md) | HTTP middleware helpers                                        |
-| [oauth](oauth/README.md)           | OAuth 2.0 authorization code (recommended use with coreos/dex) |
-| [rpcutil](rpcutil/README.md)       | Utility functions for GM Fabric gRPC services                  |
-| [sds](sds/README.md)               | Service discovery and announcement (GM Fabric 2.0)             |
-| [srvgen](srvgen/README.md)         | GM Fabric golang service generator (gRPC)                      |
-| [tlsutil](tlsutil/README.md)     | TLS utility functions for easy integration with 2-way SSL      |
-| [zkutil](zkutil/README.md)         | Helper functions for zookeeper/gatekeeper service announcement |
+| Package                            | Description                                                        |
+|------------------------------------|--------------------------------------------------------------------|
+| [consul](consul/README.md)         | Easy integration with Hashicorps service discovery system          |
+| [dbutil](dbutil/README.md)         | Utilities for configuration/interaction with Mongo and Redis       |
+| [events](events/README.md)         | Prototyped event streaming                                         |
+| [gk](gk/README.md)                 | Gatekeeper service announcement utility                            |
+| [metrics](metrics/README.md)       | GM Fabric metrics (HTTP, gRPC)                                     |
+| [middleware](middleware/README.md) | HTTP middleware helpers                                            |
+| [oauth](oauth/README.md)           | OAuth 2.0 authorization code (recommended use with coreos/dex)     |
+| [rpcutil](rpcutil/README.md)       | Utility functions for GM Fabric gRPC services                      |
+| [sds](sds/README.md)               | Service discovery and announcement (GM Fabric 2.0)                 |
+| [srvgen](srvgen/README.md)         | GM Fabric golang service generator (gRPC)                          |
+| [tlsutil](tlsutil/README.md)       | TLS utility functions for easy integration with 2-way SSL          |
+| [zkutil](zkutil/README.md)         | Helper functions for zookeeper/gatekeeper service announcement     |
 | [cloudwatch](cloudwatch/README.md) | Auto-scale abilities using GM Fabric metrics and amazon cloudwatch |
 
-## Install
+## Install and Setup Go
+
+### With Homebrew
+
+```{bash}
+brew install go
+```
+
+### With the Installer Package
+
+1.  Download the installer for your platform from [https://golang.org/dl/](https://golang.org/dl/)
+2.  Follow the install prompts
+
+When Go installs packages, it puts the artifacts in the following tree:
+```
+    $GOPATH   <-- you set this environment variable
+    ├── bin   <-- executables go here
+    ├── pkg   <-- object files (*.a) go here
+    └── src   <-- source files go here
+```
+
+To get started, decide where you want your $GOPATH to be. For example:
+```{bash}
+export GOPATH=$HOME/go
+```
+
+To make go programs available in your shell:
+```{bash}
+PATH=$GOPATH/bin:$PATH
+```
+
+*Note*: Both need to be added to `$HOME/.bash_profile` for persistence across shell sessions.
+
+## Install And Setup GM Fabric Go SDK
+
+### Packages
 
 We recommend that you use [golang/dep](https://github.com/golang/dep) for dependency management.
 
 ### Alternative
 
-1.  Clone the repo into `$GOPATH/src/github.com/deciphernow`
-2.  Import the appropriate package into your code:
-```go
-import (
-    "github.com/deciphernow/gm-fabric-go/metrics"
-)
-```
+-   Install the repo on your local machine. There are a few options to go about this:
+    1.  Install with `go get`
+    ```bash
+    go get -u github.com/deciphernow/gm-fabric-go
+    ```
+    2.  Install with `git`
+    ```bash
+    cd $GOPATH/src/github.com/deciphernow
+    git clone git@github.com:DecipherNow/gm-fabric-go.git
+    ```
+    *Note*: if you use git, you'll want to make sure your folder structure matches the example above
 
 ## Warnings
 
