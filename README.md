@@ -33,7 +33,7 @@ Grey Matter Fabric Golang Software Development Kit
 
 ### With Homebrew
 
-```{bash}
+```bash
 brew install go
 ```
 
@@ -94,26 +94,27 @@ mv openssl openssl.orig
 
 1.  Install Homebrew
 
-    ```bash
-    /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
-    ```
+```bash
+/usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+```
 
-2.  Install OpenSSL and Pkg-Config
+2.  Install OpenSSL and PKG-Config
 
-    ```bash
-    brew install openssl
-    brew install pkg-config
-    ```
-    *Note: Homebrew may say this is keg-only, do not worry. That is just a warning. You can verify if the install was correct by looking in `/usr/local/Cellar/openssl`. If so, Proceed to step 3*
+```bash
+brew install openssl
+brew install pkg-config
+```
+*Note*: Homebrew may say this is keg-only, do not worry. That is just a warning. You can verify if the install was correct by looking in `/usr/local/Cellar/openssl`. If so, Proceed to step 3
+
 3.  Create SymLinks
 
-    ```bash
-    ln -s /usr/local/Cellar/openssl/{openssl_version}/bin/openssl /usr/local/bin/openssl
-    ```
+```bash
+ln -s /usr/local/Cellar/openssl/{openssl_version}/bin/openssl /usr/local/bin/openssl
+```
 
-    This will tell Mac OS to use the homebrew version of OpenSSL which includes the header and necessary development files
+*Note*: This will tell Mac OS to use the homebrew version of OpenSSL which includes the header and necessary development files
 
 4.  Update `~/.bash_profile` or `~/.bashrc`
-    ```bash
-    export PKG_CONFIG_PATH="$(brew --prefix openssl)/lib/pkgconfig"
-    ```
+```bash
+export PKG_CONFIG_PATH="$(brew --prefix openssl)/lib/pkgconfig"
+```
