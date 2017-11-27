@@ -43,26 +43,26 @@ brew install go
 2.  Follow the install prompts
 
 When Go installs packages, it puts the artifacts in the following tree:
-```
-    $GOPATH   <-- you set this environment variable
-    ├── bin   <-- executables go here
-    ├── pkg   <-- object files (*.a) go here
-    └── src   <-- source files go here
+```bash
+$GOPATH   <-- you set this environment variable
+├── bin   <-- executables go here
+├── pkg   <-- object files (*.a) go here
+└── src   <-- source files go here
 ```
 
 To get started, decide where you want your $GOPATH to be. For example:
-```{bash}
+```bash
 export GOPATH=$HOME/go
 ```
 
 To make go programs available in your shell:
-```{bash}
+```bash
 PATH=$GOPATH/bin:$PATH
 ```
 
 *Note*: Both need to be added to `$HOME/.bash_profile` for persistence across shell sessions.
 
-## Install And Setup GM Fabric Go SDK
+## Install and Setup GM Fabric Go SDK
 
 ### Packages
 
@@ -70,17 +70,17 @@ We recommend that you use [golang/dep](https://github.com/golang/dep) for depend
 
 ### Alternative
 
--   Install the repo on your local machine. There are a few options to go about this:
-    1.  Install with `go get`
-    ```bash
-    go get -u github.com/deciphernow/gm-fabric-go
-    ```
-    2.  Install with `git`
-    ```bash
-    cd $GOPATH/src/github.com/deciphernow
-    git clone git@github.com:DecipherNow/gm-fabric-go.git
-    ```
-    *Note*: if you use git, you'll want to make sure your folder structure matches the example above
+Install the repo on your local machine. There are a few options to go about this:
+1.  Install with `go get`
+```bash
+go get -u github.com/deciphernow/gm-fabric-go
+```
+2.  Install with `git`
+```bash
+cd $GOPATH/src/github.com/deciphernow
+git clone git@github.com:DecipherNow/gm-fabric-go.git
+```
+*Note*: if you use git, you'll want to make sure your folder structure matches the example above
 
 ## Warnings
 
