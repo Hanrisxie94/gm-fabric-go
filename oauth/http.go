@@ -16,7 +16,6 @@ package oauth
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 
 	"github.com/rs/zerolog/log"
@@ -46,8 +45,8 @@ func HTTPAuthenticate(opts ...ValidationOption) middleware.Middleware {
 			token, err := auth0.FromAuthHeader(r)
 			if err != nil {
 				log.Error().Err(err).Msg("Failed to extract token from header")
-				fmt.Fprintln(w, err.Error())
 				w.WriteHeader(http.StatusUnauthorized)
+				sendFormattedError(w, err, http.StatusUnauthorized, 45, "http.go")
 				return
 			}
 
@@ -55,7 +54,7 @@ func HTTPAuthenticate(opts ...ValidationOption) middleware.Middleware {
 			if err != nil {
 				log.Error().Err(err).Msg("Failed to validate token")
 				w.WriteHeader(http.StatusUnauthorized)
-				fmt.Fprintln(w, err.Error())
+				sendFormattedError(w, err, http.StatusUnauthorized, 53, "http.go")
 				return
 			}
 
@@ -69,12 +68,12 @@ func HTTPAuthenticate(opts ...ValidationOption) middleware.Middleware {
 }
 
 // HTTPValidateToken validates the token being passed into the request context.
-// Probably want to switch this to follow the opts... paradigm
 func HTTPValidateToken(ctx context.Context, token string, opts ...ValidationOption) (*Permissions, error) {
 	var options ValidationOptions
 	for _, o := range opts {
 		o(&options)
 	}
+	options = *setDefaults(&options)
 
 	p, err := authorize(ctx, options, token)
 	if err != nil {

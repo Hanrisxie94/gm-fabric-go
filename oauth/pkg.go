@@ -137,3 +137,34 @@ func RetrieveToken(ctx context.Context) string {
 	}
 	return token
 }
+
+// setDefaults will set the default configuration options
+func setDefaults(options *ValidationOptions) *ValidationOptions {
+	// DEX provider defaults
+	if options.Provider == "" {
+		options.Provider = "http://localhost:5556/dex"
+	}
+	if options.ClientID == "" {
+		options.ClientID = "example-app"
+	}
+
+	return options
+}
+
+func sendFormattedError(w io.Writer, err error, statusCode, line int, file string) {
+	var e struct {
+		Error      string `json:"error"`
+		StatusCode int    `json:"status_code"`
+		Line       int    `json:"line"`
+		File       string `json:"file"`
+	}
+
+	e.Error = err.Error()
+	e.StatusCode = statusCode
+	e.Line = line
+	e.File = file
+
+	enc := json.NewEncoder(w)
+	enc.SetIndent("", "    ")
+	enc.Encode(e)
+}
