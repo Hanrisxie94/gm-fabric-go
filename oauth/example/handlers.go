@@ -17,10 +17,11 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"time"
+
+	"github.com/rs/zerolog/hlog"
 
 	"github.com/deciphernow/gm-fabric-go/oauth"
 	"github.com/deciphernow/gm-fabric-go/oauth/example/config"
@@ -41,6 +42,7 @@ var movies []movie
 
 // getMovies will fetch all movies in the local mem array and return the JSON
 func getMovies(w http.ResponseWriter, r *http.Request) {
+	log := hlog.FromRequest(r)
 	// if token validation is successful, permissions will be injected in the request context
 	// we can filter data accordingly with this object
 	perm := oauth.RetrievePermissions(r.Context())
@@ -48,6 +50,7 @@ func getMovies(w http.ResponseWriter, r *http.Request) {
 	// print user object to console for demonstration
 	err := config.PrintJSON(os.Stdout, perm)
 	if err != nil {
+		log.Error().Err(err).Msg("Failed to print permissions")
 		config.PrintJSON(w, errorMessage{
 			Message: err.Error(),
 			Time:    time.Now().Format(time.RFC3339),
@@ -70,6 +73,7 @@ func getMovies(w http.ResponseWriter, r *http.Request) {
 
 // createMovie will add a movie from a request into the local movies array
 func createMovie(w http.ResponseWriter, r *http.Request) {
+	log := hlog.FromRequest(r)
 	// if token validation is successful, permissions will be injected in the request context
 	// we can filter data accordingly with this object
 	perm := oauth.RetrievePermissions(r.Context())
@@ -77,6 +81,7 @@ func createMovie(w http.ResponseWriter, r *http.Request) {
 	// Print user object to console for demonstration
 	err := config.PrintJSON(os.Stdout, perm)
 	if err != nil {
+		log.Error().Err(err).Msg("Failed to print permissions")
 		config.PrintJSON(w, errorMessage{
 			Message: err.Error(),
 			Time:    time.Now().Format(time.RFC3339),
@@ -88,7 +93,7 @@ func createMovie(w http.ResponseWriter, r *http.Request) {
 
 	// Decode the incoming request body into a movie object
 	if err = json.NewDecoder(r.Body).Decode(&m); err != nil {
-		log.Println("Failed to read request body: " + err.Error())
+		log.Error().Err(err).Msg("Failed to read request body")
 	}
 
 	// Add the movie into the movies array in mem

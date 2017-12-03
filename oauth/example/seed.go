@@ -14,8 +14,10 @@
 
 package main
 
+import "github.com/rs/zerolog"
+
 // basic seed data
-func seedData() {
+func seedData(log zerolog.Logger) {
 	movies = append(movies, movie{
 		Title:    "A New Hope",
 		Director: "George Lucas",
@@ -57,4 +59,6 @@ func seedData() {
 		Director: "J.J. Abrams",
 		Release:  "December 18, 2015",
 	})
+
+	log.Info().Msg("Finished seeding. . .")
 }

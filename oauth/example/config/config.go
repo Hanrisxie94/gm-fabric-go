@@ -17,9 +17,9 @@ package config
 import (
 	"encoding/json"
 	"io"
-	"log"
 
 	"github.com/BurntSushi/toml"
+	"github.com/rs/zerolog"
 )
 
 type oauth struct {
@@ -34,10 +34,10 @@ type Config struct {
 }
 
 // ParseConfig will read the provided toml file and return a global configuration object
-func ParseConfig(path string) *Config {
+func ParseConfig(path string, log zerolog.Logger) *Config {
 	var c Config
 	if _, err := toml.DecodeFile(path, &c); err != nil {
-		log.Fatal("Failed to parse config: " + err.Error())
+		log.Error().Err(err).Msg("Failed to parse config")
 	}
 
 	return &c

@@ -16,14 +16,17 @@ package main
 
 import (
 	"flag"
-	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/deciphernow/gm-fabric-go/middleware"
 	"github.com/deciphernow/gm-fabric-go/oauth"
 	"github.com/deciphernow/gm-fabric-go/oauth/example/config"
 	"github.com/gorilla/mux"
+	"github.com/rs/cors"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/hlog"
 )
 
 var (
@@ -31,16 +34,19 @@ var (
 )
 
 func main() {
+	log := zerolog.New(os.Stdout).With().Timestamp().Logger().
+		Output(zerolog.ConsoleWriter{Out: os.Stderr})
+
 	// parse the command line flags and add some seed data
 	flag.Parse()
-	seedData()
+	seedData(log)
 
 	// parse the config file
 	conf := config.ParseConfig(*configPath)
-	log.Println("Using config:")
+	log.Info().Msg("Using config:")
 	err := config.PrintJSON(os.Stdout, conf)
 	if err != nil {
-		log.Fatal(err)
+		log.Error().Err(err).Msg("Failed to print config")
 	}
 
 	// create our HTTP router
@@ -51,7 +57,19 @@ func main() {
 	mux.HandleFunc("/movies", createMovie).Methods("POST")
 
 	// Create our middleware stack that wraps all HTTP handlers
-	stack := middleware.Middleware(
+	stack := middleware.Chain(
+		// Setup HTTP logger using github.com/rs/zerolog
+		middleware.MiddlewareFunc(cors.AllowAll().Handler),
+		middleware.MiddlewareFunc(hlog.NewHandler(log)),
+		middleware.MiddlewareFunc(hlog.AccessHandler(func(r *http.Request, status int, size int, duration time.Duration) {
+			hlog.FromRequest(r).Info().
+				Str("method", r.Method).
+				Str("path", r.URL.String()).
+				Int("status", status).
+				Int("size", size).
+				Dur("duration", duration).
+				Msg("Access")
+		})),
 		// Inject the GM Fabric OAuth middleware with appropriate options
 		// A provider and client ID are required for proper token validation
 		oauth.HTTPAuthenticate(oauth.WithProvider(conf.Oauth.Provider), oauth.WithClientID(conf.Oauth.ClientID)),
@@ -65,6 +83,6 @@ func main() {
 	}
 
 	// Start the HTTP server
-	log.Println("Server listening on: " + conf.Address)
+	log.Info().Str("address", conf.Address).Msg("Server listening. . .")
 	s.ListenAndServe()
 }
