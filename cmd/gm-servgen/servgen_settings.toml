@@ -1,0 +1,49 @@
+# Copyright 2017 Decipher Technology Studios LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+###############################################################################
+# config settings for the gm fabric service generator
+# some of these will be passed on to the generated 'settings.toml'
+# if this, or a similar file is not specified, we will use internal defaults
+###############################################################################
+
+# grpc-server
+    grpc_server_host = ""
+    grpc_server_port = 10000
+
+# metrics-server
+    metrics_server_host =  ""
+    metrics_server_port = 10001
+    metrics_cache_size =  1024
+    metrics_uri_path = "/metrics"
+
+# gateway-proxy
+    use_gateway_proxy = false
+    gateway_proxy_host = ""
+    gateway_proxy_port = 8080
+
+# tls
+    use_tls = false
+    ca_cert_path = ""
+    server_cert_path = ""
+    server_key_path = ""
+
+# statsd
+    report_statsd = false
+    statsd_host = "127.0.0.1"
+    statsd_port = 8125
+    statsd_mem_interval = "1m"
+
+# misc
+    verbose_logging = true
