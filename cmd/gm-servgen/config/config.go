@@ -73,7 +73,7 @@ func Load() (Config, error) {
 		"path to the gm_fabric_servgen_settings.toml file. Default: no file")
 	pflag.Parse()
 
-	cfg.Version = version
+	cfg.Version = fmt.Sprintf("%s (%s)", version, gitHash)
 
 	switch {
 	case showVersion:

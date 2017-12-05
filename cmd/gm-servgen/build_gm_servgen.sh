@@ -19,5 +19,8 @@ set -euxo pipefail
 SRVGEN_PATH=$GOPATH/src/github.com/deciphernow/gm-fabric-go/cmd/gm-servgen
 
 pushd $SRVGEN_PATH
-go install --race
+GITHASH=`(git rev-parse --verify --short HEAD)`
+go install \
+    -race \
+    -ldflags "-X github.com/deciphernow/gm-fabric-go/cmd/gm-servgen/config.gitHash=${GITHASH}"
 popd

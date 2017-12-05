@@ -16,3 +16,4 @@ package config
 
 // version is for display by the --version command
 var version = "0.1.0-dev"
+var gitHash string
