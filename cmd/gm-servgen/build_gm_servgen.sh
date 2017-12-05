@@ -22,5 +22,5 @@ pushd $SRVGEN_PATH
 GITHASH=`(git rev-parse --verify --short HEAD)`
 go install \
     -race \
-    -ldflags "-X github.com/deciphernow/gm-fabric-go/cmd/gm-servgen/config.gitHash=${GITHASH}"
+    -ldflags "-X github.com/deciphernow/gm-fabric-go/version.gitHash=${GITHASH}"
 popd

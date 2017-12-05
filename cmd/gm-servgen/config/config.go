@@ -25,6 +25,8 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/pkg/errors"
+
+	"github.com/deciphernow/gm-fabric-go/version"
 )
 
 // Operation requested on command line
@@ -73,7 +75,7 @@ func Load() (Config, error) {
 		"path to the gm_fabric_servgen_settings.toml file. Default: no file")
 	pflag.Parse()
 
-	cfg.Version = fmt.Sprintf("%s (%s)", version, gitHash)
+	cfg.Version = version.Current()
 
 	switch {
 	case showVersion:

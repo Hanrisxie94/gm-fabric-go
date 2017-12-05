@@ -1,3 +1,7 @@
+/*Package version reports the crrent version of the gm-fabric-go library
+ */
+package version
+
 // Copyright 2017 Decipher Technology Studios LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -11,9 +15,3 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
-package config
-
-// version is for display by the --version command
-var version = "0.1.0-dev"
-var gitHash string
