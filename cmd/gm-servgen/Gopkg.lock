@@ -2,6 +2,12 @@
 
 
 [[projects]]
+  branch = "master"
+  name = "github.com/deciphernow/gm-fabric-go"
+  packages = ["version"]
+  revision = "45df333c71d9b0141a5f2d521ea552ce379609c2"
+
+[[projects]]
   name = "github.com/fsnotify/fsnotify"
   packages = ["."]
   revision = "629574ca2a5df945712d3079857300b5e4da0236"
@@ -94,6 +100,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "34eb44a4b98512d2ffb98d0cc272a723879d8c72dffa7a8510bbaa47843c931a"
+  inputs-digest = "62c486fd9cd76862e88bb24aafca0817dad8f14207cb3149e999cb406ab5a7a6"
   solver-name = "gps-cdcl"
   solver-version = 1

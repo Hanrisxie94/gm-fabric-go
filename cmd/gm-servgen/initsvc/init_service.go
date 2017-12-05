@@ -15,7 +15,9 @@
 package initsvc
 
 import (
+	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/rs/zerolog"
 	"github.com/spf13/viper"
@@ -174,6 +176,20 @@ func InitService(cfg config.Config, logger zerolog.Logger) error {
 	}
 	if err = os.Chmod(cfg.RunDockerImageScriptPath(), 0777); err != nil {
 		return errors.Wrapf(err, "os.Chmod(%s)", cfg.RunDockerImageScriptPath())
+	}
+
+	logger.Info().Msg("creating a .gitignore")
+	err = templ.Merge(
+		"gitignore",
+		gitIgnoreTemplate,
+		fmt.Sprintf("%s", filepath.Join(cfg.ServicePath(), ".gitignore")),
+		nil,
+	)
+	if err != nil {
+		return errors.Wrap(err, "creating .gitignore")
+	}
+	if err = os.Chmod(filepath.Join(cfg.ServicePath(), ".gitignore"), 0777); err != nil {
+		return errors.Wrap(err, "os.Chmod(.gitignore)")
 	}
 
 	logger.Info().Msg("initializing versioning")
