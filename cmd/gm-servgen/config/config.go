@@ -323,6 +323,11 @@ func (cfg Config) GeneratedPBProxyPath() string {
 	return path.Join(cfg.ProtoPath(), cfg.GeneratedPBProxyName())
 }
 
+// GitIgnorePath full path to .gitignore in root of service directory
+func (cfg Config) GitIgnorePath() string {
+	return path.Join(cfg.ServicePath(), ".gitignore")
+}
+
 func gopath() string {
 	path := os.Getenv("GOPATH")
 	if path == "" {

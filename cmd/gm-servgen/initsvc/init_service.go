@@ -15,9 +15,7 @@
 package initsvc
 
 import (
-	"fmt"
 	"os"
-	"path/filepath"
 
 	"github.com/rs/zerolog"
 	"github.com/spf13/viper"
@@ -182,13 +180,13 @@ func InitService(cfg config.Config, logger zerolog.Logger) error {
 	err = templ.Merge(
 		"gitignore",
 		gitIgnoreTemplate,
-		fmt.Sprintf("%s", filepath.Join(cfg.ServicePath(), ".gitignore")),
+		cfg.GitIgnorePath(),
 		nil,
 	)
 	if err != nil {
 		return errors.Wrap(err, "creating .gitignore")
 	}
-	if err = os.Chmod(filepath.Join(cfg.ServicePath(), ".gitignore"), 0777); err != nil {
+	if err = os.Chmod(cfg.GitIgnorePath(), 0777); err != nil {
 		return errors.Wrap(err, "os.Chmod(.gitignore)")
 	}
 
