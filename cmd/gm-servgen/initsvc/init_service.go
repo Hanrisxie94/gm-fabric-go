@@ -186,9 +186,6 @@ func InitService(cfg config.Config, logger zerolog.Logger) error {
 	if err != nil {
 		return errors.Wrap(err, "creating .gitignore")
 	}
-	if err = os.Chmod(cfg.GitIgnorePath(), 0777); err != nil {
-		return errors.Wrap(err, "os.Chmod(.gitignore)")
-	}
 
 	logger.Info().Msg("initializing versioning")
 	if err = initVersioning(cfg, logger); err != nil {
