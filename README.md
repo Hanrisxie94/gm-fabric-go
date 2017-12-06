@@ -274,7 +274,7 @@ go build -o=$GOPATH/bin/test_service
 popd
 ```
 ## Test client
-we also generate the stub of a grpc client for testing.
+We also generate the stub of a grpc client for testing.
 ```
 .
 └── test_service
@@ -300,7 +300,7 @@ func runTest(logger zerolog.Logger, client pb.TestServiceClient) error {
     return errors.New("not implemented")
 }
 ```
-You can add code to test changes to server methods
+You can add code to test changes to server methods:
 ```go
 package main
 
@@ -353,17 +353,17 @@ curl http://127.0.0.1:10001/metrics
 ```
 ```json
 {
-	"Total/requests": 2,
-	"HTTP/requests": 0,
-	"HTTPS/requests": 0,
-	"RPC/requests": 2,
-	"RPC_TLS/requests": 0,
-	"function/HelloProxy/requests": 2,
+    "Total/requests": 2,
+    "HTTP/requests": 0,
+    "HTTPS/requests": 0,
+    "RPC/requests": 2,
+    "RPC_TLS/requests": 0,
+    "function/HelloProxy/requests": 2,
 
 
     "go_metrics/runtime/alloc_bytes": 1394328.000000,
-	"go_metrics/valid-ping": 2.000000,
-	"go_metrics/HelloProxy/elapsed": 0.004140
+    "go_metrics/valid-ping": 2.000000,
+    "go_metrics/HelloProxy/elapsed": 0.004140
 }
 ```
 
@@ -418,6 +418,7 @@ ln -s /usr/local/Cellar/openssl/{openssl_version}/bin/openssl /usr/local/bin/ope
 *Note*: This will tell Mac OS to use the homebrew version of OpenSSL which includes the header and necessary development files
 
 4.  Update `~/.bash_profile` or `~/.bashrc`
+
 ```bash
 export PKG_CONFIG_PATH="$(brew --prefix openssl)/lib/pkgconfig"
 ```
