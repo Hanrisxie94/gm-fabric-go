@@ -24,7 +24,7 @@ import (
 
 	"github.com/rs/zerolog"
 
-	"github.com/deciphernow/gm-fabric-go/cmd/gm-servgen/config"
+	"github.com/deciphernow/gm-fabric-go/cmd/fabric/config"
 )
 
 // InterfaceEntry defines a parsed interface entry for the client or server

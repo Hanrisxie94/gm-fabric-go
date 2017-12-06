@@ -25,8 +25,8 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/deciphernow/gm-fabric-go/cmd/gm-servgen/config"
-	"github.com/deciphernow/gm-fabric-go/cmd/gm-servgen/templ"
+	"github.com/deciphernow/gm-fabric-go/cmd/fabric/config"
+	"github.com/deciphernow/gm-fabric-go/cmd/fabric/templ"
 )
 
 // GenerateProtobuf generates code from protocol buffer definitions
