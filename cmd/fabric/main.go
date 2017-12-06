@@ -30,15 +30,18 @@ func main() {
 }
 
 func run() int {
+
+	zerolog.SetGlobalLevel(zerolog.DebugLevel)
+	logger := zerolog.New(os.Stderr).With().Timestamp().Logger().
+		Output(zerolog.ConsoleWriter{Out: os.Stderr})
+
 	cfg, err := config.Load()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "\nFATAL: config.Load() failed: %v\n\n", err)
+		logger.Error().Err(err).Msg("config.Load()")
 		return 1
 	}
 
 	zerolog.SetGlobalLevel(cfg.LogLevel)
-	logger := zerolog.New(os.Stderr).With().Timestamp().Logger().
-		Output(zerolog.ConsoleWriter{Out: os.Stderr})
 
 	logger.Debug().Str("GOPATH", os.Getenv("GOPATH")).Msg("")
 	logger.Debug().Str("GOBIN", os.Getenv("GOBIN")).Msg("")
