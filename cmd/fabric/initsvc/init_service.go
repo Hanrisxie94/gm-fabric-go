@@ -31,8 +31,6 @@ import (
 func InitService(cfg config.Config, logger zerolog.Logger) error {
 	var err error
 
-	logger.Debug().Str("GOPATH", os.Getenv("GOPATH")).Msg("")
-	logger.Debug().Str("GOBIN", os.Getenv("GOBIN")).Msg("")
 	logger.Info().Str("service", cfg.ServiceName).Msg("starting --init")
 
 	// TODO: build in a temp dir and rename on success - no partial completion

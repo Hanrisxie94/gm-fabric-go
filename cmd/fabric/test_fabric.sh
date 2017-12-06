@@ -30,7 +30,7 @@ mkdir $TESTDIR
 SERVICE_NAME="test_service"
 
 # initialize the service
-fabric --dir="$TESTDIR" --init $SERVICE_NAME
+fabric --log-level="debug" --dir="$TESTDIR" --init $SERVICE_NAME
 
 # add method to the protocol buf definition by stuffing a whole new
 # file from a 'here' document
@@ -70,7 +70,7 @@ message HelloResponse {
 PROTO1
 
 # run again to generate the protobuf files and our method stub(s)
-fabric --dir="$TESTDIR" --generate $SERVICE_NAME
+fabric --log-level="debug" --dir="$TESTDIR" --generate $SERVICE_NAME
 
 # compile the stubs to verify that they are valid
 "$TESTDIR/$SERVICE_NAME/build_${SERVICE_NAME}_server.sh"

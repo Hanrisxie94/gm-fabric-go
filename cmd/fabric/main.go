@@ -15,6 +15,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/rs/zerolog"
@@ -29,18 +30,23 @@ func main() {
 }
 
 func run() int {
-	logger := zerolog.New(os.Stderr).With().Timestamp().Logger().
-		Output(zerolog.ConsoleWriter{Out: os.Stderr})
-
 	cfg, err := config.Load()
 	if err != nil {
-		logger.Error().AnErr("config.Load()", err).Msg("")
+		fmt.Fprintf(os.Stderr, "\nFATAL: config.Load() failed: %v\n\n", err)
 		return 1
 	}
 
+	zerolog.SetGlobalLevel(cfg.LogLevel)
+	logger := zerolog.New(os.Stderr).With().Timestamp().Logger().
+		Output(zerolog.ConsoleWriter{Out: os.Stderr})
+
+	logger.Debug().Str("GOPATH", os.Getenv("GOPATH")).Msg("")
+	logger.Debug().Str("GOBIN", os.Getenv("GOBIN")).Msg("")
+	logger.Debug().Str("version", cfg.Version).Msg("")
+
 	switch cfg.Op {
 	case config.ShowVersion:
-		logger.Info().Str("version", cfg.Version).Msg("Fabric Service Generator")
+		fmt.Println(cfg.Version)
 	case config.Init:
 		if err = initsvc.InitService(cfg, logger); err != nil {
 			logger.Error().AnErr("initService", err).Msg("")

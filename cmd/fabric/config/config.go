@@ -26,6 +26,8 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/rs/zerolog"
+
 	"github.com/deciphernow/gm-fabric-go/version"
 )
 
@@ -52,6 +54,7 @@ type Config struct {
 	Version     string
 	ServiceName string
 	OwnerDir    string
+	LogLevel    zerolog.Level
 }
 
 // Load constructs the configuation from various sources
@@ -60,6 +63,7 @@ func Load() (Config, error) {
 	var initService string
 	var generateService string
 	var configFilePath string
+	var logLevel string
 	var cfg Config
 	var err error
 
@@ -73,9 +77,22 @@ func Load() (Config, error) {
 		"path to the directory containing the service. Default: cwd")
 	pflag.StringVar(&configFilePath, "config", "",
 		"path to the fabric_settings.toml file. Default: no file")
+	pflag.StringVar(&logLevel, "log-level", "error",
+		"global log level ('debug', 'info', 'error'): default 'error'")
 	pflag.Parse()
 
 	cfg.Version = version.Current()
+
+	switch strings.ToLower(logLevel) {
+	case "debug":
+		cfg.LogLevel = zerolog.DebugLevel
+	case "info":
+		cfg.LogLevel = zerolog.InfoLevel
+	case "error":
+		cfg.LogLevel = zerolog.ErrorLevel
+	default:
+		return Config{}, fmt.Errorf("Unknown log level '%s'", logLevel)
+	}
 
 	switch {
 	case showVersion:
