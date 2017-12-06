@@ -24,7 +24,7 @@ Grey Matter Fabric Golang Software Development Kit
 | [oauth](oauth/README.md)           | OAuth 2.0 authorization code (recommended use with coreos/dex)     |
 | [rpcutil](rpcutil/README.md)       | Utility functions for GM Fabric gRPC services                      |
 | [sds](sds/README.md)               | Service discovery and announcement (GM Fabric 2.0)                 |
-| [servgen](https://github.com/DecipherNow/gm-fabric-go/cmd/gm-servgen) | GM Fabric golang service generator (gRPC) |
+| [servgen](https://github.com/DecipherNow/gm-fabric-go/cmd/fabric) | GM Fabric golang service generator (gRPC) |
 | [tlsutil](tlsutil/README.md)       | TLS utility functions for easy integration with 2-way SSL          |
 | [zkutil](zkutil/README.md)         | Helper functions for zookeeper/gatekeeper service announcement     |
 | [cloudwatch](cloudwatch/README.md) | Auto-scale abilities using GM Fabric metrics and amazon cloudwatch |
