@@ -42,7 +42,7 @@ func main() {
 	seedData(log)
 
 	// parse the config file
-	conf := config.ParseConfig(*configPath)
+	conf := config.ParseConfig(*configPath, log)
 	log.Info().Msg("Using config:")
 	err := config.PrintJSON(os.Stdout, conf)
 	if err != nil {
