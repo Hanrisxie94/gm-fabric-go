@@ -371,19 +371,19 @@ curl http://127.0.0.1:10001/metrics
 
 | Package                            | Description                                                        |
 |------------------------------------|--------------------------------------------------------------------|
+| [cloudwatch](cloudwatch/README.md) | Auto-scale abilities using GM Fabric metrics and amazon cloudwatch |
 | [consul](consul/README.md)         | Easy integration with Hashicorps service discovery system          |
 | [dbutil](dbutil/README.md)         | Utilities for configuration/interaction with Mongo and Redis       |
 | [events](events/README.md)         | Prototyped event streaming                                         |
+| [fabric](https://github.com/DecipherNow/gm-fabric-go/cmd/fabric) | GM Fabric golang service generator (gRPC) |
 | [gk](gk/README.md)                 | Gatekeeper service announcement utility                            |
 | [metrics](metrics/README.md)       | GM Fabric metrics (HTTP, gRPC)                                     |
 | [middleware](middleware/README.md) | HTTP middleware helpers                                            |
 | [oauth](oauth/README.md)           | OAuth 2.0 authorization code (recommended use with coreos/dex)     |
 | [rpcutil](rpcutil/README.md)       | Utility functions for GM Fabric gRPC services                      |
 | [sds](sds/README.md)               | Service discovery and announcement (GM Fabric 2.0)                 |
-| [fabric](https://github.com/DecipherNow/gm-fabric-go/cmd/fabric) | GM Fabric golang service generator (gRPC) |
 | [tlsutil](tlsutil/README.md)       | TLS utility functions for easy integration with 2-way SSL          |
 | [zkutil](zkutil/README.md)         | Helper functions for zookeeper/gatekeeper service announcement     |
-| [cloudwatch](cloudwatch/README.md) | Auto-scale abilities using GM Fabric metrics and amazon cloudwatch |
 
 ## Warnings
 
