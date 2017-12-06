@@ -72,7 +72,7 @@ func Load() (Config, error) {
 	pflag.StringVar(&cfg.OwnerDir, "dir", "",
 		"path to the directory containing the service. Default: cwd")
 	pflag.StringVar(&configFilePath, "config", "",
-		"path to the gm_fabric_servgen_settings.toml file. Default: no file")
+		"path to the fabric_settings.toml file. Default: no file")
 	pflag.Parse()
 
 	cfg.Version = version.Current()
@@ -111,9 +111,9 @@ func Load() (Config, error) {
 		viper.SetConfigName(strings.Split(filepath.Base(configFilePath), ".")[0])
 		viper.AddConfigPath(filepath.Dir(configFilePath))
 	} else {
-		viper.SetConfigName("gm_servgen_settings")
-		viper.AddConfigPath("/etc/gm_servgen/")
-		viper.AddConfigPath("$HOME/.gm_servgen")
+		viper.SetConfigName("fabric_settings")
+		viper.AddConfigPath("/etc/fabric/")
+		viper.AddConfigPath("$HOME/.fabric")
 		viper.AddConfigPath(".")
 	}
 

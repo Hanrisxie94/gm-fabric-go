@@ -20,8 +20,8 @@ import (
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 
-	"github.com/deciphernow/gm-fabric-go/cmd/gm-servgen/config"
-	"github.com/deciphernow/gm-fabric-go/cmd/gm-servgen/templ"
+	"github.com/deciphernow/gm-fabric-go/cmd/fabric/config"
+	"github.com/deciphernow/gm-fabric-go/cmd/fabric/templ"
 )
 
 func generateMethod(

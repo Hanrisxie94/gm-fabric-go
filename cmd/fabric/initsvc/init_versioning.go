@@ -25,7 +25,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 
-	"github.com/deciphernow/gm-fabric-go/cmd/gm-servgen/config"
+	"github.com/deciphernow/gm-fabric-go/cmd/fabric/config"
 )
 
 func initVersioning(
@@ -84,7 +84,7 @@ func initVersioning(
 func hackGopkgToml(cfg config.Config, logger zerolog.Logger) error {
 	const fixText = `
 
-	# appended by gm-fabric-go/cmd/gm-servgen
+	# appended by gm-fabric-go/cmd/fabric
 	[[override]]
 	  name = "github.com/grpc-ecosystem/grpc-gateway"
 	  branch = "master"

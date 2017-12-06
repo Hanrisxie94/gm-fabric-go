@@ -20,9 +20,9 @@ import (
 
 	"github.com/rs/zerolog"
 
-	"github.com/deciphernow/gm-fabric-go/cmd/gm-servgen/config"
-	"github.com/deciphernow/gm-fabric-go/cmd/gm-servgen/genproto"
-	"github.com/deciphernow/gm-fabric-go/cmd/gm-servgen/initsvc"
+	"github.com/deciphernow/gm-fabric-go/cmd/fabric/config"
+	"github.com/deciphernow/gm-fabric-go/cmd/fabric/genproto"
+	"github.com/deciphernow/gm-fabric-go/cmd/fabric/initsvc"
 )
 
 func main() {

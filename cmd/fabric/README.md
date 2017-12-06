@@ -26,11 +26,11 @@
    * https://gist.github.com/sofyanhadia/37787e5ed098c97919b8c593f0ec44d8#file-install-protobuf-3-on-ubuntu
 
 ### Examples
-Examples in this document come from the test script ```gm-fabric-go/cmd/gm-servgen/test_gm_fabric_servgen.sh```. You may be interested in reading and/or running it.
+Examples in this document come from the test script ```gm-fabric-go/cmd/fabric/test_fabric.sh```. You may be interested in reading and/or running it.
 
 ## Usage
 ```
-Usage of gm-fabric-go/cmd/gm-servgen:
+Usage of gm-fabric-go/cmd/fabric:
   -dir string
     	path to the directory containing the service. Default: cwd
   -init <service-name>
@@ -41,9 +41,9 @@ Usage of gm-fabric-go/cmd/gm-servgen:
         run repeatedly while changing the protobuf definition (.proto)
 ```
 ## Initialize Service
-`gm-fabric-go/cmd/gm-servgen --init <service-name>`
+`gm-fabric-go/cmd/fabric --init <service-name>`
 
-for example: `gm-fabric-go/cmd/gm-servgen --dir=$GOPATH/src/github.com/<organization-name> --init "test_service"`
+for example: `gm-fabric-go/cmd/fabric --dir=$GOPATH/src/github.com/<organization-name> --init "test_service"`
 
 The program will create the following directory structure
 ```
@@ -83,7 +83,7 @@ service TestService {
 ## Generate Service
 This is an iterative process:
  * Add method and data definitions to the protocol buffer definition file (.proto)
- * `gm-fabric-go/cmd/gm-servgen --generate <service-name>`
+ * `gm-fabric-go/cmd/fabric --generate <service-name>`
  * Add working code to the generated methods
 
 ### Edit Protocol Buffer Definition File
@@ -113,7 +113,7 @@ message HelloResponse {
 }
 ```
 ### run --generate
-`gm-fabric-go/cmd/gm-servgen --dir=$GOPATH/src/src/github.com/<organization-name> --generate "test_service"`
+`gm-fabric-go/cmd/fabric --dir=$GOPATH/src/src/github.com/<organization-name> --generate "test_service"`
 
 
 This produces generated files:

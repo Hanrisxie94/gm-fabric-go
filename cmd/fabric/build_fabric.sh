@@ -16,7 +16,7 @@
 
 set -euxo pipefail
 
-SRVGEN_PATH=$GOPATH/src/github.com/deciphernow/gm-fabric-go/cmd/gm-servgen
+SRVGEN_PATH=$GOPATH/src/github.com/deciphernow/gm-fabric-go/cmd/fabric
 
 pushd $SRVGEN_PATH
 GITHASH=`(git rev-parse --verify --short HEAD)`
