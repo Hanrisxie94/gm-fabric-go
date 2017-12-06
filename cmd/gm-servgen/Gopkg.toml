@@ -19,7 +19,7 @@
 # [[override]]
 #  name = "github.com/x/y"
 #  version = "2.4.0"
-
+ignored = ["github.com/deciphernow/gm-fabric-go/version"]
 
 [[constraint]]
   name = "github.com/pkg/errors"

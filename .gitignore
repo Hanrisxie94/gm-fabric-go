@@ -1,4 +1,4 @@
 .DS_Store
 vendor*
-srvgen/Gopkg.lock
+cmd/gm-servgen/Gopkg.lock
 .vscode
