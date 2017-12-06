@@ -53,7 +53,7 @@ PATH=$GOPATH/bin:$PATH
 ### With Homebrew
 
 ```bash
-brew install protoc
+brew install protobuf
 ```
 
 ### Without Homebrew
