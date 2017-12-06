@@ -36,6 +36,8 @@ func GenerateProtobuf(cfg config.Config, logger zerolog.Logger) error {
 	var intEntries []InterfaceEntry
 	var err error
 
+	logger.Debug().Str("GOPATH", os.Getenv("GOPATH")).Msg("")
+	logger.Debug().Str("GOBIN", os.Getenv("GOBIN")).Msg("")
 	logger.Info().Str("service", cfg.ServiceName).Msg("starting --generate")
 
 	// see if we have already generated the gateway proxy code (<service-name>.pb.gw.go)
