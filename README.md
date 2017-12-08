@@ -77,14 +77,12 @@ PATH=$PATH:~/Developer/protoc-3.3.0-osx-x86_64/bin
 A quick outline of the Grey Matter micro-service generator:
 ```
 Usage of fabric:
-  --dir string
-    	path to the directory containing the service. Default: cwd
-  --init <service-name>
-        initialize service
-        run once to initialize service
-  --generate <service-name>
-    	generate protobuf methods for service
-        run repeatedly while changing the protobuf definition (.proto)
+      --config string      path to the fabric_settings.toml file. Default: no file
+      --dir string         path to the directory containing the service. Default: cwd
+      --generate string    generate protobuff for service
+      --init string        initialize service
+      --log-level string   global log level ('debug', 'info', 'error'): default 'error' (default "error")
+      --version            display version string to stdout and exit
 ```
 If you are interested in taking a peek under the hood, the source code for the service generator is located under `cmd/fabric`.
 
