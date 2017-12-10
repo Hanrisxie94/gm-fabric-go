@@ -31,7 +31,8 @@ import (
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
-
+	"github.com/grpc-ecosystem/go-grpc-middleware/auth"
+	
 	gometrics "github.com/armon/go-metrics"
 
 	"github.com/deciphernow/gm-fabric-go/metrics/gmfabricsink"
@@ -42,6 +43,7 @@ import (
 	"github.com/deciphernow/gm-fabric-go/metrics/sinkobserver"
 	"github.com/deciphernow/gm-fabric-go/metrics/subject"
 	"github.com/deciphernow/gm-fabric-go/tlsutil"
+	"github.com/deciphernow/gm-fabric-go/oauth
 
 	"{{.ConfigPackage}}"
 	"{{.MethodsPackage}}"
@@ -91,6 +93,14 @@ func main() {
 		if err != nil {
 			logger.Fatal().AnErr("tlsutil.BuildServerTLSConfig", err).Msg("")
 		}
+	}
+
+	if viper.GetBool("use_oauth") {
+		logger.Debug().Str("service", "{{.ServiceName}}").
+			Str("oauth_provider", viper.GetString("oauth_provider")).
+			Str("oauth_client_id", viper.GetString("oauth_client_id")).
+			Msg("loading OAuth config")
+		ctx = oauth.ContextWithOptions(context.Background(), oauth.WithProvider(viper.GetString("oauth_provider)), oauth.WithClientID(viper.GetString("oauth_client_id")))
 	}
 
 	logger.Debug().Str("service", "{{.ServiceName}}").
@@ -168,6 +178,10 @@ func main() {
 	}
 	if viper.GetBool("use_tls") {
 		opts = append(opts, grpc.Creds(credentials.NewTLS(tlsServerConf)))
+	}
+	if viper.GetBool("use_oauth") {
+		opts = append(opts, grpc.StreamInterceptor(grpc_auth.StreamServerInterceptor(oauth.ValidateToken(ctx))))
+		opts = append(opts, grpc.UnaryInterceptor(grpc_auth.UnaryServerInterceptor(oauth.ValidateToken(ctx))))
 	}
 
 	grpcServer := grpc.NewServer(opts...)

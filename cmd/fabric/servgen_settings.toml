@@ -39,6 +39,11 @@
     server_cert_path = ""
     server_key_path = ""
 
+# oauth
+    use_oauth = false
+    oauth_provider = "http://127.0.0.1:5556/dex"
+    oauth_client_id = "example-app"
+
 # statsd
     report_statsd = false
     statsd_host = "127.0.0.1"
