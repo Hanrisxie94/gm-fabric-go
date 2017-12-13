@@ -43,7 +43,7 @@ import (
 	"github.com/deciphernow/gm-fabric-go/metrics/sinkobserver"
 	"github.com/deciphernow/gm-fabric-go/metrics/subject"
 	"github.com/deciphernow/gm-fabric-go/tlsutil"
-	"github.com/deciphernow/gm-fabric-go/oauth
+	"github.com/deciphernow/gm-fabric-go/oauth"
 
 	"{{.ConfigPackage}}"
 	"{{.MethodsPackage}}"
@@ -100,7 +100,11 @@ func main() {
 			Str("oauth_provider", viper.GetString("oauth_provider")).
 			Str("oauth_client_id", viper.GetString("oauth_client_id")).
 			Msg("loading OAuth config")
-		ctx = oauth.ContextWithOptions(context.Background(), oauth.WithProvider(viper.GetString("oauth_provider)), oauth.WithClientID(viper.GetString("oauth_client_id")))
+		ctx = oauth.ContextWithOptions(
+			context.Background(), 
+			oauth.WithProvider(viper.GetString("oauth_provider")), 
+			oauth.WithClientID(viper.GetString("oauth_client_id")),
+		)
 	}
 
 	logger.Debug().Str("service", "{{.ServiceName}}").
@@ -180,8 +184,8 @@ func main() {
 		opts = append(opts, grpc.Creds(credentials.NewTLS(tlsServerConf)))
 	}
 	if viper.GetBool("use_oauth") {
-		opts = append(opts, grpc.StreamInterceptor(grpc_auth.StreamServerInterceptor(oauth.ValidateToken(ctx))))
-		opts = append(opts, grpc.UnaryInterceptor(grpc_auth.UnaryServerInterceptor(oauth.ValidateToken(ctx))))
+		opts = append(opts, grpc.StreamInterceptor(grpc_auth.StreamServerInterceptor(oauth.ValidateToken)))
+		opts = append(opts, grpc.UnaryInterceptor(grpc_auth.UnaryServerInterceptor(oauth.ValidateToken)))
 	}
 
 	grpcServer := grpc.NewServer(opts...)
