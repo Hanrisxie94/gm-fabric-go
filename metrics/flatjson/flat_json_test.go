@@ -20,14 +20,9 @@ import (
 	"testing"
 )
 
-type testStruct struct {
-	aaa int
-	bbb float32
-}
-
 func TestFlatJSONWriter(t *testing.T) {
 	var buffer bytes.Buffer
-	var ts testStruct
+	var ts map[string]interface{}
 	var err error
 
 	w, err := New(&buffer)
@@ -48,5 +43,11 @@ func TestFlatJSONWriter(t *testing.T) {
 	err = json.Unmarshal(data, &ts)
 	if err != nil {
 		t.Fatalf("json.Unmarshal failed: %s; %s", err, string(data))
+	}
+	if ts["aaa"].(int) != 42 {
+		t.Fatalf("ts.aaa = %v", ts)
+	}
+	if ts["bbb"].(float64) != 3.14 {
+		t.Fatalf("ts.bbb = %v", ts)
 	}
 }

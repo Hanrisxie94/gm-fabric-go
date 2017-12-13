@@ -49,7 +49,7 @@ type Sample struct {
 // GoMetricsObserver implements the Observer interface and also
 // supports http handlers
 type GoMetricsObserver struct {
-	Lock       sync.Mutex
+	sync.Mutex
 	GaugeMap   map[string]Gauge
 	EmitKeyMap map[string]EmitKey
 	CounterMap map[string]Counter
@@ -72,8 +72,8 @@ func (g *GoMetricsObserver) Observe(event subject.MetricsEvent) {
 		return
 	}
 
-	g.Lock.Lock()
-	defer g.Lock.Unlock()
+	g.Lock()
+	defer g.Unlock()
 
 	switch event.EventType {
 	case "go-metrics.SetGauge":

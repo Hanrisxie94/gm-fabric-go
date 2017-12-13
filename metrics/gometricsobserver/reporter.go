@@ -24,8 +24,8 @@ import (
 func (g *GoMetricsObserver) Report(jWriter *flatjson.Writer) error {
 	var err error
 
-	g.Lock.Lock()
-	defer g.Lock.Unlock()
+	g.Lock()
+	defer g.Unlock()
 
 	for key, gauge := range g.GaugeMap {
 		prefixKey := fmt.Sprintf("go_metrics/%s", key)
