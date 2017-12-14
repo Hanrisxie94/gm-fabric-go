@@ -111,8 +111,23 @@ func TestGoMetricsObserver(t *testing.T) {
 		t.Fatalf("json.Unmarshal failed: %s; %s", err, string(data))
 	}
 
-	if ts["go-metrics/aaa"].(float64) != 1.0 {
+	if ts["go_metrics/aaa"].(float64) != 1.0 {
 		t.Fatalf("ts.aaa expected %f %v", 1.0, string(data))
+	}
+	if ts["go_metrics/bbb"].(float64) != 2.0 {
+		t.Fatalf("ts.bbb expected %f %v", 2.0, string(data))
+	}
+	if ts["go_metrics/ccc"].(float64) != 3.0 {
+		t.Fatalf("ts.ccc expected %f %v", 3.0, string(data))
+	}
+	if ts["go_metrics/ddd"].(float64) != 9.0 {
+		t.Fatalf("ts.ddd expected %f %v", 9.0, string(data))
+	}
+	if ts["go_metrics/eee"].(float64) != 6.0 {
+		t.Fatalf("ts.eee expected %f %v", 6.0, string(data))
+	}
+	if ts["go_metrics/fff"].(float64) != 7.0 {
+		t.Fatalf("ts.fff expected %f %v", 7.0, string(data))
 	}
 
 }
