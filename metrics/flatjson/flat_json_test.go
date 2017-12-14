@@ -44,7 +44,7 @@ func TestFlatJSONWriter(t *testing.T) {
 	if err != nil {
 		t.Fatalf("json.Unmarshal failed: %s; %s", err, string(data))
 	}
-	if ts["aaa"].(int) != 42 {
+	if ts["aaa"].(float64) != 42.0 {
 		t.Fatalf("ts.aaa = %v", ts)
 	}
 	if ts["bbb"].(float64) != 3.14 {

@@ -92,16 +92,6 @@ func TestGoMetricsObserver(t *testing.T) {
 			observer.SampleMap["fff"].Value, 7.0)
 	}
 
-	type testStruct struct {
-		aaa float32
-		bbb float32
-		ccc float32
-		ddd float32
-		eee float32
-		fff float32
-	}
-	var ts testStruct
-
 	var buffer bytes.Buffer
 	jr, err := flatjson.New(&buffer)
 	if err != nil {
@@ -115,12 +105,13 @@ func TestGoMetricsObserver(t *testing.T) {
 	}
 
 	data := buffer.Bytes()
+	var ts map[string]interface{}
 	err = json.Unmarshal(data, &ts)
 	if err != nil {
 		t.Fatalf("json.Unmarshal failed: %s; %s", err, string(data))
 	}
 
-	if ts.aaa != 1.0 {
+	if ts["go-metrics/aaa"].(float64) != 1.0 {
 		t.Fatalf("ts.aaa expected %f %v", 1.0, string(data))
 	}
 
