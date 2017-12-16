@@ -15,11 +15,11 @@
 /*
 	Example code usage:
 
-	ctx := oauth.ContextWithOptions(oauth.WithSigningAlg(HS256), oauth.WithTokenSecret("KbtfnXOHH3ezniXIsHYSd4WhZPBXH1vB"))
+	authfunc, err := oauth.NewOAuthInterceptor(oauth.WithSigningAlg(HS256), oauth.WithTokenSecret("KbtfnXOHH3ezniXIsHYSd4WhZPBXH1vB"))
 
 	server := grpc.NewServer(
-	    grpc.StreamInterceptor(grpc_auth.StreamServerInterceptor(oauth.ValidateToken(ctx))),
-	    grpc.UnaryInterceptor(grpc_auth.UnaryServerInterceptor(oauth.ValidateToken(ctx))),
+	    grpc.StreamInterceptor(grpc_auth.StreamServerInterceptor(authfunc)),
+	    grpc.UnaryInterceptor(grpc_auth.UnaryServerInterceptor(authfunc)),
 	)
 
 	return server
@@ -59,9 +59,33 @@ import (
 
 	"github.com/rs/zerolog/log"
 
+	"github.com/grpc-ecosystem/go-grpc-middleware/auth"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/metadata"
 )
+
+// NewOauthInterceptor is a factory function that will return a AuthFunc that can be plugged
+// into the grpc_auth interceptor method
+func NewOauthInterceptor(opts ...ValidationOption) (grpc_auth.AuthFunc, error) {
+	authfunc := func(ctx context.Context) (context.Context, error) {
+		meta, ok := metadata.FromIncomingContext(ctx)
+		if !ok {
+			return ctx, errors.New("Failed to retrieve rpc metadata from incoming context")
+		}
+
+		p, err := ValidateOnSigningMethod(ctx, meta, opts...)
+		if err != nil {
+			log.Error().Err(err).Msg("Interceptor failed to validate token")
+			return ctx, err
+		}
+
+		ctx = InjectPermissions(ctx, p)
+
+		return ctx, nil
+	}
+
+	return authfunc, nil
+}
 
 // ValidateToken validates the token being passed into the request metadata.
 // A developer should pass the tokenSecret in the context with the key: 'token-secret'
