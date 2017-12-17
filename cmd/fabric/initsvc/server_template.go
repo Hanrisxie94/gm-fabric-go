@@ -96,10 +96,6 @@ func main() {
 	}
 
 	if viper.GetBool("use_oauth") {
-		logger.Debug().Str("service", "{{.ServiceName}}").
-			Str("oauth_provider", viper.GetString("oauth_provider")).
-			Str("oauth_client_id", viper.GetString("oauth_client_id")).
-			Msg("loading OAuth config")
 		ctx = oauth.ContextWithOptions(
 			context.Background(), 
 			oauth.WithProvider(viper.GetString("oauth_provider")), 
@@ -184,8 +180,32 @@ func main() {
 		opts = append(opts, grpc.Creds(credentials.NewTLS(tlsServerConf)))
 	}
 	if viper.GetBool("use_oauth") {
-		opts = append(opts, grpc.StreamInterceptor(grpc_auth.StreamServerInterceptor(oauth.ValidateToken)))
-		opts = append(opts, grpc.UnaryInterceptor(grpc_auth.UnaryServerInterceptor(oauth.ValidateToken)))
+		var err error
+
+		provider := viper.GetString("oauth_provider")
+		clientID := viper.GetString("oauth_client_id") 
+
+		logger.Debug().Str("service", "{{.ServiceName}}").
+			Str("oauth_provider", provider).
+			Str("oauth_client_id", clientID).
+			Msg("loading OAuth config")
+
+		interceptor, err := oauth.NewOauthInterceptor(
+			oauth.WithProvider(provider),
+			oauth.WithClientID(clientID),
+		)
+		if err != nil {
+			logger.Fatal().AnErr("oauth.NewOauthInterceptor", err).Msg("")
+		}
+			
+		opts = append(
+			opts, 
+			grpc.StreamInterceptor(grpc_auth.StreamServerInterceptor(interceptor)),
+		)
+		opts = append(
+			opts, 
+			grpc.UnaryInterceptor(grpc_auth.UnaryServerInterceptor(interceptor)),
+		)
 	}
 
 	grpcServer := grpc.NewServer(opts...)
