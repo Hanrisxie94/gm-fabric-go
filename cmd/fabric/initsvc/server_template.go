@@ -166,6 +166,18 @@ func main() {
 	if err != nil {
 		logger.Fatal().AnErr("start metrics server", err).Msg("")
 	}
+	
+	if viper.GetBool("use_zk") {
+		logger.Info().Str("service", "{{.ServiceName}}).Msg("announcing metrics endpoint to zookeeper")
+		cancel := gk.Announce(viper.GetStringSlice("zk_connection_string"), &gk.Registration{
+			Path: viper.GetString("zk_announce_path") + viper.GetString("metrics_uri_path"),
+			Host: viper.GetString("zk_announce_host"),
+			Status: gk.Alive,
+			Port: viper.GetInt("metrics_service_port"),
+		})
+		defer cancel()
+		logger.Info().Str("service", "{{.ServiceName}}").Msg("Service successfully registered metrics endpoint to zookeeper")
+	}
 
 	metricsChan := subject.New(ctx, observers...)
 
@@ -216,10 +228,42 @@ func main() {
 		Msg("starting grpc server")
 	go grpcServer.Serve(lis)
 
+	// Announce rpc server to zookeeper
+	if viper.GetBool("use_zk") {
+		logger.Info().Str("service", "{{.ServiceName}}).Msg("announcing rpc endpoint to zookeeper")
+		cancel := gk.Announce(viper.GetStringSlice("zk_connection_string"), &gk.Registration{
+			Path: viper.GetString("zk_announce_path") + "/rpc",
+			Host: viper.GetString("zk_announce_host"),
+			Status: gk.Alive,
+			Port: viper.GetInt("metrics_service_port"),
+		})
+		defer cancel()
+		logger.Info().Str("service", "{{.ServiceName}}").Msg("Service successfully registered rpc endpoint to zookeeper")
+	}
+
+
 	if viper.GetBool("use_gateway_proxy") {
 		logger.Debug().Str("service", "{{.ServiceName}}").
 			Msg("starting gateway proxy")
 		go gatewayProxy(ctx, logger)
+		// Setup Zookeeper announcement enpointpoint for gRPC
+		if viper.GetBool("announce_zk") {
+			gatewayEndpoint := "http"
+			if viper.GetBool("use_tls") {
+				gatewayEndpoint = "https"
+			}
+
+			logger.Info().Str("service", "{{.ServiceName}}).Msg("announcing gateway endpoint to zookeeper")
+
+			cancel := gk.Announce(viper.GetStringSlice("zk_connection_string"), &gk.Registration{
+				Path:   viper.GetString("zk_announce_path") + "/" + gatewayEndpoint,
+				Host:   viper.GetString("zk_announce_host"),
+				Status: gk.Alive,
+				Port:   viper.GetInt("gateway_proxy_port"),
+			})
+			defer cancel()
+		logger.Info().Str("service", "{{.ServiceName}}).Msg("announcing gateway endpoint to zookeeper")
+		}
 	}
 
 	s := <- sigChan

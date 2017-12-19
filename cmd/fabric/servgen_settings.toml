@@ -44,6 +44,12 @@
     oauth_provider = "http://127.0.0.1:5556/dex"
     oauth_client_id = "example-app"
 
+# zookeeper
+    use_zk = false
+    zk_connection_string = "zk:2181"
+    zk_announce_path="/services/fabric-service/1.0"
+    zk_announce_host = "127.0.0.1"
+
 # statsd
     report_statsd = false
     statsd_host = "127.0.0.1"
