@@ -189,7 +189,7 @@ func InitService(cfg config.Config, logger zerolog.Logger) error {
 
 	err = BundleRPMArtifacts(cfg, logger)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "creating rpm artifacts")
 	}
 
 	logger.Info().Msg("initializing versioning")

@@ -30,7 +30,7 @@ func BundleRPMArtifacts(cfg config.Config, logger zerolog.Logger) error {
 	logger.Info().Msg("creating rpm dir")
 	err := os.Mkdir(cfg.RPMBundlingPath(), 0777)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "creating rpm dir")
 	}
 
 	logger.Info().Msg("creating rpm build artifacts")

@@ -14,8 +14,7 @@
 
 package initsvc
 
-var buildRPMTemplate = `#!/bin/bash
-
+var buildRPMTemplate = `
 #!/bin/sh
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
