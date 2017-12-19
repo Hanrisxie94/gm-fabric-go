@@ -16,12 +16,7 @@ package grpcmetrics
 
 import (
 	"testing"
-
-	"github.com/deciphernow/gm-fabric-go/metrics/subject"
 )
 
 func TestStatsHandler(t *testing.T) {
-	metricsChan := make(chan subject.MetricsEvent, 1)
-
-	handler := NewStatsHandler(metricsChan)
 }
