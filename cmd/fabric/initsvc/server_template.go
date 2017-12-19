@@ -168,7 +168,7 @@ func main() {
 	}
 	
 	if viper.GetBool("use_zk") {
-		logger.Info().Str("service", "{{.ServiceName}}).Msg("announcing metrics endpoint to zookeeper")
+		logger.Info().Str("service", "{{.ServiceName}}").Msg("announcing metrics endpoint to zookeeper")
 		cancel := gk.Announce(viper.GetStringSlice("zk_connection_string"), &gk.Registration{
 			Path: viper.GetString("zk_announce_path") + viper.GetString("metrics_uri_path"),
 			Host: viper.GetString("zk_announce_host"),
@@ -230,7 +230,7 @@ func main() {
 
 	// Announce rpc server to zookeeper
 	if viper.GetBool("use_zk") {
-		logger.Info().Str("service", "{{.ServiceName}}).Msg("announcing rpc endpoint to zookeeper")
+		logger.Info().Str("service", "{{.ServiceName}}").Msg("announcing rpc endpoint to zookeeper")
 		cancel := gk.Announce(viper.GetStringSlice("zk_connection_string"), &gk.Registration{
 			Path: viper.GetString("zk_announce_path") + "/rpc",
 			Host: viper.GetString("zk_announce_host"),
@@ -253,7 +253,7 @@ func main() {
 				gatewayEndpoint = "https"
 			}
 
-			logger.Info().Str("service", "{{.ServiceName}}).Msg("announcing gateway endpoint to zookeeper")
+			logger.Info().Str("service", "{{.ServiceName}}").Msg("announcing gateway endpoint to zookeeper")
 
 			cancel := gk.Announce(viper.GetStringSlice("zk_connection_string"), &gk.Registration{
 				Path:   viper.GetString("zk_announce_path") + "/" + gatewayEndpoint,
@@ -262,7 +262,7 @@ func main() {
 				Port:   viper.GetInt("gateway_proxy_port"),
 			})
 			defer cancel()
-		logger.Info().Str("service", "{{.ServiceName}}).Msg("announcing gateway endpoint to zookeeper")
+			logger.Info().Str("service", "{{.ServiceName}}").Msg("announcing gateway endpoint to zookeeper")
 		}
 	}
 

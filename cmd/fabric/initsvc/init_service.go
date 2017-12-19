@@ -187,6 +187,11 @@ func InitService(cfg config.Config, logger zerolog.Logger) error {
 		return errors.Wrap(err, "creating .gitignore")
 	}
 
+	err = BundleRPMArtifacts(cfg, logger)
+	if err != nil {
+		return err
+	}
+
 	logger.Info().Msg("initializing versioning")
 	if err = initVersioning(cfg, logger); err != nil {
 		return errors.Wrap(err, "initVersioning()")

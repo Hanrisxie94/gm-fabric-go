@@ -345,6 +345,11 @@ func (cfg Config) GitIgnorePath() string {
 	return path.Join(cfg.ServicePath(), ".gitignore")
 }
 
+// RPMBundlingPath is the full path to the /rpm dir which olds artifacts for bundling
+func (cfg Config) RPMBundlingPath() string {
+	return path.Join(cfg.ServicePath(), "/rpm")
+}
+
 func gopath() string {
 	path := os.Getenv("GOPATH")
 	if path == "" {
