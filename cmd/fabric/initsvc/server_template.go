@@ -35,6 +35,8 @@ import (
 	
 	gometrics "github.com/armon/go-metrics"
 
+	"github.com/deciphernow/gm-fabric-go/gk"
+
 	"github.com/deciphernow/gm-fabric-go/metrics/gmfabricsink"
 	"github.com/deciphernow/gm-fabric-go/metrics/gometricsobserver"
 	"github.com/deciphernow/gm-fabric-go/metrics/grpcmetrics"
