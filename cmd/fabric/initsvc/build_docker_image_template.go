@@ -18,13 +18,19 @@ var buildDockerImageTemplate = `#!/bin/bash
 
 set -euxo pipefail
 
-pushd {{.ServerPath}}
-CGO_ENABLED=0 GOOS=linux go build -a -tags netgo -ldflags '-w' -o {{.DockerPath}}/{{.ServiceName}} .
-popd
+# assume we are in the service base directory
+BASEDIR=$PWD
+DOCKERDIR="${BASEDIR}/{{.ServiceName}}/docker"
 
-pushd {{.DockerPath}}
-cp {{.SettingsFilePath}} .
-docker build -t  {{.ServiceName}} .
-popd
+(
+	cd "cmd/server"
+	CGO_ENABLED=0 GOOS=linux go build -a -tags netgo -ldflags '-w' -o "$DOCKERDIR/{{.ServiceName}}" .
+)
+
+(
+	cd $DOCKERDIR
+	cp "${BASEDIR}/settings.toml" .
+	docker build -t  {{.ServiceName}} .
+)
 
 `

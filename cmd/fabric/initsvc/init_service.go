@@ -94,10 +94,8 @@ func InitService(cfg config.Config, logger zerolog.Logger) error {
 		buildServerTemplate,
 		cfg.BuildServerScriptPath(),
 		struct {
-			ServerPath  string
 			ServiceName string
 		}{
-			cfg.ServerPath(),
 			cfg.ServiceName,
 		},
 	)
@@ -114,10 +112,8 @@ func InitService(cfg config.Config, logger zerolog.Logger) error {
 		buildGRPCClientTemplate,
 		cfg.BuildGRPCClientScriptPath(),
 		struct {
-			GRPCClientPath string
-			ServiceName    string
+			ServiceName string
 		}{
-			cfg.GRPCClientPath(),
 			cfg.ServiceName,
 		},
 	)
@@ -134,15 +130,9 @@ func InitService(cfg config.Config, logger zerolog.Logger) error {
 		buildDockerImageTemplate,
 		cfg.BuildDockerImageScriptPath(),
 		struct {
-			ServiceName      string
-			ServerPath       string
-			DockerPath       string
-			SettingsFilePath string
+			ServiceName string
 		}{
 			cfg.ServiceName,
-			cfg.ServerPath(),
-			cfg.DockerPath(),
-			cfg.SettingsFilePath(),
 		},
 	)
 	if err != nil {

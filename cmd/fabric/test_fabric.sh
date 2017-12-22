@@ -70,11 +70,14 @@ message HelloResponse {
 PROTO1
 
 # run again to generate the protobuf files and our method stub(s)
-fabric --log-level="debug" --dir="$TESTDIR" --generate $SERVICE_NAME
+# we assume we are running in the test directory
+pushd $TESTDIR
+fabric --log-level="debug" --generate $SERVICE_NAME
 
 # compile the stubs to verify that they are valid
-"$TESTDIR/$SERVICE_NAME/build_${SERVICE_NAME}_server.sh"
-"$TESTDIR/$SERVICE_NAME/build_${SERVICE_NAME}_grpc_client.sh"
+"${SERVICE_NAME}/build_${SERVICE_NAME}_server.sh"
+"${SERVICE_NAME}/build_${SERVICE_NAME}_grpc_client.sh"
+popd
 
 # stuff a client that exercises the methods
 cat << CLIENT1 > "$TESTDIR/$SERVICE_NAME/cmd/grpc_client/test_grpc.go"
@@ -147,8 +150,11 @@ func testStreamMethod(logger zerolog.Logger, client pb.TestServiceClient) error 
 }
 CLIENT1
 
-# compile the client again, this  time wit real code
-"$TESTDIR/$SERVICE_NAME/build_${SERVICE_NAME}_grpc_client.sh"
+# compile the client again, this  time with real code
+# we assume we are running in the test directory
+pushd $TESTDIR
+${SERVICE_NAME}/"build_${SERVICE_NAME}_grpc_client.sh"
+popd
 
 # stuff a server method that handles a unitary method
 cat << METHOD1 > "$TESTDIR/$SERVICE_NAME/cmd/server/methods/hello_proxy.go"
@@ -233,7 +239,10 @@ func (s *serverData) HelloStream(req *pb.HelloStreamRequest, stream pb.TestServi
 METHOD2
 
 # compile the server to include the changed methods
-"$TESTDIR/$SERVICE_NAME/build_${SERVICE_NAME}_server.sh"
+# we assume we are running in the test directory
+pushd $TESTDIR
+"$SERVICE_NAME/build_${SERVICE_NAME}_server.sh"
+popd
 
 # run the server in background
 SERVICE_BINARY="$GOPATH/bin/$SERVICE_NAME"

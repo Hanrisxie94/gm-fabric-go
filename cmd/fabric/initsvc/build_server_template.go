@@ -14,11 +14,17 @@
 
 package initsvc
 
-var buildServerTemplate = `#! /bin/bash
+var buildServerTemplate = `#!/bin/bash
 
 set -euxo pipefail
 
-pushd {{.ServerPath}}
-go build -o=$GOPATH/bin/{{.ServiceName}}
-popd
+# assume we are in the service base directory
+BASEDIR=$PWD
+SERVERDIR="${BASEDIR}/{{.ServiceName}}/cmd/server"
+
+(
+	cd $SERVERDIR
+	go build -o=$GOPATH/bin/{{.ServiceName}}
+)
+
 `
