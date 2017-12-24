@@ -63,6 +63,11 @@ func GenerateProtobuf(cfg config.Config, logger zerolog.Logger) error {
 	} {
 		logger.Info().Str("service", cfg.ServiceName).
 			Str("generating", entry.outputDef).Msg("")
+		logger.Debug().Str("service", cfg.ServiceName).Msgf(
+			"protoc -I %s --proto_path %s --plugin=%s %s %s",
+			apisPath, cfg.ProtoPath(), entry.pluginPath,
+			entry.outputDef, cfg.ProtoFilePath(),
+		)
 		cmd := exec.Command(
 			"protoc",
 			"-I",
