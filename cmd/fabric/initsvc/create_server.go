@@ -35,7 +35,7 @@ func createServer(
 	logger.Info().Msg("creating server main.go")
 	err = templ.Merge(
 		"server",
-		serverTemplate,
+		mainTemplate,
 		filepath.Join(cfg.ServerPath(), "main.go"),
 		struct {
 			ServiceName       string
@@ -55,6 +55,42 @@ func createServer(
 	)
 	if err != nil {
 		return errors.Wrap(err, "creating server main.go")
+	}
+	err = templ.Merge(
+		"tls",
+		tlsTemplate,
+		filepath.Join(cfg.ServerPath(), "tls.go"),
+		nil,
+	)
+	if err != nil {
+		return errors.Wrap(err, "creating server tls.go")
+	}
+	err = templ.Merge(
+		"oauth",
+		oauthTemplate,
+		filepath.Join(cfg.ServerPath(), "oauth.go"),
+		nil,
+	)
+	if err != nil {
+		return errors.Wrap(err, "creating server oauth.go")
+	}
+	err = templ.Merge(
+		"statsd",
+		statsdTemplate,
+		filepath.Join(cfg.ServerPath(), "statsd.go"),
+		nil,
+	)
+	if err != nil {
+		return errors.Wrap(err, "creating server oauth.go")
+	}
+	err = templ.Merge(
+		"zk",
+		zkTemplate,
+		filepath.Join(cfg.ServerPath(), "zk.go"),
+		nil,
+	)
+	if err != nil {
+		return errors.Wrap(err, "creating server oauth.go")
 	}
 
 	// The gateway proxy code can't compile until the developer generates
