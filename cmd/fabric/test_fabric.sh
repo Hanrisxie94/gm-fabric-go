@@ -16,11 +16,15 @@
 
 set -euxo pipefail
 
+# here we want the GOPATH that points to the (not generated) source code
+TEST_CERTS_DIR="$GOPATH/src/github.com/deciphernow/gm-fabric-go/cmd/fabric/test_certs"
+
 TOPDIR="$HOME/fabric_test_dir"
 
 rm -rf $TOPDIR
 mkdir $TOPDIR
 
+# here we create a GOPATH that will point to the generated code
 GOPATH="$TOPDIR"
 mkdir "$GOPATH/src"
 
@@ -146,8 +150,9 @@ func testStreamMethod(logger zerolog.Logger, client pb.TestServiceClient) error 
     return nil
 }
 CLIENT1
+gofmt -w "$TESTDIR/$SERVICE_NAME/cmd/grpc_client/test_grpc.go"
 
-# compile the client again, this  time wit real code
+# compile the client again, this  time with real code
 "$TESTDIR/$SERVICE_NAME/build_${SERVICE_NAME}_grpc_client.sh"
 
 # stuff a server method that handles a unitary method
@@ -199,6 +204,7 @@ func (s *serverData) HelloProxy(_ context.Context, req *pb.HelloRequest) (*pb.He
 	return nil, errors.New("invalid request")
 }
 METHOD1
+gofmt -w "$TESTDIR/$SERVICE_NAME/cmd/server/methods/hello_proxy.go"
 
 # stuff a server method that handles a stream method
 cat << METHOD2 > "$TESTDIR/$SERVICE_NAME/cmd/server/methods/hello_stream.go"
@@ -231,9 +237,44 @@ func (s *serverData) HelloStream(req *pb.HelloStreamRequest, stream pb.TestServi
     return nil
 }
 METHOD2
+gofmt -w "$TESTDIR/$SERVICE_NAME/cmd/server/methods/hello_stream.go"
 
 # compile the server to include the changed methods
 "$TESTDIR/$SERVICE_NAME/build_${SERVICE_NAME}_server.sh"
+
+# stuff our own settings file over the generated one
+cat << SETTINGS > "$TESTDIR/$SERVICE_NAME/settings.toml"
+# grpc-server
+    grpc_server_host = ""
+    grpc_server_port = 10000
+
+# metrics-server
+    metrics_server_host =  ""
+    metrics_server_port = 10001
+    metrics_cache_size =  1024
+    metrics_uri_path = "/metrics"
+
+# gateway-proxy
+    use_gateway_proxy = "true"
+    gateway_proxy_host = ""
+    gateway_proxy_port = 8080
+
+# tls
+    use_tls = true
+    ca_cert_path = "$TEST_CERTS_DIR/root.crt"
+    server_cert_path = "$TEST_CERTS_DIR/server.localdomain.chain.crt"
+    server_key_path = "$TEST_CERTS_DIR/server.localdomain.nopass.key"
+
+# statsd
+    report_statsd = true
+    statsd_host = "127.0.0.1"
+    statsd_port = 8125
+    statsd_mem_interval = ""
+
+# misc
+    verbose_logging = true
+
+SETTINGS
 
 # run the server in background
 SERVICE_BINARY="$GOPATH/bin/$SERVICE_NAME"

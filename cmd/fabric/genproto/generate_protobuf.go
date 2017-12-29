@@ -133,7 +133,7 @@ func GenerateProtobuf(cfg config.Config, logger zerolog.Logger) error {
 			viper.GetString("metrics_server_port"),
 			viper.GetString("metrics_cache_size"),
 			viper.GetString("metrics_uri_path"),
-			viper.GetBool("use_gateway_proxy") || proxyExists,
+			viper.GetBool("use_gateway_proxy"),
 			viper.GetString("gateway_proxy_host"),
 			viper.GetString("gateway_proxy_port"),
 			viper.GetBool("use_tls"),

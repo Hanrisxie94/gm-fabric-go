@@ -58,7 +58,7 @@ type Config struct {
 }
 
 // Load constructs the configuation from various sources
-func Load() (Config, error) {
+func Load(logger zerolog.Logger) (Config, error) {
 	var showVersion bool
 	var initService string
 	var generateService string
@@ -135,7 +135,9 @@ func Load() (Config, error) {
 	}
 
 	// we don't care if ReadInConfig returns an error: we'll run off the defaults
-	viper.ReadInConfig()
+	if err := viper.ReadInConfig(); err != nil {
+		logger.Warn().Err(err).Msg("ReadInConfig")
+	}
 
 	return cfg, nil
 }
