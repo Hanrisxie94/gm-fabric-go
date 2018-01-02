@@ -156,14 +156,10 @@ CLIENT1
 gofmt -w "$TESTDIR/$SERVICE_NAME/cmd/grpc_client/test_grpc.go"
 
 # compile the client again, this  time with real code
-<<<<<<< HEAD
-"$TESTDIR/$SERVICE_NAME/build_${SERVICE_NAME}_grpc_client.sh"
-=======
 # we assume we are running in the test directory
 pushd $TESTDIR
 ${SERVICE_NAME}/"build_${SERVICE_NAME}_grpc_client.sh"
 popd
->>>>>>> master
 
 # stuff a server method that handles a unitary method
 cat << METHOD1 > "$TESTDIR/$SERVICE_NAME/cmd/server/methods/hello_proxy.go"
