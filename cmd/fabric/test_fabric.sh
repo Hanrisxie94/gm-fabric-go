@@ -275,7 +275,7 @@ cat << SETTINGS > "$TESTDIR/$SERVICE_NAME/settings.toml"
     server_key_path = "$TEST_CERTS_DIR/server.localdomain.nopass.key"
 
 # statsd
-    report_statsd = true
+    report_statsd = false
     statsd_host = "127.0.0.1"
     statsd_port = 8125
     statsd_mem_interval = ""
@@ -289,14 +289,14 @@ SETTINGS
 SERVICE_BINARY="$GOPATH/bin/$SERVICE_NAME"
 SERVICE_CONFIG="$TESTDIR/$SERVICE_NAME/settings.toml"
 
-$SERVICE_BINARY --config="$SERVICE_CONFIG" &
+$SERVICE_BINARY --config="$SERVICE_CONFIG" > "${TOPDIR}/server.log" 2>&1 &
 SERVICE_PID=$!
 
 ps -p $SERVICE_PID
 
 # run the grpc client as a test
 CLIENT_BINARY="$GOPATH/bin/${SERVICE_NAME}_grpc_client"
-$CLIENT_BINARY --address=":10000"
+$CLIENT_BINARY --address=":10000" --test-cert-dir="${TEST_CERTS_DIR}" > "${TOPDIR}/client.log" 2>&1
 
 # hit the proxy
 curl http://127.0.0.1:8080/acme/services/hello?hello_text=ping
