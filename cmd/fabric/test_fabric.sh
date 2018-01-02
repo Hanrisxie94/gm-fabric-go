@@ -74,11 +74,14 @@ message HelloResponse {
 PROTO1
 
 # run again to generate the protobuf files and our method stub(s)
-fabric --log-level="debug" --dir="$TESTDIR" --generate $SERVICE_NAME
+# we assume we are running in the test directory
+pushd $TESTDIR
+fabric --log-level="debug" --generate $SERVICE_NAME
 
 # compile the stubs to verify that they are valid
-"$TESTDIR/$SERVICE_NAME/build_${SERVICE_NAME}_server.sh"
-"$TESTDIR/$SERVICE_NAME/build_${SERVICE_NAME}_grpc_client.sh"
+"${SERVICE_NAME}/build_${SERVICE_NAME}_server.sh"
+"${SERVICE_NAME}/build_${SERVICE_NAME}_grpc_client.sh"
+popd
 
 # stuff a client that exercises the methods
 cat << CLIENT1 > "$TESTDIR/$SERVICE_NAME/cmd/grpc_client/test_grpc.go"
@@ -153,7 +156,14 @@ CLIENT1
 gofmt -w "$TESTDIR/$SERVICE_NAME/cmd/grpc_client/test_grpc.go"
 
 # compile the client again, this  time with real code
+<<<<<<< HEAD
 "$TESTDIR/$SERVICE_NAME/build_${SERVICE_NAME}_grpc_client.sh"
+=======
+# we assume we are running in the test directory
+pushd $TESTDIR
+${SERVICE_NAME}/"build_${SERVICE_NAME}_grpc_client.sh"
+popd
+>>>>>>> master
 
 # stuff a server method that handles a unitary method
 cat << METHOD1 > "$TESTDIR/$SERVICE_NAME/cmd/server/methods/hello_proxy.go"
@@ -240,7 +250,10 @@ METHOD2
 gofmt -w "$TESTDIR/$SERVICE_NAME/cmd/server/methods/hello_stream.go"
 
 # compile the server to include the changed methods
-"$TESTDIR/$SERVICE_NAME/build_${SERVICE_NAME}_server.sh"
+# we assume we are running in the test directory
+pushd $TESTDIR
+"$SERVICE_NAME/build_${SERVICE_NAME}_server.sh"
+popd
 
 # stuff our own settings file over the generated one
 cat << SETTINGS > "$TESTDIR/$SERVICE_NAME/settings.toml"

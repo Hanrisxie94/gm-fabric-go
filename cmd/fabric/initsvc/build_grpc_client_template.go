@@ -14,11 +14,17 @@
 
 package initsvc
 
-var buildGRPCClientTemplate = `#! /bin/bash
+var buildGRPCClientTemplate = `#!/bin/bash
 
 set -euxo pipefail
 
-pushd {{.GRPCClientPath}}
-go build -o=$GOPATH/bin/{{.ServiceName}}_grpc_client
-popd
+# assume we are in the service base directory
+BASEDIR=$PWD
+CLIENTDIR="${BASEDIR}/{{.ServiceName}}/cmd/grpc_client"
+
+(
+	cd $CLIENTDIR
+	go build -o=$GOPATH/bin/{{.ServiceName}}_grpc_client
+)
+
 `

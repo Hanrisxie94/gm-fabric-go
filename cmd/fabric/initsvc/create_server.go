@@ -60,7 +60,11 @@ func createServer(
 		"tls",
 		tlsTemplate,
 		filepath.Join(cfg.ServerPath(), "tls.go"),
-		nil,
+		struct {
+			ServiceName string
+		}{
+			cfg.ServiceName,
+		},
 	)
 	if err != nil {
 		return errors.Wrap(err, "creating server tls.go")
@@ -69,7 +73,11 @@ func createServer(
 		"oauth",
 		oauthTemplate,
 		filepath.Join(cfg.ServerPath(), "oauth.go"),
-		nil,
+		struct {
+			ServiceName string
+		}{
+			cfg.ServiceName,
+		},
 	)
 	if err != nil {
 		return errors.Wrap(err, "creating server oauth.go")
@@ -78,7 +86,11 @@ func createServer(
 		"statsd",
 		statsdTemplate,
 		filepath.Join(cfg.ServerPath(), "statsd.go"),
-		nil,
+		struct {
+			ServiceName string
+		}{
+			cfg.ServiceName,
+		},
 	)
 	if err != nil {
 		return errors.Wrap(err, "creating server oauth.go")
@@ -87,7 +99,11 @@ func createServer(
 		"zk",
 		zkTemplate,
 		filepath.Join(cfg.ServerPath(), "zk.go"),
-		nil,
+		struct {
+			ServiceName string
+		}{
+			cfg.ServiceName,
+		},
 	)
 	if err != nil {
 		return errors.Wrap(err, "creating server oauth.go")

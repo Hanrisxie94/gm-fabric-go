@@ -51,7 +51,7 @@ func getOauthOptsIfNeeded(logger zerolog.Logger) ([]grpc.ServerOption, error) {
 	provider := viper.GetString("oauth_provider")
 	clientID := viper.GetString("oauth_client_id")
 
-	logger.Debug().Str("service", "test_service").
+	logger.Debug().Str("service", "{{.ServiceName}}").
 		Str("oauth_provider", provider).
 		Str("oauth_client_id", clientID).
 		Msg("loading OAuth config")

@@ -50,7 +50,7 @@ func getStatsdObserverIfNeeded(logger zerolog.Logger) ([]subject.Observer, error
 		viper.GetDuration("statsd_mem_interval"),
 	)
 
-	logger.Debug().Str("service", "test_service").
+	logger.Debug().Str("service", "{{.ServiceName}}").
 		Str("host", viper.GetString("statsd_server_host")).
 		Int("port", viper.GetInt("statsd_server_port")).
 		Dur("interval", viper.GetDuration("statsd_mem_interval")).
