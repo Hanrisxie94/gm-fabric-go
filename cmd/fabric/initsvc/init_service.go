@@ -44,6 +44,7 @@ func InitService(cfg config.Config, logger zerolog.Logger) error {
 		cfg.ConfigPackagePath(),
 		cfg.MethodsPath(),
 		cfg.GRPCClientPath(),
+		cfg.HTTPClientPath(),
 		cfg.DockerPath(),
 		cfg.ProtoPath(),
 	} {
@@ -60,6 +61,11 @@ func InitService(cfg config.Config, logger zerolog.Logger) error {
 	logger.Info().Msg("creating grpc client")
 	if err = createGRPCClient(cfg, logger); err != nil {
 		return errors.Wrap(err, "createGRPCClient")
+	}
+
+	logger.Info().Msg("creating HTTP(S) client")
+	if err = createHTTPClient(cfg, logger); err != nil {
+		return errors.Wrap(err, "createHTTPClient")
 	}
 
 	logger.Info().Msg("creating docker files")
@@ -108,7 +114,7 @@ func InitService(cfg config.Config, logger zerolog.Logger) error {
 
 	logger.Info().Msgf("creating %s", cfg.BuildGRPCClientScriptName())
 	err = templ.Merge(
-		"build-client",
+		"build-grpc-client",
 		buildGRPCClientTemplate,
 		cfg.BuildGRPCClientScriptPath(),
 		struct {
@@ -122,6 +128,24 @@ func InitService(cfg config.Config, logger zerolog.Logger) error {
 	}
 	if err = os.Chmod(cfg.BuildGRPCClientScriptPath(), 0777); err != nil {
 		return errors.Wrapf(err, "os.Chmod(%s)", cfg.BuildGRPCClientScriptPath())
+	}
+
+	logger.Info().Msgf("creating %s", cfg.BuildHTTPClientScriptName())
+	err = templ.Merge(
+		"build-http-client",
+		buildHTTPClientTemplate,
+		cfg.BuildHTTPClientScriptPath(),
+		struct {
+			ServiceName string
+		}{
+			cfg.ServiceName,
+		},
+	)
+	if err != nil {
+		return errors.Wrapf(err, "creating %s", cfg.BuildHTTPClientScriptName())
+	}
+	if err = os.Chmod(cfg.BuildHTTPClientScriptPath(), 0777); err != nil {
+		return errors.Wrapf(err, "os.Chmod(%s)", cfg.BuildHTTPClientScriptPath())
 	}
 
 	logger.Info().Msgf("creating %s", cfg.BuildDockerImageScriptName())

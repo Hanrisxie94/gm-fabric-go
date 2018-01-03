@@ -81,6 +81,7 @@ fabric --log-level="debug" --generate $SERVICE_NAME
 # compile the stubs to verify that they are valid
 "${SERVICE_NAME}/build_${SERVICE_NAME}_server.sh"
 "${SERVICE_NAME}/build_${SERVICE_NAME}_grpc_client.sh"
+"${SERVICE_NAME}/build_${SERVICE_NAME}_http_client.sh"
 popd
 
 # stuff a client that exercises the methods
@@ -155,7 +156,7 @@ func testStreamMethod(logger zerolog.Logger, client pb.TestServiceClient) error 
 CLIENT1
 gofmt -w "$TESTDIR/$SERVICE_NAME/cmd/grpc_client/test_grpc.go"
 
-# compile the client again, this  time with real code
+# compile the gRPC client again, this  time with real code
 # we assume we are running in the test directory
 pushd $TESTDIR
 ${SERVICE_NAME}/"build_${SERVICE_NAME}_grpc_client.sh"
@@ -295,14 +296,16 @@ SERVICE_PID=$!
 ps -p $SERVICE_PID
 
 # run the grpc client as a test
-CLIENT_BINARY="$GOPATH/bin/${SERVICE_NAME}_grpc_client"
-$CLIENT_BINARY --address=":10000" --test-cert-dir="${TEST_CERTS_DIR}" > "${TOPDIR}/client.log" 2>&1
+GRPC_CLIENT_BINARY="$GOPATH/bin/${SERVICE_NAME}_grpc_client"
+$GRPC_CLIENT_BINARY --address=":10000" --test-cert-dir="${TEST_CERTS_DIR}" > "${TOPDIR}/grpc_client.log" 2>&1
+
+HTTP_CLIENT_BINARY="$GOPATH/bin/${SERVICE_NAME}_http_client"
 
 # hit the proxy
-curl http://127.0.0.1:8080/acme/services/hello?hello_text=ping
+#$HTTP_CLIENT_BINARY --uri="https://127.0.0.1:8080/acme/services/hello?hello_text=ping" --test-cert-dir="${TEST_CERTS_DIR}" 
 
 # hit the metrics server
-curl http://127.0.0.1:10001/metrics
+$HTTP_CLIENT_BINARY --uri="https://127.0.0.1:10001/metrics" --test-cert-dir="${TEST_CERTS_DIR}"
 
 # stop the server gracefuly
 kill $SERVICE_PID

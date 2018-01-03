@@ -238,6 +238,21 @@ func (cfg Config) BuildGRPCClientScriptPath() string {
 	return path.Join(cfg.ServicePath(), cfg.BuildGRPCClientScriptName())
 }
 
+// HTTPClientPath the path to the 'cmd/http_client' directory
+func (cfg Config) HTTPClientPath() string {
+	return path.Join(cfg.CmdPath(), "http_client")
+}
+
+// BuildHTTPClientScriptName the name of the bash file to Build http client
+func (cfg Config) BuildHTTPClientScriptName() string {
+	return fmt.Sprintf("build_%s_http_client.sh", cfg.ServiceName)
+}
+
+// BuildHTTPClientScriptPath the name to the bash file to Build grpc client
+func (cfg Config) BuildHTTPClientScriptPath() string {
+	return path.Join(cfg.ServicePath(), cfg.BuildHTTPClientScriptName())
+}
+
 // ServerPath the path to the 'cmd/server' directory
 func (cfg Config) ServerPath() string {
 	return path.Join(cfg.CmdPath(), "server")
