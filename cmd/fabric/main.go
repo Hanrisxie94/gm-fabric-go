@@ -35,7 +35,7 @@ func run() int {
 	logger := zerolog.New(os.Stderr).With().Timestamp().Logger().
 		Output(zerolog.ConsoleWriter{Out: os.Stderr})
 
-	cfg, err := config.Load()
+	cfg, err := config.Load(logger)
 	if err != nil {
 		logger.Error().Err(err).Msg("config.Load()")
 		return 1

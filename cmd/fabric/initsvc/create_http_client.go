@@ -25,46 +25,27 @@ import (
 	"github.com/deciphernow/gm-fabric-go/cmd/fabric/templ"
 )
 
-func createGRPCClient(
+func createHTTPClient(
 	cfg config.Config,
 	logger zerolog.Logger,
 ) error {
 	var err error
 
-	logger.Info().Msg("creating gRPC client main.go")
+	logger.Info().Msg("creating HTTP client main.go")
 	err = templ.Merge(
-		"grpcclient",
-		grpcClientTemplate,
-		filepath.Join(cfg.GRPCClientPath(), "main.go"),
+		"httpclient",
+		httpClientTemplate,
+		filepath.Join(cfg.HTTPClientPath(), "main.go"),
 		struct {
 			ServiceName   string
 			GoServiceName string
-			PBImport      string
 		}{
 			cfg.ServiceName,
 			cfg.GoServiceName(),
-			cfg.PBImportPath(),
 		},
 	)
 	if err != nil {
 		return errors.Wrap(err, "creating client main.go")
-	}
-
-	logger.Info().Msg("creating test_grpc.go")
-	err = templ.Merge(
-		"test_grpc",
-		grpcClientTestTemplate,
-		filepath.Join(cfg.GRPCClientPath(), "test_grpc.go"),
-		struct {
-			GoServiceName string
-			PBImport      string
-		}{
-			cfg.GoServiceName(),
-			cfg.PBImportPath(),
-		},
-	)
-	if err != nil {
-		return errors.Wrap(err, "creating test_grpc.go")
 	}
 
 	return nil

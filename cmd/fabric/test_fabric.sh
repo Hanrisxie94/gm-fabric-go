@@ -16,11 +16,15 @@
 
 set -euxo pipefail
 
+# here we want the GOPATH that points to the (not generated) source code
+TEST_CERTS_DIR="$GOPATH/src/github.com/deciphernow/gm-fabric-go/cmd/fabric/test_certs"
+
 TOPDIR="$HOME/fabric_test_dir"
 
 rm -rf $TOPDIR
 mkdir $TOPDIR
 
+# here we create a GOPATH that will point to the generated code
 GOPATH="$TOPDIR"
 mkdir "$GOPATH/src"
 
@@ -77,6 +81,7 @@ fabric --log-level="debug" --generate $SERVICE_NAME
 # compile the stubs to verify that they are valid
 "${SERVICE_NAME}/build_${SERVICE_NAME}_server.sh"
 "${SERVICE_NAME}/build_${SERVICE_NAME}_grpc_client.sh"
+"${SERVICE_NAME}/build_${SERVICE_NAME}_http_client.sh"
 popd
 
 # stuff a client that exercises the methods
@@ -149,8 +154,9 @@ func testStreamMethod(logger zerolog.Logger, client pb.TestServiceClient) error 
     return nil
 }
 CLIENT1
+gofmt -w "$TESTDIR/$SERVICE_NAME/cmd/grpc_client/test_grpc.go"
 
-# compile the client again, this  time with real code
+# compile the gRPC client again, this  time with real code
 # we assume we are running in the test directory
 pushd $TESTDIR
 ${SERVICE_NAME}/"build_${SERVICE_NAME}_grpc_client.sh"
@@ -205,6 +211,7 @@ func (s *serverData) HelloProxy(_ context.Context, req *pb.HelloRequest) (*pb.He
 	return nil, errors.New("invalid request")
 }
 METHOD1
+gofmt -w "$TESTDIR/$SERVICE_NAME/cmd/server/methods/hello_proxy.go"
 
 # stuff a server method that handles a stream method
 cat << METHOD2 > "$TESTDIR/$SERVICE_NAME/cmd/server/methods/hello_stream.go"
@@ -237,6 +244,7 @@ func (s *serverData) HelloStream(req *pb.HelloStreamRequest, stream pb.TestServi
     return nil
 }
 METHOD2
+gofmt -w "$TESTDIR/$SERVICE_NAME/cmd/server/methods/hello_stream.go"
 
 # compile the server to include the changed methods
 # we assume we are running in the test directory
@@ -244,24 +252,60 @@ pushd $TESTDIR
 "$SERVICE_NAME/build_${SERVICE_NAME}_server.sh"
 popd
 
+# stuff our own settings file over the generated one
+cat << SETTINGS > "$TESTDIR/$SERVICE_NAME/settings.toml"
+# grpc-server
+    grpc_server_host = ""
+    grpc_server_port = 10000
+
+# metrics-server
+    metrics_server_host =  ""
+    metrics_server_port = 10001
+    metrics_cache_size =  1024
+    metrics_uri_path = "/metrics"
+
+# gateway-proxy
+    use_gateway_proxy = "true"
+    gateway_proxy_host = ""
+    gateway_proxy_port = 8080
+
+# tls
+    use_tls = true
+    ca_cert_path = "$TEST_CERTS_DIR/root.crt"
+    server_cert_path = "$TEST_CERTS_DIR/server.localdomain.chain.crt"
+    server_key_path = "$TEST_CERTS_DIR/server.localdomain.nopass.key"
+
+# statsd
+    report_statsd = false
+    statsd_host = "127.0.0.1"
+    statsd_port = 8125
+    statsd_mem_interval = ""
+
+# misc
+    verbose_logging = true
+
+SETTINGS
+
 # run the server in background
 SERVICE_BINARY="$GOPATH/bin/$SERVICE_NAME"
 SERVICE_CONFIG="$TESTDIR/$SERVICE_NAME/settings.toml"
 
-$SERVICE_BINARY --config="$SERVICE_CONFIG" &
+$SERVICE_BINARY --config="$SERVICE_CONFIG" > "${TOPDIR}/server.log" 2>&1 &
 SERVICE_PID=$!
 
 ps -p $SERVICE_PID
 
 # run the grpc client as a test
-CLIENT_BINARY="$GOPATH/bin/${SERVICE_NAME}_grpc_client"
-$CLIENT_BINARY --address=":10000"
+GRPC_CLIENT_BINARY="$GOPATH/bin/${SERVICE_NAME}_grpc_client"
+$GRPC_CLIENT_BINARY --address=":10000" --test-cert-dir="${TEST_CERTS_DIR}" > "${TOPDIR}/grpc_client.log" 2>&1
+
+HTTP_CLIENT_BINARY="$GOPATH/bin/${SERVICE_NAME}_http_client"
 
 # hit the proxy
-curl http://127.0.0.1:8080/acme/services/hello?hello_text=ping
+#$HTTP_CLIENT_BINARY --uri="https://127.0.0.1:8080/acme/services/hello?hello_text=ping" --test-cert-dir="${TEST_CERTS_DIR}" 
 
 # hit the metrics server
-curl http://127.0.0.1:10001/metrics
+$HTTP_CLIENT_BINARY --uri="https://127.0.0.1:10001/metrics" --test-cert-dir="${TEST_CERTS_DIR}"
 
 # stop the server gracefuly
 kill $SERVICE_PID

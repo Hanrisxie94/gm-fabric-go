@@ -58,7 +58,7 @@ type Config struct {
 }
 
 // Load constructs the configuation from various sources
-func Load() (Config, error) {
+func Load(logger zerolog.Logger) (Config, error) {
 	var showVersion bool
 	var initService string
 	var generateService string
@@ -135,7 +135,9 @@ func Load() (Config, error) {
 	}
 
 	// we don't care if ReadInConfig returns an error: we'll run off the defaults
-	viper.ReadInConfig()
+	if err := viper.ReadInConfig(); err != nil {
+		logger.Warn().Err(err).Msg("ReadInConfig")
+	}
 
 	return cfg, nil
 }
@@ -234,6 +236,21 @@ func (cfg Config) BuildGRPCClientScriptName() string {
 // BuildGRPCClientScriptPath the name to the bash file to Build grpc client
 func (cfg Config) BuildGRPCClientScriptPath() string {
 	return path.Join(cfg.ServicePath(), cfg.BuildGRPCClientScriptName())
+}
+
+// HTTPClientPath the path to the 'cmd/http_client' directory
+func (cfg Config) HTTPClientPath() string {
+	return path.Join(cfg.CmdPath(), "http_client")
+}
+
+// BuildHTTPClientScriptName the name of the bash file to Build http client
+func (cfg Config) BuildHTTPClientScriptName() string {
+	return fmt.Sprintf("build_%s_http_client.sh", cfg.ServiceName)
+}
+
+// BuildHTTPClientScriptPath the name to the bash file to Build grpc client
+func (cfg Config) BuildHTTPClientScriptPath() string {
+	return path.Join(cfg.ServicePath(), cfg.BuildHTTPClientScriptName())
 }
 
 // ServerPath the path to the 'cmd/server' directory

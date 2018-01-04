@@ -14,10 +14,13 @@
 
 package initsvc
 
-var grpcClientTemplate = `package main
+var httpClientTemplate = `package main
 
 import (
 	"crypto/tls"
+	"fmt"
+	"io/ioutil"
+	"net/http"
 	"os"
 	"path/filepath"
 
@@ -25,12 +28,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/spf13/pflag"
 
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
-
 	"github.com/deciphernow/gm-fabric-go/tlsutil"
-
-    pb "{{.PBImport}}"
 )
 
 func main() {
@@ -38,19 +36,18 @@ func main() {
 }
 
 func run() int {
-    var grpcServerAddress string
 	var testCertDir string
-    var client pb.{{.GoServiceName}}Client
+	var uri string
     var err error
 
     logger := zerolog.New(os.Stderr).With().Timestamp().Logger().
 		Output(zerolog.ConsoleWriter{Out: os.Stderr})
 
 	pflag.StringVar(
-		&grpcServerAddress,
-		"address",
+		&uri,
+		"uri",
 		"",
-		"address of grpc server",
+		"URI to send to server",
 	)
 	pflag.StringVar(
 		&testCertDir,
@@ -59,44 +56,38 @@ func run() int {
 		"(if TLS) directory holding test certificates",
 	)
 	pflag.Parse()
-    if grpcServerAddress == "" {
-        logger.Error().Msg("You must specify server address. (--address)")
+    if uri == "" {
+        logger.Error().Msg("You must supply a URI. (--uri)")
         return 1
-    }
+	}
 
-    logger.Info().Str("grpc-client", "{{.ServiceName}}").
-    Str("address", grpcServerAddress).
+    logger.Info().Str("http-client", "{{.ServiceName}}").
+    Str("URI", uri).
     Str("test-certs", testCertDir).Msg("starting")
 
-    if client, err = newClient(grpcServerAddress, testCertDir); err != nil {
+	client, err := newClient(testCertDir)
+	if err != nil {
         logger.Error().AnErr("newClient", err).Msg("")
         return 1
 	}
 
-    if err = runTest(logger, client); err != nil {
-        logger.Error().AnErr("runTest", err).Msg("")
-        return 1
+	if err = runURITest(client, uri); err != nil {
+		logger.Error().AnErr("runGatewayTest", err).Msg("")
+		return 1
 	}
 
-    logger.Info().Str("grpc client", "{{.ServiceName}}").Msg("terminating normally")
+    logger.Info().Str("http client", "{{.ServiceName}}").Msg("terminating normally")
     return 0
 }
 
-func newClient(
-	serverAddress string,
-	testCertDir string,
-) (pb.TestServiceClient, error) {
-
-	var opts []grpc.DialOption
-	var conn *grpc.ClientConn
+func newClient(testCertDir string) (*http.Client, error) {
+	var client http.Client
 	var err error
 
-	if testCertDir == "" {
-		opts = append(opts, grpc.WithInsecure())
-	} else {
+	if testCertDir != "" {
 		var tlsConf *tls.Config
 
-		tlsConf, err := tlsutil.NewTLSClientConfig(
+		tlsConf, err = tlsutil.NewTLSClientConfig(
 			filepath.Join(testCertDir, "root.crt"),                      // ca_cert_path
 			filepath.Join(testCertDir, "server.localdomain.chain.crt"),  // server_cert_path
 			filepath.Join(testCertDir, "server.localdomain.nopass.key"), // server_key_path
@@ -106,16 +97,43 @@ func newClient(
 			return nil, errors.Wrap(err, "tlsutil.NewTLSClientConfig")
 		}
 
-		creds := credentials.NewTLS(tlsConf)
-		opts = append(opts, grpc.WithTransportCredentials(creds))
+		transport := http.Transport{
+			TLSClientConfig: tlsConf,
+		}
+
+		client.Transport = &transport
 	}
 
-	conn, err = grpc.Dial(serverAddress, opts...)
-	if err != nil {
-		return nil, errors.Wrapf(err, "grpc.Dial(%s", serverAddress)
-	}
-
-	return pb.NewTestServiceClient(conn), nil
+	return &client, nil
 }
+
+func runURITest(client *http.Client, uri string) error {
+	httpResp, err := client.Get(uri)
+	if err != nil {
+		return errors.Wrap(err, "client.Get")
+	}
+	defer httpResp.Body.Close()
+
+	if httpResp.StatusCode != http.StatusOK {
+		return errors.Errorf(
+			"invalid HTTP status (%d) %s",
+			httpResp.StatusCode,
+			httpResp.Status,
+		)
+	}
+
+	respBytes, err := ioutil.ReadAll(httpResp.Body)
+	if err != nil {
+		return errors.Wrap(err, "ioutil.ReadAll")
+	}
+
+	fmt.Println()
+	fmt.Println("output of %s", uri)
+	fmt.Println(string(respBytes))
+	fmt.Println()
+
+	return nil
+}
+
 
 `
