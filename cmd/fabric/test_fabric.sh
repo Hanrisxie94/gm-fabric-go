@@ -77,11 +77,14 @@ PROTO1
 # we assume we are running in the test directory
 pushd $TESTDIR
 fabric --log-level="debug" --generate $SERVICE_NAME
+popd
 
+
+pushd "$TESTDIR/${SERVICE_NAME}"
 # compile the stubs to verify that they are valid
-"${SERVICE_NAME}/build_${SERVICE_NAME}_server.sh"
-"${SERVICE_NAME}/build_${SERVICE_NAME}_grpc_client.sh"
-"${SERVICE_NAME}/build_${SERVICE_NAME}_http_client.sh"
+"./build_${SERVICE_NAME}_server.sh"
+"./build_${SERVICE_NAME}_grpc_client.sh"
+"./build_${SERVICE_NAME}_http_client.sh"
 popd
 
 # stuff a client that exercises the methods
@@ -158,8 +161,8 @@ gofmt -w "$TESTDIR/$SERVICE_NAME/cmd/grpc_client/test_grpc.go"
 
 # compile the gRPC client again, this  time with real code
 # we assume we are running in the test directory
-pushd $TESTDIR
-${SERVICE_NAME}/"build_${SERVICE_NAME}_grpc_client.sh"
+pushd "${TESTDIR}/${SERVICE_NAME}"
+"./build_${SERVICE_NAME}_grpc_client.sh"
 popd
 
 # stuff a server method that handles a unitary method
@@ -248,8 +251,8 @@ gofmt -w "$TESTDIR/$SERVICE_NAME/cmd/server/methods/hello_stream.go"
 
 # compile the server to include the changed methods
 # we assume we are running in the test directory
-pushd $TESTDIR
-"$SERVICE_NAME/build_${SERVICE_NAME}_server.sh"
+pushd "${TESTDIR}/${SERVICE_NAME}"
+"./build_${SERVICE_NAME}_server.sh"
 popd
 
 # stuff our own settings file over the generated one

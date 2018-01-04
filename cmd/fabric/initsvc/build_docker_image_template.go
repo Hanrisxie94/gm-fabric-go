@@ -18,9 +18,9 @@ var buildDockerImageTemplate = `#!/bin/bash
 
 set -euxo pipefail
 
-# assume we are in the service base directory
-BASEDIR=$PWD
-DOCKERDIR="${BASEDIR}/{{.ServiceName}}/docker"
+# assume we are in the service directory
+SERVICEDIR=$PWD
+DOCKERDIR="${SERVICEDIR}/docker"
 
 (
 	cd "cmd/server"
@@ -28,9 +28,9 @@ DOCKERDIR="${BASEDIR}/{{.ServiceName}}/docker"
 )
 
 (
+	cp "settings.toml" "${DOCKERDIR}/."
 	cd $DOCKERDIR
-	cp "${BASEDIR}/settings.toml" .
-	docker build -t  {{.ServiceName}} .
+	docker build -t {{.ServiceName}} .
 )
 
 `

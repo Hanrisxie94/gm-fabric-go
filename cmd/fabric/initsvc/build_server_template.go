@@ -18,9 +18,9 @@ var buildServerTemplate = `#!/bin/bash
 
 set -euxo pipefail
 
-# assume we are in the service base directory
-BASEDIR=$PWD
-SERVERDIR="${BASEDIR}/{{.ServiceName}}/cmd/server"
+# assume we are in the service directory
+SERVICEDIR=$PWD
+SERVERDIR="${SERVICEDIR}/cmd/server"
 
 (
 	cd $SERVERDIR

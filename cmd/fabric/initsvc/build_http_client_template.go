@@ -18,9 +18,9 @@ var buildHTTPClientTemplate = `#!/bin/bash
 
 set -euxo pipefail
 
-# assume we are in the service base directory
-BASEDIR=$PWD
-CLIENTDIR="${BASEDIR}/{{.ServiceName}}/cmd/http_client"
+# assume we are in the service directory
+SERVICEDIR=$PWD
+CLIENTDIR="${SERVICEDIR}/cmd/http_client"
 
 (
 	cd $CLIENTDIR
