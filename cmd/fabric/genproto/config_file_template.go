@@ -36,6 +36,7 @@ var configFileTemplate = `
     ca_cert_path = "{{.CaCertPath}}"
     server_cert_path = "{{.ServerCertPath}}"
     server_key_path = "{{.ServerKeyPath}}"
+    server_cert_name = "{{.ServerCertName}}"
 
 # statsd
     report_statsd = {{.ReportStatsd}}

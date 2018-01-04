@@ -38,6 +38,7 @@
     ca_cert_path = ""
     server_cert_path = ""
     server_key_path = ""
+    server_cert_name = ""
 
 # oauth
     use_oauth = false

@@ -274,6 +274,7 @@ cat << SETTINGS > "$TESTDIR/$SERVICE_NAME/settings.toml"
     ca_cert_path = "$TEST_CERTS_DIR/root.crt"
     server_cert_path = "$TEST_CERTS_DIR/server.localdomain.chain.crt"
     server_key_path = "$TEST_CERTS_DIR/server.localdomain.nopass.key"
+	server_cert_name = "server.localdomain"
 
 # statsd
     report_statsd = false
@@ -302,7 +303,7 @@ $GRPC_CLIENT_BINARY --address=":10000" --test-cert-dir="${TEST_CERTS_DIR}" > "${
 HTTP_CLIENT_BINARY="$GOPATH/bin/${SERVICE_NAME}_http_client"
 
 # hit the proxy
-#$HTTP_CLIENT_BINARY --uri="https://127.0.0.1:8080/acme/services/hello?hello_text=ping" --test-cert-dir="${TEST_CERTS_DIR}" 
+$HTTP_CLIENT_BINARY --uri="https://127.0.0.1:8080/acme/services/hello?hello_text=ping" --test-cert-dir="${TEST_CERTS_DIR}" 
 
 # hit the metrics server
 $HTTP_CLIENT_BINARY --uri="https://127.0.0.1:10001/metrics" --test-cert-dir="${TEST_CERTS_DIR}"

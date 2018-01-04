@@ -171,7 +171,9 @@ func main() {
 	if viper.GetBool("use_gateway_proxy") {
 		logger.Debug().Str("service", "{{.ServiceName}}").
 			Msg("starting gateway proxy")
-		go gatewayProxy(ctx, logger)
+		if err = startGatewayProxy(ctx, logger); err != nil {
+			logger.Fatal().AnErr("startGatewayProxy", err).Msg("")
+		}
 	}
 
 	zkCancels = append(

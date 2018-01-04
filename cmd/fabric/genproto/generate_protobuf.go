@@ -126,6 +126,7 @@ func GenerateProtobuf(cfg config.Config, logger zerolog.Logger) error {
 			CaCertPath        string
 			ServerCertPath    string
 			ServerKeyPath     string
+			ServerCertName    string
 			ReportStatsd      bool
 			StatsdHost        string
 			StatsdPort        string
@@ -145,6 +146,7 @@ func GenerateProtobuf(cfg config.Config, logger zerolog.Logger) error {
 			viper.GetString("ca_cert_path"),
 			viper.GetString("server_cert_path"),
 			viper.GetString("server_key_path"),
+			viper.GetString("server_cert_name"),
 			viper.GetBool("report_statsd"),
 			viper.GetString("statsd_host"),
 			viper.GetString("statsd_port"),
