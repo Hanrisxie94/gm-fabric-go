@@ -158,6 +158,16 @@ func GenerateProtobuf(cfg config.Config, logger zerolog.Logger) error {
 		return errors.Wrap(err, "writing config file")
 	}
 
+	logger.Info().Msg("running gofmt")
+	cmd := exec.Command(
+		"gofmt",
+		"-w",
+		cfg.CmdPath(),
+	)
+	if op, err := cmd.CombinedOutput(); err != nil {
+		return errors.Wrapf(err, "gofmt %s: %s", cfg.CmdPath(), string(op))
+	}
+
 	logger.Info().Str("service", cfg.ServiceName).Msg("--generate complete")
 	return nil
 }

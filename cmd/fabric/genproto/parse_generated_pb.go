@@ -91,7 +91,7 @@ func parseGeneratedPBFile(
 			} else {
 				// we assume the prototype is on a single line: this is
 				// generated code
-				currentEntry.Prototype = strings.TrimSpace(line)
+				currentEntry.Prototype = addNamesToFuncDef(strings.TrimSpace(line))
 				serverDef = append(serverDef, currentEntry)
 				currentEntry = InterfaceEntry{}
 			}

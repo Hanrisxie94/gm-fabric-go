@@ -16,6 +16,7 @@ package initsvc
 
 import (
 	"os"
+	"os/exec"
 
 	"github.com/rs/zerolog"
 	"github.com/spf13/viper"
@@ -204,6 +205,16 @@ func InitService(cfg config.Config, logger zerolog.Logger) error {
 	err = BundleRPMArtifacts(cfg, logger)
 	if err != nil {
 		return errors.Wrap(err, "creating rpm artifacts")
+	}
+
+	logger.Info().Msg("running gofmt")
+	cmd := exec.Command(
+		"gofmt",
+		"-w",
+		cfg.CmdPath(),
+	)
+	if op, err := cmd.CombinedOutput(); err != nil {
+		return errors.Wrapf(err, "gofmt %s: %s", cfg.CmdPath(), string(op))
 	}
 
 	logger.Info().Msg("initializing versioning")

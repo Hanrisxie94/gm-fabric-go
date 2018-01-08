@@ -32,7 +32,8 @@ func generateMethod(
 ) error {
 	var err error
 	var template string
-	var methodDeclaration string
+
+	methodDeclaration := entry.Prototype
 
 	// unitary methods are of the form
 	// HelloProxy(context.Context, *HelloRequest) (*HelloResponse, error)
@@ -41,13 +42,11 @@ func generateMethod(
 	// So we tell them apart by looking for ' error$'
 	if strings.HasSuffix(entry.Prototype, " error") {
 		template = streamMethodTemplate
-		methodDeclaration = prepareStreamMethodDeclaration(entry.Prototype)
-
 	} else {
 		template = unitaryMethodTemplate
-		methodDeclaration = prepareUnitaryMethodDeclaration(entry.Prototype)
 	}
 
+	logger.Debug().Str("method", methodDeclaration).Msg("generateMethod")
 	err = templ.Merge(
 		"method",
 		template,
@@ -74,15 +73,4 @@ func generateMethod(
 
 func prepareComments(comments []string) string {
 	return strings.Join(comments, "\n")
-}
-
-func prepareUnitaryMethodDeclaration(prototype string) string {
-	// HelloProxy(context.Context, *HelloRequest) (*HelloResponse, error)
-	return strings.Replace(prototype, "*", "*pb.", -1)
-}
-
-func prepareStreamMethodDeclaration(prototype string) string {
-	// HelloStream(*HelloStreamRequest, TestService_HelloStreamServer) error
-	result := strings.Replace(prototype, "*", "*pb.", -1)
-	return strings.Replace(result, ", ", ", pb.", -1)
 }
