@@ -136,7 +136,7 @@ func Load(logger zerolog.Logger) (Config, error) {
 
 	// we don't care if ReadInConfig returns an error: we'll run off the defaults
 	if err := viper.ReadInConfig(); err != nil {
-		logger.Warn().Err(err).Msg("ReadInConfig")
+		logger.Debug().Msg("ReadInConfig: using defaults")
 	}
 
 	return cfg, nil
