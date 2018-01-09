@@ -105,9 +105,13 @@ The following instructions assume that we will be creating a service named `exem
     ```bash
     mkdir -p "${GOPATH}/src/github.com/examples"
     ```
+1. You must run ```fabric``` from the service directory
+    ```bash
+    cd "${GOPATH}/src/github.com/examples"
+    ```
 1. Initialize the service with the `--init` flag.
     ```bash
-    fabric --dir="${GOPATH}/src/github.com/examples" --init "exemplar"
+    fabric --init "exemplar"
     ```
 1. Note that the generated directory structure is as follows:
     ```bash
@@ -171,9 +175,13 @@ As stated previously, Grey Matter Fabric is based upon [gRPC](https://grpc.io/) 
         string text = 1;
     }
     ```
+1. You must run ```fabric``` from the service directory
+    ```bash
+    cd "${GOPATH}/src/github.com/examples"
+    ```
 1. Generate the method stubs for the updated definitions.
     ```bash
-    fabric --dir="${GOPATH}/src/github.com/examples" --generate "exemplar"
+    fabric --generate "exemplar"
     ```
 1. Note that this will add the following files to your service directory.
     ```bash
@@ -212,9 +220,13 @@ Note that any time you make changes to your proto files (e.g., `${GOPATH}/src/gi
 
 Once you are happy with your implementation of your service you may build and run the service.
 
+1. You must run the build scripts from the current directory.
+    ```bash
+    cd ${GOPATH}/src/github.com/examples/exemplar
+    ```
 1. Build the service.
     ```bash
-    ${GOPATH}/src/github.com/examples/exemplar/build_exemplar_server.sh
+    ./build_exemplar_server.sh
     ```
 1. Run the service.
     ```bash
@@ -258,19 +270,24 @@ The generated service also provides stubs for creating tests of your service usi
         return nil
     }
     ```
+1. You must run the build scripts from the current directory.
+    ```bash
+    cd ${GOPATH}/src/github.com/examples/exemplar
+    ```
 1. Build the tests.
     ```bash
-     ${GOPATH}/src/github.com/examples/exemplar/build_exemplar_grpc_client.sh
+     ./build_exemplar_grpc_client.sh
+     ./build_exemplar_http_client.sh
     ```
 1. Run the exemplar service if not running.
    ```bash
     ${GOPATH}/bin/exemplar --config ${GOPATH}/src/github.com/examples/exemplar/settings.toml
     ```
-1. Run the tests.
+1. Run the grpc tests.
    ```bash
    ${GOPATH}/bin/exemplar_grpc_client --address localhost:10000
    ```
-
+   
 ## Configuring and Extending a Microservice
 
 ### Overview
