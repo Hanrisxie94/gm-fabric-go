@@ -50,6 +50,7 @@ import (
 )
 
 func main() {
+	var tlsMetricsConf *tls.Config
 	var tlsServerConf *tls.Config
 	var err error
 	var zkCancels []zkCancelFunc
@@ -81,8 +82,12 @@ func main() {
 		logger.Fatal().AnErr("New{{.GoServiceName}}Server())", err).Msg("")
 	}
 
-	if tlsServerConf, err = buildTLSConfigIfNeeded(logger); err != nil {
-		logger.Fatal().AnErr("buildTLSConfigIfNeeded", err).Msg("")
+	if tlsMetricsConf, err = buildMetricsTLSConfigIfNeeded(logger); err != nil {
+		logger.Fatal().AnErr("buildMetricsTLSConfigIfNeeded", err).Msg("")
+	}
+
+	if tlsServerConf, err = buildServerTLSConfigIfNeeded(logger); err != nil {
+		logger.Fatal().AnErr("buildServerTLSConfigIfNeeded", err).Msg("")
 	}
 
 	ctx = putOauthInCtxIfNeeded(ctx)
@@ -124,7 +129,7 @@ func main() {
 			viper.GetString("metrics_server_host"),
 			viper.GetInt("metrics_server_port"),
 		),
-		tlsServerConf,
+		tlsMetricsConf,
 		grpcObserver.Report,
 		goMetObserver.Report,
 	)

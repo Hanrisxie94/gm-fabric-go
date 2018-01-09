@@ -1,3 +1,4 @@
+
 # Copyright 2017 Decipher Technology Studios LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,22 +20,24 @@
 ###############################################################################
 
 # grpc-server
+    grpc_use_tls = false
     grpc_server_host = ""
     grpc_server_port = 10000
 
 # metrics-server
+    metrics_use_tls = false
     metrics_server_host =  ""
     metrics_server_port = 10001
     metrics_cache_size =  1024
     metrics_uri_path = "/metrics"
 
 # gateway-proxy
+    gateway_use_tls = false
     use_gateway_proxy = false
     gateway_proxy_host = ""
     gateway_proxy_port = 8080
 
 # tls
-    use_tls = false
     ca_cert_path = ""
     server_cert_path = ""
     server_key_path = ""

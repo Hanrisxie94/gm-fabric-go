@@ -75,7 +75,7 @@ func startGatewayProxy(ctx context.Context, logger zerolog.Logger) error {
 		viper.GetString("gateway_proxy_host"),
 		viper.GetInt("gateway_proxy_port"),
 	)
-	if viper.GetBool("use_tls") {
+	if viper.GetBool("gateway_use_tls") {
 		var tlsServerConf *tls.Config
 
 		tlsServerConf, err = tlsutil.BuildServerTLSConfig(
@@ -116,7 +116,7 @@ func registerClient(
 	var err error 
 
 	var clientOpts []grpc.DialOption
-	if viper.GetBool("use_tls") {
+	if viper.GetBool("grpc_use_tls") {
 		var creds credentials.TransportCredentials
 		var tlsClientConf *tls.Config
 
