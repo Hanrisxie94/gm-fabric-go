@@ -44,6 +44,17 @@ var configFileTemplate = `
     statsd_port = {{.StatsdPort}}
     statsd_mem_interval = "{{.StatsdMemInterval}}"
 
+# oauth
+    use_oauth = {{.UseOauth}}
+    oauth_provider = "{{.OauthProvider}}"
+    oauth_client_id = "{{.OauthClientID}}"
+
+# zookeeper
+    use_zk = {{.UseZK}}}
+    zk_connection_string = "{{.ZKConnString}}"
+    zk_announce_path="{{.ZKAnnouncePath}}"
+    zk_announce_host = "{{.ZKAnnounceHost}}"
+
 # misc
     verbose_logging = true
 `

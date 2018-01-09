@@ -113,25 +113,32 @@ func GenerateProtobuf(cfg config.Config, logger zerolog.Logger) error {
 		configFileTemplate,
 		cfg.SettingsFilePath(),
 		struct {
-			GrpcServerHost    string
-			GrpcServerPort    string
-			MetricsServerHost string
-			MetricsServerPort string
-			MetricsCacheSize  string
-			MetricsURIPath    string
-			UseGatewayProxy   bool
-			GatewayProxyHost  string
-			GatewayProxyPort  string
-			UseTLS            bool
-			CaCertPath        string
-			ServerCertPath    string
-			ServerKeyPath     string
-			ServerCertName    string
-			ReportStatsd      bool
-			StatsdHost        string
-			StatsdPort        string
-			StatsdMemInterval string
-			VerboseLogging    bool
+			GrpcServerHost     string
+			GrpcServerPort     string
+			MetricsServerHost  string
+			MetricsServerPort  string
+			MetricsCacheSize   string
+			MetricsURIPath     string
+			UseGatewayProxy    bool
+			GatewayProxyHost   string
+			GatewayProxyPort   string
+			UseTLS             bool
+			CaCertPath         string
+			ServerCertPath     string
+			ServerKeyPath      string
+			ServerCertName     string
+			ReportStatsd       bool
+			StatsdHost         string
+			StatsdPort         string
+			StatsdMemInterval  string
+			VerboseLogging     bool
+			UseOauth           bool
+			OauthProvider      string
+			OauthClientID      string
+			UseZK              bool
+			ZKConnectionString string
+			ZKAnnouncePath     string
+			ZKAnnounceHost     string
 		}{
 			viper.GetString("grpc_server_host"),
 			viper.GetString("grpc_server_port"),
@@ -152,6 +159,13 @@ func GenerateProtobuf(cfg config.Config, logger zerolog.Logger) error {
 			viper.GetString("statsd_port"),
 			viper.GetString("statsd_mem_interval"),
 			viper.GetBool("verbose_logging"),
+			viper.GetBool("use_oauth"),
+			viper.GetString("oauth_provider"),
+			viper.GetString("oauth_client_id"),
+			viper.GetBool("use_zk"),
+			viper.GetString("zk_connection_string"),
+			viper.GetString("zk_announce_path"),
+			viper.GetString("zk_announce_host"),
 		},
 	)
 	if err != nil {
