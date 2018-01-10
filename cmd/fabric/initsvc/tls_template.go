@@ -30,7 +30,7 @@ import (
 )
 
 func buildMetricsTLSConfigIfNeeded(logger zerolog.Logger) (*tls.Config, error) {
-	if viper.GetString("metrics_use_tls") != "" {
+	if !viper.GetBool("metrics_use_tls") {
 		logger.Debug().Str("service", "{{.ServiceName}}").Msg("not using metrics TLS")
 		return nil, nil
 	}
@@ -44,7 +44,7 @@ func buildMetricsTLSConfigIfNeeded(logger zerolog.Logger) (*tls.Config, error) {
 }
 
 func buildServerTLSConfigIfNeeded(logger zerolog.Logger) (*tls.Config, error) {
-	if viper.GetString("grpc_use_tls") != "" {
+	if !viper.GetBool("grpc_use_tls") {
 		logger.Debug().Str("service", "{{.ServiceName}}").Msg("not using grpc server TLS")
 		return nil, nil
 	}

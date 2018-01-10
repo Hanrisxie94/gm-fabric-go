@@ -258,26 +258,39 @@ popd
 # stuff our own settings file over the generated one
 cat << SETTINGS > "$TESTDIR/$SERVICE_NAME/settings.toml"
 # grpc-server
+    grpc_use_tls = true
     grpc_server_host = ""
     grpc_server_port = 10000
 
 # metrics-server
+   	metrics_use_tls = true
     metrics_server_host =  ""
     metrics_server_port = 10001
     metrics_cache_size =  1024
     metrics_uri_path = "/metrics"
 
 # gateway-proxy
+	gateway_use_tls = true
     use_gateway_proxy = "true"
     gateway_proxy_host = ""
     gateway_proxy_port = 8080
 
 # tls
-    use_tls = true
     ca_cert_path = "$TEST_CERTS_DIR/root.crt"
     server_cert_path = "$TEST_CERTS_DIR/server.localdomain.chain.crt"
     server_key_path = "$TEST_CERTS_DIR/server.localdomain.nopass.key"
 	server_cert_name = "server.localdomain"
+
+# oauth
+    use_oauth = false
+    oauth_provider = "http://127.0.0.1:5556/dex"
+    oauth_client_id = "example-app"
+
+# zookeeper
+    use_zk = false
+    zk_connection_string = "zk:2181"
+    zk_announce_path="/services/fabric-service/1.0"
+    zk_announce_host = "127.0.0.1"
 
 # statsd
     report_statsd = false
