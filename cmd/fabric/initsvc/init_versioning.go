@@ -15,6 +15,7 @@
 package initsvc
 
 import (
+	"bufio"
 	"bytes"
 	"io/ioutil"
 	"os"
@@ -34,7 +35,6 @@ func initVersioning(
 ) error {
 	var cwd string
 	var cmd *exec.Cmd
-	var op []byte
 	var err error
 
 	if cwd, err = os.Getwd(); err != nil {
@@ -49,9 +49,9 @@ func initVersioning(
 		return errors.Wrapf(err, "os.Chdir(%s)", cfg.ServicePath())
 	}
 
-	cmd = exec.Command("dep", "init")
-	if op, err = cmd.CombinedOutput(); err != nil {
-		return errors.Wrapf(err, "dep init; '%s'", string(op))
+	cmd = exec.Command("dep", "init", "-v")
+	if err = executeCommand(cmd, logger); err != nil {
+		return errors.Wrap(err, "dep init")
 	}
 
 	// now, due to the vagaries of the grpc gateway plugin, we must hack
@@ -61,9 +61,9 @@ func initVersioning(
 	}
 
 	// feed our hacked Gopkg.toml to dep
-	cmd = exec.Command("dep", "ensure")
-	if op, err = cmd.CombinedOutput(); err != nil {
-		return errors.Wrapf(err, "dep ensure; '%s'", string(op))
+	cmd = exec.Command("dep", "ensure", "-v")
+	if err = executeCommand(cmd, logger); err != nil {
+		return errors.Wrapf(err, "dep ensure")
 	}
 
 	// do an "install" of required binary tools FROM INSIDE VENDOR;
@@ -137,8 +137,8 @@ func installProtocGen(cfg config.Config, logger zerolog.Logger) error {
 	}
 
 	cmd = exec.Command("go", "install", "-v")
-	if op, err = cmd.CombinedOutput(); err != nil {
-		return errors.Wrapf(err, "go install gateway; %s", string(op))
+	if err = executeCommand(cmd, logger); err != nil {
+		return errors.Wrapf(err, "go install gateway")
 	}
 
 	return nil
@@ -175,6 +175,33 @@ func installGateway(cfg config.Config, logger zerolog.Logger) error {
 	cmd = exec.Command("go", "install", "-v")
 	if op, err = cmd.CombinedOutput(); err != nil {
 		return errors.Wrapf(err, "go install gateway; %s", string(op))
+	}
+
+	return nil
+}
+
+// helper execute function to capture output to os.Stdout so commands don't look like they're hanging
+func executeCommand(cmd *exec.Cmd, logger zerolog.Logger) error {
+	op, err := cmd.StdoutPipe()
+	if err != nil {
+		return err
+	}
+
+	// create a scanner to read the output stream of the command
+	scanner := bufio.NewScanner(op)
+	go func() {
+		// loop over the scanner to read the output and print
+		for scanner.Scan() {
+			logger.Info().Msgf("%s", scanner.Text())
+		}
+	}()
+
+	if err = cmd.Start(); err != nil {
+		return err
+	}
+
+	if err = cmd.Wait(); err != nil {
+		return err
 	}
 
 	return nil
