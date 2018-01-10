@@ -34,7 +34,7 @@ func notifyZkOfMetricsIfNeeded(logger zerolog.Logger) []zkCancelFunc {
 		Path:   viper.GetString("zk_announce_path") + viper.GetString("metrics_uri_path"),
 		Host:   viper.GetString("zk_announce_host"),
 		Status: gk.Alive,
-		Port:   viper.GetInt("metrics_service_port"),
+		Port:   viper.GetInt("metrics_server_port"),
 	})
 	logger.Info().Str("service", "{{.ServiceName}}").Msg("Service successfully registered metrics endpoint to zookeeper")
 
@@ -51,7 +51,7 @@ func notifyZkOfRPCServerIfNeeded(logger zerolog.Logger) []zkCancelFunc {
 		Path:   viper.GetString("zk_announce_path") + "/rpc",
 		Host:   viper.GetString("zk_announce_host"),
 		Status: gk.Alive,
-		Port:   viper.GetInt("metrics_service_port"),
+		Port:   viper.GetInt("grpc_server_port"),
 	})
 	logger.Info().Str("service", "{{.ServiceName}}").Msg("Service successfully registered rpc endpoint to zookeeper")
 
