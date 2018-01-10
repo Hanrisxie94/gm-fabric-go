@@ -111,7 +111,6 @@ func hackGopkgToml(cfg config.Config, logger zerolog.Logger) error {
 func installProtocGen(cfg config.Config, logger zerolog.Logger) error {
 	var cwd string
 	var cmd *exec.Cmd
-	var op []byte
 	var err error
 
 	pDir := path.Join(
