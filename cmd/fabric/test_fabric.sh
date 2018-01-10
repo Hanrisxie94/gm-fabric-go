@@ -263,15 +263,15 @@ cat << SETTINGS > "$TESTDIR/$SERVICE_NAME/settings.toml"
     grpc_server_port = 10000
 
 # metrics-server
-   	metrics_use_tls = true
+    metrics_use_tls = true
     metrics_server_host =  ""
     metrics_server_port = 10001
     metrics_cache_size =  1024
     metrics_uri_path = "/metrics"
 
 # gateway-proxy
-	gateway_use_tls = true
-    use_gateway_proxy = "true"
+    gateway_use_tls = true
+    use_gateway_proxy = true
     gateway_proxy_host = ""
     gateway_proxy_port = 8080
 
