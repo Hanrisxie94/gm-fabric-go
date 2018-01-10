@@ -51,7 +51,7 @@ var configFileTemplate = `
 
 # zookeeper
     use_zk = {{.UseZK}}}
-    zk_connection_string = "{{.ZKConnString}}"
+    zk_connection_string = "{{.ZKConnectionString}}"
     zk_announce_path="{{.ZKAnnouncePath}}"
     zk_announce_host = "{{.ZKAnnounceHost}}"
 
