@@ -113,16 +113,18 @@ func GenerateProtobuf(cfg config.Config, logger zerolog.Logger) error {
 		configFileTemplate,
 		cfg.SettingsFilePath(),
 		struct {
+			GrpcUseTLS         bool
 			GrpcServerHost     string
 			GrpcServerPort     string
+			MetricsUseTLS      bool
 			MetricsServerHost  string
 			MetricsServerPort  string
 			MetricsCacheSize   string
 			MetricsURIPath     string
+			GatewayUseTLS      bool
 			UseGatewayProxy    bool
 			GatewayProxyHost   string
 			GatewayProxyPort   string
-			UseTLS             bool
 			CaCertPath         string
 			ServerCertPath     string
 			ServerKeyPath      string
@@ -140,16 +142,18 @@ func GenerateProtobuf(cfg config.Config, logger zerolog.Logger) error {
 			ZKAnnouncePath     string
 			ZKAnnounceHost     string
 		}{
+			viper.GetBool("grpc_use_tls"),
 			viper.GetString("grpc_server_host"),
 			viper.GetString("grpc_server_port"),
+			viper.GetBool("metrics_use_tls"),
 			viper.GetString("metrics_server_host"),
 			viper.GetString("metrics_server_port"),
 			viper.GetString("metrics_cache_size"),
 			viper.GetString("metrics_uri_path"),
+			viper.GetBool("gateway_use_tls"),
 			viper.GetBool("use_gateway_proxy"),
 			viper.GetString("gateway_proxy_host"),
 			viper.GetString("gateway_proxy_port"),
-			viper.GetBool("use_tls"),
 			viper.GetString("ca_cert_path"),
 			viper.GetString("server_cert_path"),
 			viper.GetString("server_key_path"),
