@@ -33,12 +33,13 @@ import (
 func InitService(cfg config.Config, logger zerolog.Logger) error {
 
 	var err error
-	var data interface {}
+	var data interface{}
 
 	data = struct {
 		ServiceName        string
 		ServicePath        string
 		GoServiceName      string
+		ProtoServiceName   string
 		ConfigPackage      string
 		ConfigPackageName  string
 		MethodsPackage     string
@@ -75,6 +76,7 @@ func InitService(cfg config.Config, logger zerolog.Logger) error {
 		cfg.ServiceName,
 		cfg.ServicePath(),
 		cfg.GoServiceName(),
+		cfg.ProtoServiceName(),
 		cfg.ConfigPackageImportPath(),
 		cfg.ConfigPackageName(),
 		cfg.MethodsImportPath(),
@@ -109,7 +111,7 @@ func InitService(cfg config.Config, logger zerolog.Logger) error {
 		viper.GetString("zk_announce_host"),
 	}
 
-    logger.Info().Str("service", cfg.ServiceName).Msg("starting --init")
+	logger.Info().Str("service", cfg.ServiceName).Msg("starting --init")
 
 	var output []byte
 	var callback = func(name *template.Template, content *template.Template, mode os.FileMode) error {
@@ -125,7 +127,7 @@ func InitService(cfg config.Config, logger zerolog.Logger) error {
 		return errors.Wrapf(err, "Failed to fetch template from %s", cfg.TemplateUrl)
 	}
 
-	if err = within(cfg.ServicePath(), func()(error) {
+	if err = within(cfg.ServicePath(), func() error {
 		if output, err = exec.Command("dep", "init").CombinedOutput(); err != nil {
 			return errors.Wrapf(err, "Failed executing command with output %", string(output))
 		}
@@ -137,7 +139,7 @@ func InitService(cfg config.Config, logger zerolog.Logger) error {
 		return err
 	}
 
-	if err = within(path.Join(cfg.VendorPath(), "github.com", "golang", "protobuf", cfg.ProtocGenGoPluginName()), func()(error) {
+	if err = within(path.Join(cfg.VendorPath(), "github.com", "golang", "protobuf", cfg.ProtocGenGoPluginName()), func() error {
 		logger.Debug().Msg("Installing Golang Plugin...")
 		if output, err = exec.Command("go", "install", "-v").CombinedOutput(); err != nil {
 			return errors.Wrapf(err, "Failed executing command with output %", string(output))
@@ -147,7 +149,7 @@ func InitService(cfg config.Config, logger zerolog.Logger) error {
 		return err
 	}
 
-	if err = within(path.Join(cfg.VendorPath(), "github.com", "grpc-ecosystem", "grpc-gateway", cfg.ProtocGenGatewayPluginName()), func()(error) {
+	if err = within(path.Join(cfg.VendorPath(), "github.com", "grpc-ecosystem", "grpc-gateway", cfg.ProtocGenGatewayPluginName()), func() error {
 		logger.Debug().Msg("Installing Gateway Plugin...")
 		if output, err = exec.Command("go", "install", "-v").CombinedOutput(); err != nil {
 			return errors.Wrapf(err, "Failed executing command with output %", string(output))
@@ -161,8 +163,8 @@ func InitService(cfg config.Config, logger zerolog.Logger) error {
 
 }
 
-func within(directory string, callback func()(error)) error {
-	
+func within(directory string, callback func() error) error {
+
 	var err error
 	var current string
 
