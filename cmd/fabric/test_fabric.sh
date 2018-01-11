@@ -34,7 +34,8 @@ mkdir $TESTDIR
 SERVICE_NAME="test_service"
 
 # initialize the service
-fabric --log-level="debug" --dir="$TESTDIR" --init $SERVICE_NAME
+fabric --log-level="debug" --dir="$TESTDIR" --init $SERVICE_NAME \
+	--template git@github.com:deciphernow/gm-fabric-templates.git//default
 
 # add method to the protocol buf definition by stuffing a whole new
 # file from a 'here' document
@@ -82,9 +83,9 @@ popd
 
 pushd "$TESTDIR/${SERVICE_NAME}"
 # compile the stubs to verify that they are valid
-"./build_${SERVICE_NAME}_server.sh"
-"./build_${SERVICE_NAME}_grpc_client.sh"
-"./build_${SERVICE_NAME}_http_client.sh"
+"./build_server.sh"
+"./build_grpc_client.sh"
+"./build_http_client.sh"
 popd
 
 # stuff a client that exercises the methods
@@ -162,7 +163,7 @@ gofmt -w "$TESTDIR/$SERVICE_NAME/cmd/grpc_client/test_grpc.go"
 # compile the gRPC client again, this  time with real code
 # we assume we are running in the test directory
 pushd "${TESTDIR}/${SERVICE_NAME}"
-"./build_${SERVICE_NAME}_grpc_client.sh"
+"./build_grpc_client.sh"
 popd
 
 # stuff a server method that handles a unitary method
@@ -252,7 +253,7 @@ gofmt -w "$TESTDIR/$SERVICE_NAME/cmd/server/methods/hello_stream.go"
 # compile the server to include the changed methods
 # we assume we are running in the test directory
 pushd "${TESTDIR}/${SERVICE_NAME}"
-"./build_${SERVICE_NAME}_server.sh"
+"./build_server.sh"
 popd
 
 # stuff our own settings file over the generated one
