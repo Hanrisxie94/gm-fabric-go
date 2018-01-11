@@ -21,7 +21,7 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/deciphernow/gm-fabric-go/cmd/fabric/config"
-	"github.com/deciphernow/gm-fabric-go/cmd/fabric/templ"
+	"github.com/deciphernow/gm-fabric-go/cmd/fabric/templates"
 )
 
 func generateMethod(
@@ -47,7 +47,7 @@ func generateMethod(
 	}
 
 	logger.Debug().Str("method", methodDeclaration).Msg("generateMethod")
-	err = templ.Merge(
+	err = templates.Merge(
 		"method",
 		template,
 		methodFilePath,

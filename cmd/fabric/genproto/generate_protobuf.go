@@ -26,7 +26,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/deciphernow/gm-fabric-go/cmd/fabric/config"
-	"github.com/deciphernow/gm-fabric-go/cmd/fabric/templ"
+	"github.com/deciphernow/gm-fabric-go/cmd/fabric/templates"
 )
 
 // GenerateProtobuf generates code from protocol buffer definitions
@@ -108,7 +108,7 @@ func GenerateProtobuf(cfg config.Config, logger zerolog.Logger) error {
 	}
 
 	logger.Info().Msg("writing config file")
-	err = templ.Merge(
+	err = templates.Merge(
 		"settings",
 		configFileTemplate,
 		cfg.SettingsFilePath(),
@@ -236,7 +236,7 @@ func writeProxyTemplate(cfg config.Config, logger zerolog.Logger) error {
 	var cwd string
 	var err error
 
-	err = templ.Merge(
+	err = templates.Merge(
 		"proxy",
 		proxyTemplate,
 		cfg.ServerGatewayProxySourceFilePath(),

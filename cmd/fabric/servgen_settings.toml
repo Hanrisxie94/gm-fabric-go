@@ -33,7 +33,7 @@
 
 # gateway-proxy
     gateway_use_tls = false
-    use_gateway_proxy = false
+    use_gateway_proxy = true
     gateway_proxy_host = ""
     gateway_proxy_port = 8080
 

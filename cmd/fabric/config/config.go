@@ -53,6 +53,7 @@ type Config struct {
 	Op          Operation
 	Version     string
 	ServiceName string
+	TemplateUrl string
 	OwnerDir    string
 	LogLevel    zerolog.Level
 }
@@ -61,6 +62,7 @@ type Config struct {
 func Load(logger zerolog.Logger) (Config, error) {
 	var showVersion bool
 	var initService string
+	var templateUrl string
 	var generateService string
 	var configFilePath string
 	var logLevel string
@@ -71,6 +73,8 @@ func Load(logger zerolog.Logger) (Config, error) {
 		"display version string to stdout and exit")
 	pflag.StringVar(&initService, "init", "",
 		"initialize service")
+	pflag.StringVar(&templateUrl, "template", "",
+		"URL of the template to generate")
 	pflag.StringVar(&generateService, "generate", "",
 		"generate protobuff for service")
 	pflag.StringVar(&cfg.OwnerDir, "dir", "",
@@ -100,9 +104,12 @@ func Load(logger zerolog.Logger) (Config, error) {
 		return cfg, nil
 	case initService != "" && generateService != "":
 		return Config{}, errors.New("cannot specify both --init and --generate")
+	case initService != "" && templateUrl == "":
+		return Config{}, errors.New("must provide a template URL with --init")
 	case initService != "":
 		cfg.Op = Init
 		cfg.ServiceName = initService
+		cfg.TemplateUrl = templateUrl
 	case generateService != "":
 		cfg.Op = Generate
 		cfg.ServiceName = generateService
@@ -121,6 +128,7 @@ func Load(logger zerolog.Logger) (Config, error) {
 	viper.SetDefault("metrics_cache_size", 1024)
 	viper.SetDefault("metrics_uri_path", "/metrics")
 	viper.SetDefault("gateway_proxy_port", 8080)
+        viper.SetDefault("use_gateway_proxy", true)
 	viper.SetDefault("statsd_host", "127.0.0.1")
 	viper.SetDefault("statsd_port", 8125)
 

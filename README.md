@@ -101,49 +101,23 @@ Once you have installed the utilities you may rapidly initialize and update gRPC
 
 The following instructions assume that we will be creating a service named `exemplar` and it will be hosted at `https://github.com/examples/exemplar.git`.
 
-1. Create the directory structure for your service in `$GOPATH`.
-    ```bash
-    mkdir -p "${GOPATH}/src/github.com/examples"
-    ```
-1. You must run ```fabric``` from the service directory
-    ```bash
-    cd "${GOPATH}/src/github.com/examples"
-    ```
 1. Initialize the service with the `--init` flag.
     ```bash
-    fabric --init "exemplar"
+    fabric --init "exemplar" --template git@github.com:deciphernow/gm-fabric-templates.git//default --dir "${GOPATH}/src/github.com/examples"
     ```
-1. Note that the generated directory structure is as follows:
+1. The above command will create a new service from the template. Confirm that the service directory exists and is not empty.
     ```bash
-    ├── Gopkg.lock
-    ├── Gopkg.toml
-    ├── build_exemplar_docker_image.sh
-    ├── build_exemplar_grpc_client.sh
-    ├── build_exemplar_server.sh
-    ├── cmd
-    │   ├── grpc_client
-    │   │   ├── main.go
-    │   │   └── test_grpc.go
-    │   └── server
-    │       ├── config
-    │       │   └── config.go
-    │       ├── gateway_proxy.go
-    │       ├── main.go
-    │       └── methods
-    │           └── new_server.go
-    ├── docker
-    │   ├── Dockerfile
-    │   └── entrypoint.sh
-    ├── protobuf
-    │   └── exemplar.proto
-    ├── run_exemplar_docker_image.sh
-    └── vendor
+    ls -ltra "${GOPATH}/src/github.com/examples/exemplar"
     ```
 
 ### Adding Service Methods
 
 As stated previously, Grey Matter Fabric is based upon [gRPC](https://grpc.io/) which uses [Protocol Buffers](https://developers.google.com/protocol-buffers/) interface description language to define the interfaces presented by remote services. To add methods to our exemplar service we need to define those methods in the `${GOPATH}/src/github.com/examples/exemplar/protobuf/exemplar.proto` file.
 
+1. Switch to the parent directory of the service directory that was created by the `--init` command.
+    ```bash
+    cd ${GOPATH}/src/github.com/examples"
+    ```
 1. Edit the `${GOPATH}/src/github.com/examples/exemplar/protobuf/exemplar.proto` file to contain the following:
     ```protobuf
     syntax = "proto3";
@@ -174,10 +148,6 @@ As stated previously, Grey Matter Fabric is based upon [gRPC](https://grpc.io/) 
     message HelloResponse {
         string text = 1;
     }
-    ```
-1. You must run ```fabric``` from the service directory
-    ```bash
-    cd "${GOPATH}/src/github.com/examples"
     ```
 1. Generate the method stubs for the updated definitions.
     ```bash
@@ -226,7 +196,7 @@ Once you are happy with your implementation of your service you may build and ru
     ```
 1. Build the service.
     ```bash
-    ./build_exemplar_server.sh
+    ./build_server.sh
     ```
 1. Run the service.
     ```bash
