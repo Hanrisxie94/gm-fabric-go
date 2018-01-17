@@ -44,6 +44,7 @@ func (e HTPStatusError) Error() string {
 // This is a wrapper for the stats chan which feeds the metricsserver
 type HTTPMetrics struct {
 	metricsChan chan<- subject.MetricsEvent
+	tags        []string
 }
 
 // wrappedMetrics wraps a single Handler
@@ -65,6 +66,18 @@ type countWriter struct {
 func New(MetricsChan chan<- subject.MetricsEvent) *HTTPMetrics {
 	if httpMetrics == nil {
 		httpMetrics = &HTTPMetrics{metricsChan: MetricsChan}
+	}
+	return httpMetrics
+}
+
+// NewWithTags returns an object that supports HTTP metrics
+// This basically passes on the stats chan to individal handlers
+func NewWithTags(
+	metricsChan chan<- subject.MetricsEvent,
+	tags []string,
+) *HTTPMetrics {
+	if httpMetrics == nil {
+		httpMetrics = &HTTPMetrics{metricsChan: metricsChan, tags: tags}
 	}
 	return httpMetrics
 }
@@ -103,17 +116,20 @@ func (wm wrappedMetrics) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		RequestID: requestID,
 		Timestamp: time.Now(),
 		Key:       fmt.Sprintf("route%s/%s", req.URL.EscapedPath(), req.Method),
+		Tags:      wm.h.tags,
 	}
 	wm.h.metricsChan <- subject.MetricsEvent{
 		EventType: "rpc.Begin",
 		RequestID: requestID,
 		Timestamp: time.Now(),
+		Tags:      wm.h.tags,
 	}
 	wm.h.metricsChan <- subject.MetricsEvent{
 		EventType: "rpc.InPayload",
 		RequestID: requestID,
 		Timestamp: time.Now(),
 		Value:     req.ContentLength,
+		Tags:      wm.h.tags,
 	}
 
 	c := countWriter{next: w}
@@ -125,6 +141,7 @@ func (wm wrappedMetrics) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			RequestID: requestID,
 			Timestamp: time.Now(),
 			Value:     HTPStatusError{StatusCode: c.status},
+			Tags:      wm.h.tags,
 		}
 	} else {
 		wm.h.metricsChan <- subject.MetricsEvent{
@@ -132,11 +149,13 @@ func (wm wrappedMetrics) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			RequestID: requestID,
 			Timestamp: time.Now(),
 			Value:     c.bytesWritten,
+			Tags:      wm.h.tags,
 		}
 		wm.h.metricsChan <- subject.MetricsEvent{
 			EventType: "rpc.End",
 			RequestID: requestID,
 			Timestamp: time.Now(),
+			Tags:      wm.h.tags,
 		}
 	}
 

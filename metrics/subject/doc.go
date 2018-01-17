@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-/*Package subject is the subject for observers of MetricsEvents
-  see https://en.wikipedia.org/wiki/Observer_pattern
-*/
+/*Package subject defines the subject as a target for the observer pattern
+ */
 package subject

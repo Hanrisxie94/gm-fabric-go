@@ -32,6 +32,7 @@ import (
 // https://godoc.org/google.golang.org/grpc/stats#Handler
 type StatsHandler struct {
 	metricsChan chan<- subject.MetricsEvent
+	tags        []string
 }
 
 // NewStatsHandler returns an object that implements the stats.Handler interface
@@ -39,6 +40,20 @@ type StatsHandler struct {
 func NewStatsHandler(metricsChan chan<- subject.MetricsEvent) *StatsHandler {
 	var h StatsHandler
 	h.metricsChan = metricsChan
+
+	return &h
+}
+
+// NewStatsHandlerWithTags returns an object that implements the stats.Handler interface
+// https://godoc.org/google.golang.org/grpc/stats#Handler
+// The tags will be added to each MetricsEvent
+func NewStatsHandlerWithTags(
+	metricsChan chan<- subject.MetricsEvent,
+	tags []string,
+) *StatsHandler {
+	var h StatsHandler
+	h.metricsChan = metricsChan
+	h.tags = tags
 
 	return &h
 }
@@ -103,6 +118,7 @@ func (h *StatsHandler) HandleRPC(
 	event.Timestamp = time.Now()
 	event.RequestID = headers.GetRequestID(ctx)
 	event.PrevRoute = headers.GetPrevRoute(ctx)
+	event.Tags = h.tags
 
 	switch st := s.(type) {
 	case *stats.InHeader:

@@ -16,6 +16,7 @@ package subject
 
 import (
 	"context"
+	"strings"
 	"time"
 )
 
@@ -39,6 +40,8 @@ const (
 	EventTransportHTTPS
 )
 
+const TagSep = ":"
+
 // MetricsEvent is a low level event.
 type MetricsEvent struct {
 	EventType string
@@ -48,6 +51,7 @@ type MetricsEvent struct {
 	PrevRoute string
 	Timestamp time.Time
 	Value     interface{}
+	Tags      []string
 }
 
 // Observer implements an individual observer of the observer design pattern.
@@ -77,4 +81,27 @@ func New(
 	}()
 
 	return metricsChan
+}
+
+// SplitTag takes a tag of the form <name:value> and returns (name, value)
+// If the tag is not splitable SplitTag returns (tag, "")
+func SplitTag(tag string) (string, string) {
+	result := strings.SplitN(tag, TagSep, 2)
+	if len(result) == 2 {
+		return result[0], result[1]
+	}
+
+	return tag, ""
+}
+
+// JoinTag joins name and value into a tag string
+// Note that if name contains TagSep, the results will be unexpected
+func JoinTag(name, value string) string {
+	if name == "" {
+		return value
+	}
+	if value == "" {
+		return name
+	}
+	return strings.Join([]string{name, value}, TagSep)
 }

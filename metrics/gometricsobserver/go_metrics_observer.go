@@ -26,6 +26,7 @@ import (
 type Gauge struct {
 	Value     float32
 	Timestamp time.Time
+	Tags      []string
 }
 
 // EmitKey represents EmitKey
@@ -38,12 +39,14 @@ type EmitKey struct {
 type Counter struct {
 	Value     float32
 	Timestamp time.Time
+	Tags      []string
 }
 
 // Sample of ongoing data
 type Sample struct {
 	Value     float32
 	Timestamp time.Time
+	Tags      []string
 }
 
 // GoMetricsObserver implements the Observer interface and also
@@ -97,6 +100,7 @@ func (g *GoMetricsObserver) setGauge(event subject.MetricsEvent) {
 	g.GaugeMap[event.Key] = Gauge{
 		Value:     event.Value.(float32),
 		Timestamp: event.Timestamp,
+		Tags:      event.Tags,
 	}
 }
 
@@ -108,9 +112,17 @@ func (g *GoMetricsObserver) emitKey(event subject.MetricsEvent) {
 }
 
 func (g *GoMetricsObserver) incrCounter(event subject.MetricsEvent) {
-	counter, _ := g.CounterMap[event.Key]
+	counter, ok := g.CounterMap[event.Key]
 	counter.Value += event.Value.(float32)
 	counter.Timestamp = event.Timestamp
+
+	// We expect the tags to  be exactly the same for each incoming event
+	// so we only store them the first time.
+	// If someone is sending us varying tags, we will lose them.
+	if !ok {
+		counter.Tags = event.Tags
+	}
+
 	g.CounterMap[event.Key] = counter
 }
 
@@ -118,5 +130,6 @@ func (g *GoMetricsObserver) addSample(event subject.MetricsEvent) {
 	g.SampleMap[event.Key] = Sample{
 		Value:     event.Value.(float32),
 		Timestamp: event.Timestamp,
+		Tags:      event.Tags,
 	}
 }

@@ -44,7 +44,6 @@ func (s *sinkStruct) SetGauge(key []string, val float32) {
 }
 
 // SetGaugeWithLabels should retain the last value it is set to
-// (We currently ignore the labels)
 func (s *sinkStruct) SetGaugeWithLabels(
 	key []string,
 	val float32,
@@ -55,6 +54,7 @@ func (s *sinkStruct) SetGaugeWithLabels(
 		Key:       joinKey(key),
 		Timestamp: time.Now().UTC(),
 		Value:     val,
+		Tags:      labels2tags(labels),
 	}
 }
 
@@ -79,7 +79,6 @@ func (s *sinkStruct) IncrCounter(key []string, val float32) {
 }
 
 // IncrCounterWithLabels should accumulate a value in a counter
-// (We currently ignore the labels)
 func (s *sinkStruct) IncrCounterWithLabels(
 	key []string,
 	val float32,
@@ -90,6 +89,7 @@ func (s *sinkStruct) IncrCounterWithLabels(
 		Key:       joinKey(key),
 		Timestamp: time.Now().UTC(),
 		Value:     val,
+		Tags:      labels2tags(labels),
 	}
 }
 
@@ -104,7 +104,6 @@ func (s *sinkStruct) AddSample(key []string, val float32) {
 }
 
 // AddSampleWithLabels for timing information, where quantiles are used
-// (We currently ignore the labels)
 func (s *sinkStruct) AddSampleWithLabels(
 	key []string,
 	val float32,
@@ -115,14 +114,28 @@ func (s *sinkStruct) AddSampleWithLabels(
 		Key:       joinKey(key),
 		Timestamp: time.Now().UTC(),
 		Value:     val,
+		Tags:      labels2tags(labels),
 	}
 }
 
 func joinKey(key []string) string {
 	// we assume the key is of the form [service, host, ...]
-	// if so, we leave out sservice and host
+	// if so, we leave out service and host
 	if len(key) > 2 {
 		return strings.Join(key[2:], "/")
 	}
 	return strings.Join(key, "/")
+}
+
+func labels2tags(labels []gometrics.Label) []string {
+	var tags []string
+
+	for _, label := range labels {
+		tag := subject.JoinTag(label.Name, label.Value)
+		if len(tag) > 0 {
+			tags = append(tags, tag)
+		}
+	}
+
+	return tags
 }

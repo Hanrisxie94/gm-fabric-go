@@ -17,6 +17,8 @@ package gmfabricsink
 import (
 	"testing"
 
+	gometrics "github.com/armon/go-metrics"
+
 	"github.com/deciphernow/gm-fabric-go/metrics/subject"
 )
 
@@ -100,4 +102,55 @@ func Test_joinKey(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestLabels2tags(t *testing.T) {
+
+	for i, td := range []struct {
+		labels   []gometrics.Label
+		expected []string
+	}{
+		{
+			labels:   nil,
+			expected: nil,
+		},
+		{
+			labels: []gometrics.Label{
+				gometrics.Label{
+					Name:  "",
+					Value: "",
+				},
+			},
+			expected: nil,
+		},
+		{
+			labels: []gometrics.Label{
+				gometrics.Label{
+					Name:  "aaa",
+					Value: "",
+				},
+			},
+			expected: []string{"aaa"},
+		},
+		{
+			labels: []gometrics.Label{
+				gometrics.Label{
+					Name:  "aaa",
+					Value: "bbb",
+				},
+			},
+			expected: []string{"aaa:bbb"},
+		},
+	} {
+		tags := labels2tags(td.labels)
+		if len(tags) != len(td.expected) {
+			t.Fatalf("#%d: size mismatch %v != %v", i+1, tags, td.expected)
+		}
+		for j := 0; j < len(tags); j++ {
+			if tags[j] != td.expected[j] {
+				t.Fatalf("#%d: %v != %v", i+1, tags, td.expected)
+			}
+		}
+	}
+
 }
