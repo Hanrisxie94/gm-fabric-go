@@ -128,18 +128,20 @@ func Load(logger zerolog.Logger) (Config, error) {
 	viper.SetDefault("metrics_cache_size", 1024)
 	viper.SetDefault("metrics_uri_path", "/metrics")
 	viper.SetDefault("gateway_proxy_port", 8080)
-        viper.SetDefault("use_gateway_proxy", true)
+	viper.SetDefault("use_gateway_proxy", true)
 	viper.SetDefault("statsd_host", "127.0.0.1")
 	viper.SetDefault("statsd_port", 8125)
+	viper.SetDefault("statsd_mem_interval", "1m")
 
 	if configFilePath != "" {
-		viper.SetConfigName(strings.Split(filepath.Base(configFilePath), ".")[0])
-		viper.AddConfigPath(filepath.Dir(configFilePath))
+		viper.SetConfigFile(configFilePath)
+		logger.Info().Msgf("reading config file from: %s", configFilePath)
 	} else {
 		viper.SetConfigName("fabric_settings")
 		viper.AddConfigPath("/etc/fabric/")
 		viper.AddConfigPath("$HOME/.fabric")
 		viper.AddConfigPath(".")
+		logger.Info().Msg("looking for config file in standard locations")
 	}
 
 	// we don't care if ReadInConfig returns an error: we'll run off the defaults
