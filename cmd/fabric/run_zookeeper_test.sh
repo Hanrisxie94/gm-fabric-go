@@ -7,7 +7,7 @@ pushd $HOME/fabric_test_dir/src/testdir/test_service
 
 (
     GOPATH="${HOME}/fabric_test_dir"
-    ./build_test_service_docker_image.sh
+    ./build_docker_image.sh
 )
 
 cat << SETTINGS > docker/settings.toml
