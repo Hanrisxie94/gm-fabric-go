@@ -32,6 +32,7 @@ import (
 // GenerateProtobuf generates code from protocol buffer definitions
 func GenerateProtobuf(cfg config.Config, logger zerolog.Logger) error {
 	var proxyExists bool
+	var settingsFileExists bool
 	var op []byte
 	var intEntries []InterfaceEntry
 	var err error
@@ -107,73 +108,78 @@ func GenerateProtobuf(cfg config.Config, logger zerolog.Logger) error {
 		}
 	}
 
-	logger.Info().Msg("writing config file")
-	err = templates.Merge(
-		"settings",
-		configFileTemplate,
-		cfg.SettingsFilePath(),
-		struct {
-			GrpcUseTLS         bool
-			GrpcServerHost     string
-			GrpcServerPort     string
-			MetricsUseTLS      bool
-			MetricsServerHost  string
-			MetricsServerPort  string
-			MetricsCacheSize   string
-			MetricsURIPath     string
-			GatewayUseTLS      bool
-			UseGatewayProxy    bool
-			GatewayProxyHost   string
-			GatewayProxyPort   string
-			CaCertPath         string
-			ServerCertPath     string
-			ServerKeyPath      string
-			ServerCertName     string
-			ReportStatsd       bool
-			StatsdHost         string
-			StatsdPort         string
-			StatsdMemInterval  string
-			VerboseLogging     bool
-			UseOauth           bool
-			OauthProvider      string
-			OauthClientID      string
-			UseZK              bool
-			ZKConnectionString string
-			ZKAnnouncePath     string
-			ZKAnnounceHost     string
-		}{
-			viper.GetBool("grpc_use_tls"),
-			viper.GetString("grpc_server_host"),
-			viper.GetString("grpc_server_port"),
-			viper.GetBool("metrics_use_tls"),
-			viper.GetString("metrics_server_host"),
-			viper.GetString("metrics_server_port"),
-			viper.GetString("metrics_cache_size"),
-			viper.GetString("metrics_uri_path"),
-			viper.GetBool("gateway_use_tls"),
-			viper.GetBool("use_gateway_proxy"),
-			viper.GetString("gateway_proxy_host"),
-			viper.GetString("gateway_proxy_port"),
-			viper.GetString("ca_cert_path"),
-			viper.GetString("server_cert_path"),
-			viper.GetString("server_key_path"),
-			viper.GetString("server_cert_name"),
-			viper.GetBool("report_statsd"),
-			viper.GetString("statsd_host"),
-			viper.GetString("statsd_port"),
-			viper.GetString("statsd_mem_interval"),
-			viper.GetBool("verbose_logging"),
-			viper.GetBool("use_oauth"),
-			viper.GetString("oauth_provider"),
-			viper.GetString("oauth_client_id"),
-			viper.GetBool("use_zk"),
-			viper.GetString("zk_connection_string"),
-			viper.GetString("zk_announce_path"),
-			viper.GetString("zk_announce_host"),
-		},
-	)
-	if err != nil {
-		return errors.Wrap(err, "writing config file")
+	if settingsFileExists, err = fileExists(cfg.SettingsFilePath()); err != nil {
+		return errors.Wrapf(err, "fileExists(%s)", cfg.SettingsFilePath())
+	}
+	if !settingsFileExists {
+		logger.Info().Str("path", cfg.SettingsFilePath()).Msg("writing settings file")
+		err = templates.Merge(
+			"settings",
+			configFileTemplate,
+			cfg.SettingsFilePath(),
+			struct {
+				GrpcUseTLS         bool
+				GrpcServerHost     string
+				GrpcServerPort     string
+				MetricsUseTLS      bool
+				MetricsServerHost  string
+				MetricsServerPort  string
+				MetricsCacheSize   string
+				MetricsURIPath     string
+				GatewayUseTLS      bool
+				UseGatewayProxy    bool
+				GatewayProxyHost   string
+				GatewayProxyPort   string
+				CaCertPath         string
+				ServerCertPath     string
+				ServerKeyPath      string
+				ServerCertName     string
+				ReportStatsd       bool
+				StatsdHost         string
+				StatsdPort         string
+				StatsdMemInterval  string
+				VerboseLogging     bool
+				UseOauth           bool
+				OauthProvider      string
+				OauthClientID      string
+				UseZK              bool
+				ZKConnectionString string
+				ZKAnnouncePath     string
+				ZKAnnounceHost     string
+			}{
+				viper.GetBool("grpc_use_tls"),
+				viper.GetString("grpc_server_host"),
+				viper.GetString("grpc_server_port"),
+				viper.GetBool("metrics_use_tls"),
+				viper.GetString("metrics_server_host"),
+				viper.GetString("metrics_server_port"),
+				viper.GetString("metrics_cache_size"),
+				viper.GetString("metrics_uri_path"),
+				viper.GetBool("gateway_use_tls"),
+				viper.GetBool("use_gateway_proxy"),
+				viper.GetString("gateway_proxy_host"),
+				viper.GetString("gateway_proxy_port"),
+				viper.GetString("ca_cert_path"),
+				viper.GetString("server_cert_path"),
+				viper.GetString("server_key_path"),
+				viper.GetString("server_cert_name"),
+				viper.GetBool("report_statsd"),
+				viper.GetString("statsd_host"),
+				viper.GetString("statsd_port"),
+				viper.GetString("statsd_mem_interval"),
+				viper.GetBool("verbose_logging"),
+				viper.GetBool("use_oauth"),
+				viper.GetString("oauth_provider"),
+				viper.GetString("oauth_client_id"),
+				viper.GetBool("use_zk"),
+				viper.GetString("zk_connection_string"),
+				viper.GetString("zk_announce_path"),
+				viper.GetString("zk_announce_host"),
+			},
+		)
+		if err != nil {
+			return errors.Wrap(err, "writing config file")
+		}
 	}
 
 	logger.Info().Msg("running gofmt")
