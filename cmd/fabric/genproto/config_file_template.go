@@ -46,6 +46,10 @@ var configFileTemplate = `
     statsd_port = {{.StatsdPort}}
     statsd_mem_interval = "{{.StatsdMemInterval}}"
 
+# prometheus
+    report_prometheus = {{.ReportPrometheus}}
+    prometheus_mem_interval = "{{.PrometheusMemInterval}}"
+
 # oauth
     use_oauth = {{.UseOauth}}
     oauth_provider = "{{.OauthProvider}}"

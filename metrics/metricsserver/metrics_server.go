@@ -19,25 +19,15 @@ import (
 	"net/http"
 )
 
-// Start starts the metrics server
-// This function runs an internal goroutine
-// This function is deprecated: retained for compatibility
-func Start(
+// NewMetricsServer returns an http.Server for metrics
+func NewMetricsServer(
 	metricsAddress string,
 	tlsConf *tls.Config,
-	reporters ...ReportFunc,
-) error {
-	mux := http.NewServeMux()
-	mux.Handle("/metrics", NewDashboardHandler(reporters...))
+) *http.Server {
+	var server http.Server
 
-	server := NewMetricsServer(metricsAddress, tlsConf)
-	server.Handler = mux
+	server.Addr = metricsAddress
+	server.TLSConfig = tlsConf
 
-	if server.TLSConfig == nil {
-		go server.ListenAndServe()
-	} else {
-		go server.ListenAndServeTLS("", "")
-	}
-
-	return nil
+	return &server
 }

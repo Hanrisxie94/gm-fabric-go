@@ -118,34 +118,36 @@ func GenerateProtobuf(cfg config.Config, logger zerolog.Logger) error {
 			configFileTemplate,
 			cfg.SettingsFilePath(),
 			struct {
-				GrpcUseTLS         bool
-				GrpcServerHost     string
-				GrpcServerPort     string
-				MetricsUseTLS      bool
-				MetricsServerHost  string
-				MetricsServerPort  string
-				MetricsCacheSize   string
-				MetricsURIPath     string
-				GatewayUseTLS      bool
-				UseGatewayProxy    bool
-				GatewayProxyHost   string
-				GatewayProxyPort   string
-				CaCertPath         string
-				ServerCertPath     string
-				ServerKeyPath      string
-				ServerCertName     string
-				ReportStatsd       bool
-				StatsdHost         string
-				StatsdPort         string
-				StatsdMemInterval  string
-				VerboseLogging     bool
-				UseOauth           bool
-				OauthProvider      string
-				OauthClientID      string
-				UseZK              bool
-				ZKConnectionString string
-				ZKAnnouncePath     string
-				ZKAnnounceHost     string
+				GrpcUseTLS            bool
+				GrpcServerHost        string
+				GrpcServerPort        string
+				MetricsUseTLS         bool
+				MetricsServerHost     string
+				MetricsServerPort     string
+				MetricsCacheSize      string
+				MetricsURIPath        string
+				GatewayUseTLS         bool
+				UseGatewayProxy       bool
+				GatewayProxyHost      string
+				GatewayProxyPort      string
+				CaCertPath            string
+				ServerCertPath        string
+				ServerKeyPath         string
+				ServerCertName        string
+				ReportStatsd          bool
+				StatsdHost            string
+				StatsdPort            string
+				StatsdMemInterval     string
+				ReportPrometheus      bool
+				PrometheusMemInterval string
+				VerboseLogging        bool
+				UseOauth              bool
+				OauthProvider         string
+				OauthClientID         string
+				UseZK                 bool
+				ZKConnectionString    string
+				ZKAnnouncePath        string
+				ZKAnnounceHost        string
 			}{
 				viper.GetBool("grpc_use_tls"),
 				viper.GetString("grpc_server_host"),
@@ -167,6 +169,8 @@ func GenerateProtobuf(cfg config.Config, logger zerolog.Logger) error {
 				viper.GetString("statsd_host"),
 				viper.GetString("statsd_port"),
 				viper.GetString("statsd_mem_interval"),
+				viper.GetBool("report_prometheus"),
+				viper.GetString("prometheus_mem_interval"),
 				viper.GetBool("verbose_logging"),
 				viper.GetBool("use_oauth"),
 				viper.GetString("oauth_provider"),

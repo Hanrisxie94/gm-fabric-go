@@ -132,6 +132,7 @@ func Load(logger zerolog.Logger) (Config, error) {
 	viper.SetDefault("statsd_host", "127.0.0.1")
 	viper.SetDefault("statsd_port", 8125)
 	viper.SetDefault("statsd_mem_interval", "1m")
+	viper.SetDefault("prometheus_mem_interval", "1m")
 
 	if configFilePath != "" {
 		viper.SetConfigFile(configFilePath)

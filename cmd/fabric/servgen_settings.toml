@@ -60,5 +60,9 @@
     statsd_port = 8125
     statsd_mem_interval = "1m"
 
+# prometheus
+    report_prometheus = false
+    prometheus_mem_interval = "1m"
+
 # misc
     verbose_logging = true

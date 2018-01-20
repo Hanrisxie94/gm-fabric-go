@@ -36,42 +36,44 @@ func InitService(cfg config.Config, logger zerolog.Logger) error {
 	var data interface{}
 
 	data = struct {
-		ServiceName        string
-		ServicePath        string
-		GoServiceName      string
-		ProtoServiceName   string
-		ConfigPackage      string
-		ConfigPackageName  string
-		MethodsPackage     string
-		MethodsPackageName string
-		ProtoDirName       string
-		PBImport           string
-		GrpcServerHost     string
-		GrpcServerPort     string
-		MetricsServerHost  string
-		MetricsServerPort  string
-		MetricsCacheSize   string
-		MetricsURIPath     string
-		UseGatewayProxy    bool
-		GatewayProxyHost   string
-		GatewayProxyPort   string
-		UseTLS             bool
-		CaCertPath         string
-		ServerCertPath     string
-		ServerKeyPath      string
-		ServerCertName     string
-		ReportStatsd       bool
-		StatsdHost         string
-		StatsdPort         string
-		StatsdMemInterval  string
-		VerboseLogging     bool
-		UseOauth           bool
-		OauthProvider      string
-		OauthClientID      string
-		UseZK              bool
-		ZKConnectionString string
-		ZKAnnouncePath     string
-		ZKAnnounceHost     string
+		ServiceName           string
+		ServicePath           string
+		GoServiceName         string
+		ProtoServiceName      string
+		ConfigPackage         string
+		ConfigPackageName     string
+		MethodsPackage        string
+		MethodsPackageName    string
+		ProtoDirName          string
+		PBImport              string
+		GrpcServerHost        string
+		GrpcServerPort        string
+		MetricsServerHost     string
+		MetricsServerPort     string
+		MetricsCacheSize      string
+		MetricsURIPath        string
+		UseGatewayProxy       bool
+		GatewayProxyHost      string
+		GatewayProxyPort      string
+		UseTLS                bool
+		CaCertPath            string
+		ServerCertPath        string
+		ServerKeyPath         string
+		ServerCertName        string
+		ReportStatsd          bool
+		StatsdHost            string
+		StatsdPort            string
+		StatsdMemInterval     string
+		ReportPrometheus      bool
+		PrometheusMemInterval string
+		VerboseLogging        bool
+		UseOauth              bool
+		OauthProvider         string
+		OauthClientID         string
+		UseZK                 bool
+		ZKConnectionString    string
+		ZKAnnouncePath        string
+		ZKAnnounceHost        string
 	}{
 		cfg.ServiceName,
 		cfg.ServicePath(),
@@ -101,6 +103,8 @@ func InitService(cfg config.Config, logger zerolog.Logger) error {
 		viper.GetString("statsd_host"),
 		viper.GetString("statsd_port"),
 		viper.GetString("statsd_mem_interval"),
+		viper.GetBool("report_prometheus"),
+		viper.GetString("prometheus_mem_interval"),
 		viper.GetBool("verbose_logging"),
 		viper.GetBool("use_oauth"),
 		viper.GetString("oauth_provider"),
