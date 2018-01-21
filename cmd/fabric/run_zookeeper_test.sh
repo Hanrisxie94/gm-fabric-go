@@ -21,7 +21,8 @@ cat << SETTINGS > docker/settings.toml
     metrics_server_host =  ""
     metrics_server_port = 10001
     metrics_cache_size =  1024
-    metrics_uri_path = "/metrics"
+    metrics_dashboard_uri_path = "/metrics"
+    metrics_prometheus_uri_path = "/prometheus"
 
 # gateway-proxy
 	gateway_use_tls = false
@@ -51,6 +52,10 @@ cat << SETTINGS > docker/settings.toml
     statsd_host = "127.0.0.1"
     statsd_port = 8125
     statsd_mem_interval = ""
+
+# prometheus
+    report_prometheus = false
+    prometheus_mem_interval = "1m"
 
 # misc
     verbose_logging = true

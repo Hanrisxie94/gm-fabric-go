@@ -36,44 +36,45 @@ func InitService(cfg config.Config, logger zerolog.Logger) error {
 	var data interface{}
 
 	data = struct {
-		ServiceName           string
-		ServicePath           string
-		GoServiceName         string
-		ProtoServiceName      string
-		ConfigPackage         string
-		ConfigPackageName     string
-		MethodsPackage        string
-		MethodsPackageName    string
-		ProtoDirName          string
-		PBImport              string
-		GrpcServerHost        string
-		GrpcServerPort        string
-		MetricsServerHost     string
-		MetricsServerPort     string
-		MetricsCacheSize      string
-		MetricsURIPath        string
-		UseGatewayProxy       bool
-		GatewayProxyHost      string
-		GatewayProxyPort      string
-		UseTLS                bool
-		CaCertPath            string
-		ServerCertPath        string
-		ServerKeyPath         string
-		ServerCertName        string
-		ReportStatsd          bool
-		StatsdHost            string
-		StatsdPort            string
-		StatsdMemInterval     string
-		ReportPrometheus      bool
-		PrometheusMemInterval string
-		VerboseLogging        bool
-		UseOauth              bool
-		OauthProvider         string
-		OauthClientID         string
-		UseZK                 bool
-		ZKConnectionString    string
-		ZKAnnouncePath        string
-		ZKAnnounceHost        string
+		ServiceName              string
+		ServicePath              string
+		GoServiceName            string
+		ProtoServiceName         string
+		ConfigPackage            string
+		ConfigPackageName        string
+		MethodsPackage           string
+		MethodsPackageName       string
+		ProtoDirName             string
+		PBImport                 string
+		GrpcServerHost           string
+		GrpcServerPort           string
+		MetricsServerHost        string
+		MetricsServerPort        string
+		MetricsCacheSize         string
+		MetricsDashboardURIPath  string
+		MetricsPrometheusURIPath string
+		UseGatewayProxy          bool
+		GatewayProxyHost         string
+		GatewayProxyPort         string
+		UseTLS                   bool
+		CaCertPath               string
+		ServerCertPath           string
+		ServerKeyPath            string
+		ServerCertName           string
+		ReportStatsd             bool
+		StatsdHost               string
+		StatsdPort               string
+		StatsdMemInterval        string
+		ReportPrometheus         bool
+		PrometheusMemInterval    string
+		VerboseLogging           bool
+		UseOauth                 bool
+		OauthProvider            string
+		OauthClientID            string
+		UseZK                    bool
+		ZKConnectionString       string
+		ZKAnnouncePath           string
+		ZKAnnounceHost           string
 	}{
 		cfg.ServiceName,
 		cfg.ServicePath(),
@@ -90,7 +91,8 @@ func InitService(cfg config.Config, logger zerolog.Logger) error {
 		viper.GetString("metrics_server_host"),
 		viper.GetString("metrics_server_port"),
 		viper.GetString("metrics_cache_size"),
-		viper.GetString("metrics_uri_path"),
+		viper.GetString("metrics_dashboard_uri_path"),
+		viper.GetString("metrics_prometheus_uri_path"),
 		viper.GetBool("use_gateway_proxy"),
 		viper.GetString("gateway_proxy_host"),
 		viper.GetString("gateway_proxy_port"),
@@ -133,9 +135,6 @@ func InitService(cfg config.Config, logger zerolog.Logger) error {
 
 	if err = within(cfg.ServicePath(), func() error {
 		if output, err = exec.Command("dep", "init").CombinedOutput(); err != nil {
-			return errors.Wrapf(err, "Failed executing command with output %", string(output))
-		}
-		if output, err = exec.Command("dep", "ensure").CombinedOutput(); err != nil {
 			return errors.Wrapf(err, "Failed executing command with output %", string(output))
 		}
 		return nil

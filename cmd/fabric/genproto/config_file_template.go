@@ -26,7 +26,8 @@ var configFileTemplate = `
     metrics_server_host =  "{{.MetricsServerHost}}"
     metrics_server_port = {{.MetricsServerPort}}
     metrics_cache_size =  {{.MetricsCacheSize}}
-    metrics_uri_path = "{{.MetricsURIPath}}"
+    metrics_dashboard_uri_path = "{{.MetricsDashboardURIPath}}"
+    metrics_prometheus_uri_path = "{{.MetricsPrometheusURIPath}}"
 
 # gateway-proxy
     gateway_use_tls = {{.GatewayUseTLS}}
@@ -40,16 +41,6 @@ var configFileTemplate = `
     server_key_path = "{{.ServerKeyPath}}"
     server_cert_name = "{{.ServerCertName}}"
 
-# statsd
-    report_statsd = {{.ReportStatsd}}
-    statsd_host = "{{.StatsdHost}}"
-    statsd_port = {{.StatsdPort}}
-    statsd_mem_interval = "{{.StatsdMemInterval}}"
-
-# prometheus
-    report_prometheus = {{.ReportPrometheus}}
-    prometheus_mem_interval = "{{.PrometheusMemInterval}}"
-
 # oauth
     use_oauth = {{.UseOauth}}
     oauth_provider = "{{.OauthProvider}}"
@@ -60,6 +51,16 @@ var configFileTemplate = `
     zk_connection_string = "{{.ZKConnectionString}}"
     zk_announce_path="{{.ZKAnnouncePath}}"
     zk_announce_host = "{{.ZKAnnounceHost}}"
+
+# statsd
+    report_statsd = {{.ReportStatsd}}
+    statsd_host = "{{.StatsdHost}}"
+    statsd_port = {{.StatsdPort}}
+    statsd_mem_interval = "{{.StatsdMemInterval}}"
+
+# prometheus
+    report_prometheus = {{.ReportPrometheus}}
+    prometheus_mem_interval = "{{.PrometheusMemInterval}}"
 
 # misc
     verbose_logging = true
