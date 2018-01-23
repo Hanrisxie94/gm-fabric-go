@@ -30,7 +30,7 @@ esac
 done
 
 TEMPLATEPATH="git@github.com:deciphernow/gm-fabric-templates.git//default"
-if [[ ! -z TEMPLATEVERSION ]]; then 
+if [[ ! -z ${TEMPLATEVERSION:-} ]]; then 
 	TEMPLATEPATH="${TEMPLATEPATH}?ref=${TEMPLATEVERSION}"
 fi
 
