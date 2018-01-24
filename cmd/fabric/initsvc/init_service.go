@@ -134,7 +134,8 @@ func InitService(cfg config.Config, logger zerolog.Logger) error {
 	}
 
 	if err = within(cfg.ServicePath(), func() error {
-		if output, err = exec.Command("dep", "init").CombinedOutput(); err != nil {
+		// assume we got a template for Gopkg.toml
+		if output, err = exec.Command("dep", "ensure").CombinedOutput(); err != nil {
 			return errors.Wrapf(err, "Failed executing command with output %", string(output))
 		}
 		return nil
