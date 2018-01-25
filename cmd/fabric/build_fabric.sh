@@ -20,7 +20,7 @@ SRVGEN_PATH=$GOPATH/src/github.com/deciphernow/gm-fabric-go/cmd/fabric
 
 # If cgo is explicitly disabled, then we can't use the race detection flag
 GOFLAGS=-race
-if [ "x$CGO_ENABLED" == "x0" ]
+if [ "x$:-" == "x0" ]
 then
   echo Go race condition detection is disabled in this build, because you disabled CGO
   GOFLAGS=
