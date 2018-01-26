@@ -19,7 +19,12 @@
 # [[override]]
 #  name = "github.com/x/y"
 #  version = "2.4.0"
+required = ["github.com/aws/aws-sdk-go"]
 ignored = ["github.com/deciphernow/gm-fabric-go/version"]
+
+[[override]]
+  name = "github.com/aws/aws-sdk-go"
+  version = "=1.12.67"
 
 [[constraint]]
   name = "github.com/pkg/errors"
