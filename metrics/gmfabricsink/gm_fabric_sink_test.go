@@ -86,19 +86,35 @@ func Test_joinKey(t *testing.T) {
 		key []string
 	}
 	tests := []struct {
-		name string
-		args args
-		want string
+		name         string
+		args         args
+		expectedKey  string
+		expectedTags []string
 	}{
-		{"empty", args{nil}, ""},
-		{"single", args{[]string{"aaa"}}, "aaa"},
-		{"double", args{[]string{"aaa", "bbb"}}, "aaa/bbb"},
-		{"triple", args{[]string{"aaa", "bbb", "ccc"}}, "ccc"},
+		{"empty", args{nil}, "", nil},
+		{"single", args{[]string{"aaa"}}, "aaa", nil},
+		{"double", args{[]string{"aaa", "bbb"}}, "aaa/bbb", nil},
+		{"triple", args{[]string{"aaa", "bbb", "ccc"}}, "ccc", []string{"service:aaa", "host:bbb"}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := joinKey(tt.args.key); got != tt.want {
-				t.Errorf("joinKey() = %v, want %v", got, tt.want)
+			key, tags := joinKey(tt.args.key)
+			if key != tt.expectedKey {
+				t.Errorf("joinKey() key = %v, want %v", key, tt.expectedKey)
+			}
+			if tt.expectedTags == nil && tags != nil {
+				t.Errorf("joinKey() tags = %v, want %v", tags, tt.expectedTags)
+			}
+			if tt.expectedTags != nil && tags == nil {
+				t.Errorf("joinKey() tags = %v, want %v", tags, tt.expectedTags)
+			}
+			if len(tags) != len(tt.expectedTags) {
+				t.Errorf("joinKey() tags = %v, want %v", tags, tt.expectedTags)
+			}
+			for i := 0; i < len(tt.expectedTags); i++ {
+				if tags[i] != tt.expectedTags[i] {
+					t.Errorf("joinKey() tags[%d] = %v, want %v", i, tags[i], tt.expectedTags[i])
+				}
 			}
 		})
 	}

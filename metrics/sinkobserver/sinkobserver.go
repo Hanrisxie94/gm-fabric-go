@@ -25,9 +25,14 @@ import (
 	"github.com/deciphernow/gm-fabric-go/metrics/subject"
 )
 
+type activeEntry struct {
+	stats  grpcobserver.APIStats
+	tagMap map[string]string
+}
+
 type sinkObs struct {
 	sync.Mutex
-	active map[string]grpcobserver.APIStats
+	active map[string]activeEntry
 	sink   gometrics.MetricSink
 }
 
@@ -38,7 +43,7 @@ func New(
 ) subject.Observer {
 	obs := sinkObs{
 		sink:   sink,
-		active: make(map[string]grpcobserver.APIStats),
+		active: make(map[string]activeEntry),
 	}
 	go obs.reportMemory(reportInterval)
 	return &obs
@@ -54,23 +59,29 @@ func (so *sinkObs) Observe(event subject.MetricsEvent) {
 	// TODO: we are using the APIStats object here because that's
 	// what the system was originally designed to collect. We should
 	// probably either move it to it's own package, or use different handlers
-	entry, end := grpcobserver.Accumulate(entry, event)
+	entryStats, end := grpcobserver.Accumulate(entry.stats, event)
+	entry.stats = entryStats
+	if entry.tagMap == nil {
+		entry.tagMap = make(map[string]string)
+	}
+	updateTagMap(entry.tagMap, event)
 
 	if end {
-		elapsed := entry.EndTime.Sub(entry.BeginTime)
+		key := []string{entry.tagMap["service"], entry.tagMap["host"], entry.tagMap["FullMethod"]}
+		elapsed := entry.stats.EndTime.Sub(entry.stats.BeginTime)
 		so.sink.IncrCounter(
-			[]string{"in", entry.Key},
-			float32(entry.InWireLength),
+			append(key, "in_throughput"),
+			float32(entry.stats.InWireLength),
 		)
 		so.sink.IncrCounter(
-			[]string{"out", entry.Key},
-			float32(entry.OutWireLength),
+			append(key, "out_throughput"),
+			float32(entry.stats.OutWireLength),
 		)
-		if entry.Err != nil {
-			so.sink.IncrCounter([]string{"errors", entry.Key}, 1)
+		if entry.stats.Err != nil {
+			so.sink.IncrCounter(append(key, "errors"), 1)
 		}
 		so.sink.AddSample(
-			[]string{"latency", entry.Key},
+			append(key, "latency"),
 			duration2ms(elapsed),
 		)
 		delete(so.active, event.RequestID)
@@ -109,4 +120,16 @@ func duration2ms(d time.Duration) float32 {
 	const nsPerMs = 1000000
 
 	return float32(d.Nanoseconds() / nsPerMs)
+}
+
+func updateTagMap(tagMap map[string]string, event subject.MetricsEvent) {
+	for _, tag := range event.Tags {
+		name, value := subject.SplitTag(tag)
+		if value != "" {
+			_, ok := tagMap[name]
+			if !ok {
+				tagMap[name] = value
+			}
+		}
+	}
 }

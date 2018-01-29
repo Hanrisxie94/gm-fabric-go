@@ -127,6 +127,7 @@ func (h *StatsHandler) HandleRPC(
 		event.Transport = subject.EventTransportRPC
 		event.Key = constructKey(st.FullMethod)
 		event.Value = int64(st.WireLength)
+		event.Tags = append(event.Tags, subject.JoinTag("FullMethod", st.FullMethod))
 	case *stats.Begin:
 		event.EventType = "rpc.Begin"
 		event.Timestamp = st.BeginTime
