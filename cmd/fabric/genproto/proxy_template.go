@@ -37,6 +37,7 @@ import (
 	"github.com/deciphernow/gm-fabric-go/metrics/httpmeta"
 	"github.com/deciphernow/gm-fabric-go/metrics/proxymeta"
 	"github.com/deciphernow/gm-fabric-go/middleware"
+	"github.com/deciphernow/gm-fabric-go/rpcutil"
 	"github.com/deciphernow/gm-fabric-go/tlsutil"
 
 	pb "{{.PBImport}}"
@@ -46,7 +47,7 @@ func startGatewayProxy(ctx context.Context, logger zerolog.Logger) error {
 	var listener net.Listener
 	var err error
 
-	mux := runtime.NewServeMux(proxymeta.MetaOption())
+	mux := runtime.NewServeMux(proxymeta.MetaOption(), runtime.WithIncomingHeaderMatcher(rpcutil.MatchHTTPHeaders))
 	var handler http.Handler = mux 
 
 	if viper.GetBool("verbose_logging") {
