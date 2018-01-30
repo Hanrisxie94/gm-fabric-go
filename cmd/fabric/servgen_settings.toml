@@ -67,3 +67,4 @@
 
 # misc
     verbose_logging = true
+    template_url = "git@github.com:deciphernow/gm-fabric-templates.git//default"

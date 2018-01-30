@@ -104,8 +104,6 @@ func Load(logger zerolog.Logger) (Config, error) {
 		return cfg, nil
 	case initService != "" && generateService != "":
 		return Config{}, errors.New("cannot specify both --init and --generate")
-	case initService != "" && templateUrl == "":
-		return Config{}, errors.New("must provide a template URL with --init")
 	case initService != "":
 		cfg.Op = Init
 		cfg.ServiceName = initService
@@ -134,6 +132,10 @@ func Load(logger zerolog.Logger) (Config, error) {
 	viper.SetDefault("statsd_port", 8125)
 	viper.SetDefault("statsd_mem_interval", "1m")
 	viper.SetDefault("prometheus_mem_interval", "1m")
+	viper.SetDefault(
+		"template_url",
+		"git@github.com:deciphernow/gm-fabric-templates.git//default",
+	)
 
 	if configFilePath != "" {
 		viper.SetConfigFile(configFilePath)
@@ -149,6 +151,10 @@ func Load(logger zerolog.Logger) (Config, error) {
 	// we don't care if ReadInConfig returns an error: we'll run off the defaults
 	if err := viper.ReadInConfig(); err != nil {
 		logger.Debug().Msg("ReadInConfig: using defaults")
+	}
+
+	if cfg.TemplateUrl == "" {
+		cfg.TemplateUrl = viper.GetString("template_url")
 	}
 
 	return cfg, nil

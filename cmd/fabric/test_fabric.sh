@@ -16,25 +16,6 @@
 
 set -euxo pipefail
 
-while [[ $# -gt 0 ]]
-do
-key="$1"
-
-case $key in
-    --template-version)
-    TEMPLATEVERSION="$2"
-    shift # past argument
-    shift # past value
-    ;;
-esac
-done
-
-TEMPLATEPATH="git@github.com:deciphernow/gm-fabric-templates.git//default"
-if [[ ! -z ${TEMPLATEVERSION:-} ]]; then 
-	TEMPLATEPATH="${TEMPLATEPATH}?ref=${TEMPLATEVERSION}"
-fi
-
-
 # here we want the GOPATH that points to the (not generated) source code
 TEST_CERTS_DIR="$GOPATH/src/github.com/deciphernow/gm-fabric-go/cmd/fabric/test_certs"
 
@@ -54,7 +35,6 @@ SERVICE_NAME="test_service"
 
 # initialize the service
 fabric --log-level="debug" --dir="$TESTDIR" --init $SERVICE_NAME \
-	--template ${TEMPLATEPATH}
 
 # add method to the protocol buf definition by stuffing a whole new
 # file from a 'here' document
