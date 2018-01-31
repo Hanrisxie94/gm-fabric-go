@@ -15,6 +15,7 @@
 package sinkobserver
 
 import (
+	"strings"
 	"sync"
 	"time"
 
@@ -67,7 +68,11 @@ func (so *sinkObs) Observe(event subject.MetricsEvent) {
 	updateTagMap(entry.tagMap, event)
 
 	if end {
-		key := []string{entry.tagMap["service"], entry.tagMap["host"], entry.tagMap["FullMethod"]}
+		key := []string{
+			entry.tagMap["service"],
+			entry.tagMap["host"],
+			splitEntryKey(entry.stats.Key),
+		}
 		elapsed := entry.stats.EndTime.Sub(entry.stats.BeginTime)
 		so.sink.IncrCounter(
 			append(key, "in_throughput"),
@@ -132,4 +137,16 @@ func updateTagMap(tagMap map[string]string, event subject.MetricsEvent) {
 			}
 		}
 	}
+}
+
+// splitEntryKey cleans up the key by removing slashes
+func splitEntryKey(rawKey string) string {
+	splitKey := strings.Split(rawKey, "/")
+
+	if len(splitKey) == 0 {
+		return rawKey
+	}
+
+	// return the last element
+	return splitKey[len(splitKey)-1]
 }
