@@ -62,7 +62,7 @@ type Config struct {
 func Load(logger zerolog.Logger) (Config, error) {
 	var showVersion bool
 	var initService string
-	var templateUrl string
+	var templateURL string
 	var generateService string
 	var configFilePath string
 	var logLevel string
@@ -73,7 +73,7 @@ func Load(logger zerolog.Logger) (Config, error) {
 		"display version string to stdout and exit")
 	pflag.StringVar(&initService, "init", "",
 		"initialize service")
-	pflag.StringVar(&templateUrl, "template", "",
+	pflag.StringVar(&templateURL, "template", "",
 		"URL of the template to generate")
 	pflag.StringVar(&generateService, "generate", "",
 		"generate protobuff for service")
@@ -107,7 +107,7 @@ func Load(logger zerolog.Logger) (Config, error) {
 	case initService != "":
 		cfg.Op = Init
 		cfg.ServiceName = initService
-		cfg.TemplateUrl = templateUrl
+		cfg.TemplateUrl = templateURL
 	case generateService != "":
 		cfg.Op = Generate
 		cfg.ServiceName = generateService
@@ -121,17 +121,6 @@ func Load(logger zerolog.Logger) (Config, error) {
 		}
 	}
 
-	viper.SetDefault("grpc_server_port", 10000)
-	viper.SetDefault("metrics_server_port", 10001)
-	viper.SetDefault("metrics_cache_size", 1024)
-	viper.SetDefault("metrics_dashboard_uri_path", "/metrics")
-	viper.SetDefault("metrics_prometheus_uri_path", "/prometheus")
-	viper.SetDefault("gateway_proxy_port", 8080)
-	viper.SetDefault("use_gateway_proxy", true)
-	viper.SetDefault("statsd_host", "127.0.0.1")
-	viper.SetDefault("statsd_port", 8125)
-	viper.SetDefault("statsd_mem_interval", "1m")
-	viper.SetDefault("prometheus_mem_interval", "1m")
 	viper.SetDefault(
 		"template_url",
 		"git@github.com:deciphernow/gm-fabric-templates.git//default",
@@ -214,6 +203,16 @@ func (cfg Config) ProtoPath() string {
 func (cfg Config) PBImportPath() string {
 	pbImport := strings.TrimPrefix(cfg.ProtoPath(), gopathSrc())
 	return strings.TrimLeft(pbImport, string(filepath.Separator))
+}
+
+// LocalDataPath is the path to the .fabric local storage dir
+func (cfg Config) LocalDataPath() string {
+	return path.Join(cfg.ServicePath(), ".fabric")
+}
+
+// TemplateCachePath is the path to local template cache
+func (cfg Config) TemplateCachePath() string {
+	return path.Join(cfg.LocalDataPath(), "templates")
 }
 
 // CmdPath the path to the 'cmd' directory

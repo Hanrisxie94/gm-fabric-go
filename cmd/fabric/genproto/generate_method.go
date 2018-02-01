@@ -31,7 +31,8 @@ func generateMethod(
 	methodFilePath string,
 ) error {
 	var err error
-	var template string
+	var templateName string
+	var templ string
 
 	methodDeclaration := entry.Prototype
 
@@ -41,15 +42,19 @@ func generateMethod(
 	// HelloStream(*HelloStreamRequest, TestService_HelloStreamServer) error
 	// So we tell them apart by looking for ' error$'
 	if strings.HasSuffix(entry.Prototype, " error") {
-		template = streamMethodTemplate
+		templateName = "stream_method.go"
 	} else {
-		template = unitaryMethodTemplate
+		templateName = "unitary_method.go"
+	}
+	templ, err = loadTemplateFromCache(cfg, logger, templateName)
+	if err != nil {
+		return errors.Wrapf(err, "loadTemplateFromCache %s", templateName)
 	}
 
 	logger.Debug().Str("method", methodDeclaration).Msg("generateMethod")
 	err = templates.Merge(
 		"method",
-		template,
+		templ,
 		methodFilePath,
 		struct {
 			MethodsPackageName string

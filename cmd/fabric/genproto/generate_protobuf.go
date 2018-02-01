@@ -21,7 +21,6 @@ import (
 	"path"
 
 	"github.com/rs/zerolog"
-	"github.com/spf13/viper"
 
 	"github.com/pkg/errors"
 
@@ -32,7 +31,6 @@ import (
 // GenerateProtobuf generates code from protocol buffer definitions
 func GenerateProtobuf(cfg config.Config, logger zerolog.Logger) error {
 	var proxyExists bool
-	var settingsFileExists bool
 	var op []byte
 	var intEntries []InterfaceEntry
 	var err error
@@ -108,96 +106,6 @@ func GenerateProtobuf(cfg config.Config, logger zerolog.Logger) error {
 		}
 	}
 
-	if settingsFileExists, err = fileExists(cfg.SettingsFilePath()); err != nil {
-		return errors.Wrapf(err, "fileExists(%s)", cfg.SettingsFilePath())
-	}
-	if !settingsFileExists {
-		logger.Info().Str("path", cfg.SettingsFilePath()).Msg("writing settings file")
-		err = templates.Merge(
-			"settings",
-			configFileTemplate,
-			cfg.SettingsFilePath(),
-			struct {
-				GrpcUseTLS               bool
-				GrpcServerHost           string
-				GrpcServerPort           string
-				MetricsUseTLS            bool
-				MetricsServerHost        string
-				MetricsServerPort        string
-				MetricsCacheSize         string
-				MetricsDashboardURIPath  string
-				MetricsPrometheusURIPath string
-				GatewayUseTLS            bool
-				UseGatewayProxy          bool
-				GatewayProxyHost         string
-				GatewayProxyPort         string
-				CaCertPath               string
-				ServerCertPath           string
-				ServerKeyPath            string
-				ServerCertName           string
-				ReportStatsd             bool
-				StatsdHost               string
-				StatsdPort               string
-				StatsdMemInterval        string
-				ReportPrometheus         bool
-				PrometheusMemInterval    string
-				VerboseLogging           bool
-				UseOauth                 bool
-				OauthProvider            string
-				OauthClientID            string
-				UseZK                    bool
-				ZKConnectionString       string
-				ZKAnnouncePath           string
-				ZKAnnounceHost           string
-			}{
-				viper.GetBool("grpc_use_tls"),
-				viper.GetString("grpc_server_host"),
-				viper.GetString("grpc_server_port"),
-				viper.GetBool("metrics_use_tls"),
-				viper.GetString("metrics_server_host"),
-				viper.GetString("metrics_server_port"),
-				viper.GetString("metrics_cache_size"),
-				viper.GetString("metrics_dashboard_uri_path"),
-				viper.GetString("metrics_prometheus_uri_path"),
-				viper.GetBool("gateway_use_tls"),
-				viper.GetBool("use_gateway_proxy"),
-				viper.GetString("gateway_proxy_host"),
-				viper.GetString("gateway_proxy_port"),
-				viper.GetString("ca_cert_path"),
-				viper.GetString("server_cert_path"),
-				viper.GetString("server_key_path"),
-				viper.GetString("server_cert_name"),
-				viper.GetBool("report_statsd"),
-				viper.GetString("statsd_host"),
-				viper.GetString("statsd_port"),
-				viper.GetString("statsd_mem_interval"),
-				viper.GetBool("report_prometheus"),
-				viper.GetString("prometheus_mem_interval"),
-				viper.GetBool("verbose_logging"),
-				viper.GetBool("use_oauth"),
-				viper.GetString("oauth_provider"),
-				viper.GetString("oauth_client_id"),
-				viper.GetBool("use_zk"),
-				viper.GetString("zk_connection_string"),
-				viper.GetString("zk_announce_path"),
-				viper.GetString("zk_announce_host"),
-			},
-		)
-		if err != nil {
-			return errors.Wrap(err, "writing config file")
-		}
-	}
-
-	logger.Info().Msg("running gofmt")
-	cmd := exec.Command(
-		"gofmt",
-		"-w",
-		cfg.CmdPath(),
-	)
-	if op, err := cmd.CombinedOutput(); err != nil {
-		return errors.Wrapf(err, "gofmt %s: %s", cfg.CmdPath(), string(op))
-	}
-
 	logger.Info().Str("service", cfg.ServiceName).Msg("--generate complete")
 	return nil
 }
@@ -246,11 +154,17 @@ METHOD_LOOP:
 func writeProxyTemplate(cfg config.Config, logger zerolog.Logger) error {
 	var op []byte
 	var cwd string
+	var templ string
 	var err error
+
+	templ, err = loadTemplateFromCache(cfg, logger, "gateway_proxy.go")
+	if err != nil {
+		return errors.Wrapf(err, "loadTemplateFromCache %s", "gateway_proxy.go")
+	}
 
 	err = templates.Merge(
 		"proxy",
-		proxyTemplate,
+		templ,
 		cfg.ServerGatewayProxySourceFilePath(),
 		struct {
 			ServiceName   string

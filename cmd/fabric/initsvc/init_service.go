@@ -25,7 +25,6 @@ import (
 	"github.com/deciphernow/gm-fabric-go/cmd/fabric/templates"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
-	"github.com/spf13/viper"
 )
 
 // InitService initializes the service up to the point where it needs a
@@ -36,45 +35,16 @@ func InitService(cfg config.Config, logger zerolog.Logger) error {
 	var data interface{}
 
 	data = struct {
-		ServiceName              string
-		ServicePath              string
-		GoServiceName            string
-		ProtoServiceName         string
-		ConfigPackage            string
-		ConfigPackageName        string
-		MethodsPackage           string
-		MethodsPackageName       string
-		ProtoDirName             string
-		PBImport                 string
-		GrpcServerHost           string
-		GrpcServerPort           string
-		MetricsServerHost        string
-		MetricsServerPort        string
-		MetricsCacheSize         string
-		MetricsDashboardURIPath  string
-		MetricsPrometheusURIPath string
-		UseGatewayProxy          bool
-		GatewayProxyHost         string
-		GatewayProxyPort         string
-		UseTLS                   bool
-		CaCertPath               string
-		ServerCertPath           string
-		ServerKeyPath            string
-		ServerCertName           string
-		ReportStatsd             bool
-		StatsdHost               string
-		StatsdPort               string
-		StatsdMemInterval        string
-		ReportPrometheus         bool
-		PrometheusMemInterval    string
-		VerboseLogging           bool
-		UseOauth                 bool
-		OauthProvider            string
-		OauthClientID            string
-		UseZK                    bool
-		ZKConnectionString       string
-		ZKAnnouncePath           string
-		ZKAnnounceHost           string
+		ServiceName        string
+		ServicePath        string
+		GoServiceName      string
+		ProtoServiceName   string
+		ConfigPackage      string
+		ConfigPackageName  string
+		MethodsPackage     string
+		MethodsPackageName string
+		ProtoDirName       string
+		PBImport           string
 	}{
 		cfg.ServiceName,
 		cfg.ServicePath(),
@@ -86,35 +56,6 @@ func InitService(cfg config.Config, logger zerolog.Logger) error {
 		cfg.MethodsPackageName(),
 		cfg.ProtoDirName(),
 		cfg.PBImportPath(),
-		viper.GetString("grpc_server_host"),
-		viper.GetString("grpc_server_port"),
-		viper.GetString("metrics_server_host"),
-		viper.GetString("metrics_server_port"),
-		viper.GetString("metrics_cache_size"),
-		viper.GetString("metrics_dashboard_uri_path"),
-		viper.GetString("metrics_prometheus_uri_path"),
-		viper.GetBool("use_gateway_proxy"),
-		viper.GetString("gateway_proxy_host"),
-		viper.GetString("gateway_proxy_port"),
-		viper.GetBool("use_tls"),
-		viper.GetString("ca_cert_path"),
-		viper.GetString("server_cert_path"),
-		viper.GetString("server_key_path"),
-		viper.GetString("server_cert_name"),
-		viper.GetBool("report_statsd"),
-		viper.GetString("statsd_host"),
-		viper.GetString("statsd_port"),
-		viper.GetString("statsd_mem_interval"),
-		viper.GetBool("report_prometheus"),
-		viper.GetString("prometheus_mem_interval"),
-		viper.GetBool("verbose_logging"),
-		viper.GetBool("use_oauth"),
-		viper.GetString("oauth_provider"),
-		viper.GetString("oauth_client_id"),
-		viper.GetBool("use_zk"),
-		viper.GetString("zk_connection_string"),
-		viper.GetString("zk_announce_path"),
-		viper.GetString("zk_announce_host"),
 	}
 
 	logger.Info().Str("service", cfg.ServiceName).Msg("starting --init")

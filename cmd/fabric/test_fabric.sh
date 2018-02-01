@@ -34,7 +34,7 @@ mkdir $TESTDIR
 SERVICE_NAME="test_service"
 
 # initialize the service
-fabric --log-level="debug" --dir="$TESTDIR" --init $SERVICE_NAME \
+fabric --log-level="debug" --dir="$TESTDIR" --template git@github.com:deciphernow/gm-fabric-templates.git//default?ref=24-create-template-cache --init $SERVICE_NAME \
 
 # add method to the protocol buf definition by stuffing a whole new
 # file from a 'here' document
