@@ -28,3 +28,8 @@ var gitHash string
 func Current() string {
 	return fmt.Sprintf("%s (%s)", semver, gitHash)
 }
+
+// Raw returns a version suitable for parsing by github.com/hashicorp/go-version
+func Raw() string {
+	return semver
+}

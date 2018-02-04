@@ -2,35 +2,14 @@
 
 
 [[projects]]
+  name = "github.com/BurntSushi/toml"
+  packages = ["."]
+  revision = "b26d9c308763d68093482582cea63d69be07a0f0"
+  version = "v0.3.0"
+
+[[projects]]
   name = "github.com/aws/aws-sdk-go"
-  packages = [
-    ".",
-    "aws",
-    "aws/awserr",
-    "aws/awsutil",
-    "aws/client",
-    "aws/client/metadata",
-    "aws/corehandlers",
-    "aws/credentials",
-    "aws/credentials/ec2rolecreds",
-    "aws/credentials/endpointcreds",
-    "aws/credentials/stscreds",
-    "aws/defaults",
-    "aws/ec2metadata",
-    "aws/endpoints",
-    "aws/request",
-    "aws/session",
-    "aws/signer/v4",
-    "internal/shareddefaults",
-    "private/protocol",
-    "private/protocol/query",
-    "private/protocol/query/queryutil",
-    "private/protocol/rest",
-    "private/protocol/restxml",
-    "private/protocol/xml/xmlutil",
-    "service/s3",
-    "service/sts"
-  ]
+  packages = [".","aws","aws/awserr","aws/awsutil","aws/client","aws/client/metadata","aws/corehandlers","aws/credentials","aws/credentials/ec2rolecreds","aws/credentials/endpointcreds","aws/credentials/stscreds","aws/defaults","aws/ec2metadata","aws/endpoints","aws/request","aws/session","aws/signer/v4","internal/shareddefaults","private/protocol","private/protocol/query","private/protocol/query/queryutil","private/protocol/rest","private/protocol/restxml","private/protocol/xml/xmlutil","service/s3","service/sts"]
   revision = "decd990ddc5dcdf2f73309cbcab90d06b996ca28"
   version = "v1.12.67"
 
@@ -61,10 +40,7 @@
 [[projects]]
   branch = "master"
   name = "github.com/hashicorp/go-getter"
-  packages = [
-    ".",
-    "helper/url"
-  ]
+  packages = [".","helper/url"]
   revision = "285374cdfad63de2c43d7562f49ced6dde5a7ba0"
 
 [[projects]]
@@ -76,17 +52,7 @@
 [[projects]]
   branch = "master"
   name = "github.com/hashicorp/hcl"
-  packages = [
-    ".",
-    "hcl/ast",
-    "hcl/parser",
-    "hcl/scanner",
-    "hcl/strconv",
-    "hcl/token",
-    "json/parser",
-    "json/scanner",
-    "json/token"
-  ]
+  packages = [".","hcl/ast","hcl/parser","hcl/scanner","hcl/strconv","hcl/token","json/parser","json/scanner","json/token"]
   revision = "23c074d0eceb2b8a5bfdbb271ab780cde70f05a8"
 
 [[projects]]
@@ -132,19 +98,13 @@
 
 [[projects]]
   name = "github.com/rs/zerolog"
-  packages = [
-    ".",
-    "internal/json"
-  ]
+  packages = [".","internal/json"]
   revision = "b53826c57a6a1d8833443ebeacf1cfb62b229c64"
   version = "v1.4.0"
 
 [[projects]]
   name = "github.com/spf13/afero"
-  packages = [
-    ".",
-    "mem"
-  ]
+  packages = [".","mem"]
   revision = "bb8f1927f2a9d3ab41c9340aa034f6b803f4359c"
   version = "v1.0.2"
 
@@ -174,12 +134,7 @@
 
 [[projects]]
   name = "github.com/ulikunitz/xz"
-  packages = [
-    ".",
-    "internal/hash",
-    "internal/xlog",
-    "lzma"
-  ]
+  packages = [".","internal/hash","internal/xlog","lzma"]
   revision = "0c6b41e72360850ca4f98dc341fd999726ea007f"
   version = "v0.5.4"
 
@@ -192,14 +147,7 @@
 [[projects]]
   branch = "master"
   name = "golang.org/x/text"
-  packages = [
-    "internal/gen",
-    "internal/triegen",
-    "internal/ucd",
-    "transform",
-    "unicode/cldr",
-    "unicode/norm"
-  ]
+  packages = ["internal/gen","internal/triegen","internal/ucd","transform","unicode/cldr","unicode/norm"]
   revision = "e19ae1496984b1c655b8044a65c0300a3c878dd3"
 
 [[projects]]
@@ -211,6 +159,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "df5ca282b325c007f2680396606452d419cf9ac79359e4faa6a5ea730225f4e8"
+  inputs-digest = "d541d2658ce62a19aa8bc579c2f857f4bb11cef6437b7bfe5e808b94d242c302"
   solver-name = "gps-cdcl"
   solver-version = 1

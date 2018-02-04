@@ -27,7 +27,9 @@ func Fetch(source string, callback Callback, logger zerolog.Logger) error {
 	var err error
 	var tmp string
 	var destination string
+	var templateConfigPath string
 	var templates string
+	var templateConfig TemplateConfig
 
 	if tmp, err = ioutil.TempDir("", "fabric-"); err != nil {
 		return errors.Wrapf(err, "error creating temporary directory for templates from %s", source)
@@ -36,7 +38,7 @@ func Fetch(source string, callback Callback, logger zerolog.Logger) error {
 	defer os.RemoveAll(tmp)
 
 	destination = path.Join(tmp, "repository")
-	// TODO: read and unmarshall destination/fabric.json
+	templateConfigPath = path.Join(destination, "fabric.toml")
 	templates = path.Join(destination, "templates")
 
 	var walker = func(absolute string, info os.FileInfo, err error) error {
@@ -76,6 +78,14 @@ func Fetch(source string, callback Callback, logger zerolog.Logger) error {
 
 	if err = getter.Get(destination, source); err != nil {
 		return errors.Wrapf(err, "error copying templates from %s to %s", source, destination)
+	}
+
+	if templateConfig, err = parseConfig(templateConfigPath); err != nil {
+		return errors.Wrapf(err, "parseConfig(%s)", templateConfigPath)
+	}
+
+	if err = verifyVersion(templateConfig.MinFabricVersion); err != nil {
+		return errors.Wrapf(err, "verifyVersion(%s)", templateConfig.MinFabricVersion)
 	}
 
 	if err = filepath.Walk(templates, walker); err != nil {
