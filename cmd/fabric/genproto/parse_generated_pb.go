@@ -16,8 +16,8 @@ package genproto
 
 import (
 	"bufio"
-	"fmt"
 	"os"
+	"regexp"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -27,8 +27,13 @@ import (
 	"github.com/deciphernow/gm-fabric-go/cmd/fabric/config"
 )
 
-// InterfaceEntry defines a parsed interface entry for the client or server
-type InterfaceEntry struct {
+type ServerInterfaceData struct {
+	ServerName string
+	Prototypes []PrototypeEntry
+}
+
+// InterfaceEntry defines a parsed interface entry for the server
+type PrototypeEntry struct {
 	Comments  []string
 	Prototype string
 }
@@ -39,14 +44,19 @@ const (
 	loadingServerState
 )
 
+var (
+	// type SomethingServer interface {
+	serverLineRegexp = regexp.MustCompile(`^type (\S+)Server interface \{`)
+)
+
 // parseGeneratedPBFile the generated xxx.pb.go file returning method definitions
 func parseGeneratedPBFile(
 	cfg config.Config,
 	logger zerolog.Logger,
-) ([]InterfaceEntry, error) {
+) (ServerInterfaceData, error) {
 	var file *os.File
-	var serverDef []InterfaceEntry
-	var currentEntry InterfaceEntry
+	var serverDef ServerInterfaceData
+	var currentEntry PrototypeEntry
 	var err error
 
 	/*
@@ -63,12 +73,12 @@ func parseGeneratedPBFile(
 		  ...
 	*/
 
-	serverLine := fmt.Sprintf("type %sServer interface {", cfg.GoServiceName())
 	commentLine := "\t//"
 	endLine := "}"
 
 	if file, err = os.Open(cfg.GeneratedPBFilePath()); err != nil {
-		return nil, errors.Wrapf(err, "os.Open(%s)", cfg.GeneratedPBFilePath())
+		return ServerInterfaceData{},
+			errors.Wrapf(err, "os.Open(%s)", cfg.GeneratedPBFilePath())
 	}
 	defer file.Close() // ignoring possible error return from Close
 
@@ -78,7 +88,8 @@ func parseGeneratedPBFile(
 		line := scanner.Text()
 		switch state {
 		case waitingServerState:
-			if line == serverLine {
+			if subM := serverLineRegexp.FindStringSubmatch(line); len(subM) == 2 {
+				serverDef.ServerName = subM[1]
 				state = loadingServerState
 			}
 		case loadingServerState:
@@ -92,8 +103,8 @@ func parseGeneratedPBFile(
 				// we assume the prototype is on a single line: this is
 				// generated code
 				currentEntry.Prototype = addNamesToFuncDef(strings.TrimSpace(line))
-				serverDef = append(serverDef, currentEntry)
-				currentEntry = InterfaceEntry{}
+				serverDef.Prototypes = append(serverDef.Prototypes, currentEntry)
+				currentEntry = PrototypeEntry{}
 			}
 		}
 	}

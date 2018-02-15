@@ -14,6 +14,10 @@
 
 package genproto
 
+import (
+	"strings"
+)
+
 /*
 	we expect something like this
 	...
@@ -58,9 +62,15 @@ func addNamesToFuncDef(rawDef string) string {
 	if matches := unitaryRegexp.FindStringSubmatch(rawDef); matches != nil {
 		name := matches[1]
 		request := matches[2]
+		if request != "google_protobuf.Empty" {
+			request = strings.Join([]string{"pb", request}, ".")
+		}
 		response := matches[3]
+		if response != "google_protobuf.Empty" {
+			response = strings.Join([]string{"pb", response}, ".")
+		}
 		return fmt.Sprintf(
-			"%s(ctx context.Context, request *pb.%s) (*pb.%s, error)",
+			"%s(ctx context.Context, request *%s) (*%s, error)",
 			name,
 			request,
 			response,
@@ -69,9 +79,12 @@ func addNamesToFuncDef(rawDef string) string {
 	if matches := streamRegexp.FindStringSubmatch(rawDef); matches != nil {
 		name := matches[1]
 		request := matches[2]
+		if request != "google_protobuf.Empty" {
+			request = strings.Join([]string{"pb", request}, ".")
+		}
 		stream := matches[3]
 		return fmt.Sprintf(
-			"%s(request *pb.%s, stream pb.%s) error",
+			"%s(request *%s, stream pb.%s) error",
 			name,
 			request,
 			stream,

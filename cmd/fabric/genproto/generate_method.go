@@ -15,6 +15,8 @@
 package genproto
 
 import (
+	"fmt"
+	"os/exec"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -27,12 +29,14 @@ import (
 func generateMethod(
 	cfg config.Config,
 	logger zerolog.Logger,
-	entry InterfaceEntry,
+	entry PrototypeEntry,
 	methodFilePath string,
 ) error {
 	var err error
 	var templateName string
 	var templ string
+	var protobufImport string
+	var pbImport string
 
 	methodDeclaration := entry.Prototype
 
@@ -50,20 +54,29 @@ func generateMethod(
 	if err != nil {
 		return errors.Wrapf(err, "loadTemplateFromCache %s", templateName)
 	}
+	if strings.Contains(methodDeclaration, "google_protobuf") {
+		protobufImport = `google_protobuf "github.com/golang/protobuf/ptypes/empty"`
+	}
+	if strings.Contains(methodDeclaration, "*pb.") {
+		pbImport = fmt.Sprintf(`pb "%s"`, cfg.PBImportPath())
+	}
 
 	logger.Debug().Str("method", methodDeclaration).Msg("generateMethod")
+
 	err = templates.Merge(
 		"method",
 		templ,
 		methodFilePath,
 		struct {
 			MethodsPackageName string
+			ProtobufImport     string
 			PBImport           string
 			Comments           string
 			MethodDeclaration  string
 		}{
 			cfg.MethodsPackageName(),
-			cfg.PBImportPath(),
+			protobufImport,
+			pbImport,
 			prepareComments(entry.Comments),
 			methodDeclaration,
 		},
@@ -71,6 +84,15 @@ func generateMethod(
 
 	if err != nil {
 		return errors.Wrap(err, "templ.Merge")
+	}
+
+	cmd := exec.Command(
+		"gofmt",
+		"-w",
+		methodFilePath,
+	)
+	if op, err := cmd.CombinedOutput(); err != nil {
+		return errors.Wrapf(err, "gofmt -w %s: %s", methodFilePath, string(op))
 	}
 
 	return nil

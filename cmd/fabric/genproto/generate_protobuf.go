@@ -30,17 +30,11 @@ import (
 
 // GenerateProtobuf generates code from protocol buffer definitions
 func GenerateProtobuf(cfg config.Config, logger zerolog.Logger) error {
-	var proxyExists bool
 	var op []byte
-	var intEntries []InterfaceEntry
+	var serverDef ServerInterfaceData
 	var err error
 
 	logger.Info().Str("service", cfg.ServiceName).Msg("starting --generate")
-
-	// see if we have already generated the gateway proxy code (<service-name>.pb.gw.go)
-	if proxyExists, err = fileExists(cfg.GeneratedPBProxyPath()); err != nil {
-		return errors.Wrapf(err, "fileExists(%s)", cfg.GeneratedPBProxyPath())
-	}
 
 	apisPath := path.Join(
 		cfg.ServicePath(),
@@ -83,27 +77,27 @@ func GenerateProtobuf(cfg config.Config, logger zerolog.Logger) error {
 	}
 
 	logger.Info().Msg("parsing generated pb file")
-	if intEntries, err = parseGeneratedPBFile(cfg, logger); err != nil {
+	if serverDef, err = parseGeneratedPBFile(cfg, logger); err != nil {
 		return errors.Wrap(err, "parseGeneratedPBFile")
 	}
 
-	logger.Info().Msgf("interface defines %d methods", len(intEntries))
+	logger.Info().Msgf("interface (%sServer) defines %d methods",
+		serverDef.ServerName, len(serverDef.Prototypes))
 
-	if err = createMethodFiles(cfg, logger, intEntries); err != nil {
-		return errors.Wrap(err, "createMethodFiles")
+	// if we don't have a methods directory yet, initialize it
+	methodsExists, err := fileExists(cfg.MethodsPath())
+	if err != nil {
+		return errors.Wrapf(err, "fileExists(%s)", cfg.MethodsPath())
 	}
 
-	// if this is the first time we have generated the gateway proxy code
-	// write the real proxy template over the stub we stored in --init
-	if !proxyExists {
-		if proxyExists, err = fileExists(cfg.GeneratedPBProxyPath()); err != nil {
-			return errors.Wrapf(err, "fileExists(%s)", cfg.GeneratedPBProxyPath())
+	if !methodsExists {
+		if err = initializeMethodsDir(cfg, logger, serverDef); err != nil {
+			return errors.Wrap(err, "initializeMethodsDir")
 		}
-		if proxyExists {
-			if err = writeProxyTemplate(cfg, logger); err != nil {
-				return errors.Wrap(err, "writeProxyTemplate")
-			}
-		}
+	}
+
+	if err = createMethodFiles(cfg, logger, serverDef); err != nil {
+		return errors.Wrap(err, "createMethodFiles")
 	}
 
 	logger.Info().Str("service", cfg.ServiceName).Msg("--generate complete")
@@ -120,15 +114,37 @@ func fileExists(filePath string) (bool, error) {
 	return true, nil
 }
 
+func initializeMethodsDir(
+	cfg config.Config,
+	logger zerolog.Logger,
+	serverDef ServerInterfaceData,
+) error {
+	var err error
+
+	if err = os.Mkdir(cfg.MethodsPath(), os.ModePerm); err != nil {
+		return errors.Wrapf(err, "os.Mkdir(%s)", cfg.MethodsPath())
+	}
+
+	if err = writeServerNew(cfg, logger, serverDef); err != nil {
+		return errors.Wrap(err, "writeServerNew")
+	}
+
+	if err = writeProxyTemplate(cfg, logger, serverDef); err != nil {
+		return errors.Wrap(err, "writeProxyTemplate")
+	}
+
+	return nil
+}
+
 func createMethodFiles(
 	cfg config.Config,
 	logger zerolog.Logger,
-	intEntries []InterfaceEntry,
+	serverDef ServerInterfaceData,
 ) error {
 	var err error
 
 METHOD_LOOP:
-	for _, entry := range intEntries {
+	for _, entry := range serverDef.Prototypes {
 		var exists bool
 
 		methodFileName := computeMethodFileName(entry.Prototype)
@@ -151,7 +167,59 @@ METHOD_LOOP:
 	return nil
 }
 
-func writeProxyTemplate(cfg config.Config, logger zerolog.Logger) error {
+func writeServerNew(
+	cfg config.Config,
+	logger zerolog.Logger,
+	serverDef ServerInterfaceData,
+) error {
+	var templ string
+	var err error
+
+	templ, err = loadTemplateFromCache(cfg, logger, "new_server.go")
+	if err != nil {
+		return errors.Wrapf(err, "loadTemplateFromCache %s", "new_server.go")
+	}
+
+	newServerFilePath := path.Join(cfg.MethodsPath(), "new_server.go")
+
+	err = templates.Merge(
+		"newserver",
+		templ,
+		newServerFilePath,
+		struct {
+			MethodsPackageName  string
+			PBImport            string
+			GoServiceName       string
+			ServerInterfaceName string
+		}{
+			cfg.MethodsPackageName(),
+			cfg.PBImportPath(),
+			cfg.GoServiceName(),
+			serverDef.ServerName,
+		},
+	)
+	if err != nil {
+		return errors.Wrap(err, "templ.Merge")
+	}
+
+	cmd := exec.Command(
+		"gofmt",
+		"-w",
+		newServerFilePath,
+	)
+	if op, err := cmd.CombinedOutput(); err != nil {
+		return errors.Wrapf(err, "gofmt -w %s: %s",
+			newServerFilePath, string(op))
+	}
+
+	return nil
+}
+
+func writeProxyTemplate(
+	cfg config.Config,
+	logger zerolog.Logger,
+	serverDef ServerInterfaceData,
+) error {
 	var op []byte
 	var cwd string
 	var templ string
@@ -167,18 +235,29 @@ func writeProxyTemplate(cfg config.Config, logger zerolog.Logger) error {
 		templ,
 		cfg.ServerGatewayProxySourceFilePath(),
 		struct {
-			ServiceName   string
-			GoServiceName string
-			PBImport      string
+			ServiceName         string
+			GoServiceName       string
+			PBImport            string
+			ServerInterfaceName string
 		}{
 			cfg.ServiceName,
 			cfg.GoServiceName(),
 			cfg.PBImportPath(),
+			serverDef.ServerName,
 		},
 	)
-
 	if err != nil {
 		return errors.Wrap(err, "templ.Merge")
+	}
+
+	cmd := exec.Command(
+		"gofmt",
+		"-w",
+		cfg.ServerGatewayProxySourceFilePath(),
+	)
+	if op, err := cmd.CombinedOutput(); err != nil {
+		return errors.Wrapf(err, "gofmt -w %s: %s",
+			cfg.ServerGatewayProxySourceFilePath(), string(op))
 	}
 
 	// now we have some new dependencies
@@ -194,7 +273,7 @@ func writeProxyTemplate(cfg config.Config, logger zerolog.Logger) error {
 		return errors.Wrapf(err, "os.Chdir(%s)", cfg.ServicePath())
 	}
 
-	cmd := exec.Command("dep", "ensure", "-v")
+	cmd = exec.Command("dep", "ensure", "-v")
 	if op, err = cmd.CombinedOutput(); err != nil {
 		return errors.Wrapf(err, "dep ensure; '%s'", string(op))
 	}
