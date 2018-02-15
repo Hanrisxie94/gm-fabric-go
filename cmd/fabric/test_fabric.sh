@@ -16,9 +16,7 @@
 
 set -euxo pipefail
 
-# here we want the GOPATH that points to the (not generated) source code
-TEST_CERTS_DIR="$GOPATH/src/github.com/deciphernow/gm-fabric-go/cmd/fabric/test_certs"
-
+CERTS_PATH="https://deciphernow.github.io/gm-fabric-documentation/certificates"
 TOPDIR="$HOME/fabric_test_dir"
 
 rm -rf $TOPDIR
@@ -89,7 +87,7 @@ pushd "$TESTDIR/${SERVICE_NAME}"
 "./build_http_client.sh"
 popd
 
-# stuff a client that exercises the methods
+# stuff a client that exercises the methodsgit@github.com:deciphernow/gm-fabric-templates.git//default
 cat << CLIENT1 > "$TESTDIR/$SERVICE_NAME/cmd/grpc_client/test_grpc.go"
 package main
 
@@ -253,9 +251,15 @@ gofmt -w "$TESTDIR/$SERVICE_NAME/cmd/server/methods/hello_stream.go"
 
 # compile the server to include the changed methods
 # we assume we are running in the test directory
+# get the 
 pushd "${TESTDIR}/${SERVICE_NAME}"
 "./build_server.sh"
 popd
+
+# get our test certificates
+curl "$CERTS_PATH/localhost.crt" > "$TESTDIR/$SERVICE_NAME/localhost.crt"
+curl "$CERTS_PATH/localhost.key" > "$TESTDIR/$SERVICE_NAME/localhost.key"
+curl "$CERTS_PATH/intermediate.crt" > "$TESTDIR/$SERVICE_NAME/intermediate.crt"
 
 # stuff our own settings file over the generated one
 cat << SETTINGS > "$TESTDIR/$SERVICE_NAME/settings.toml"
@@ -280,10 +284,10 @@ cat << SETTINGS > "$TESTDIR/$SERVICE_NAME/settings.toml"
     gateway_serve_anonymous_arrays = true
 
 # tls
-    ca_cert_path = "$TEST_CERTS_DIR/root.crt"
-    server_cert_path = "$TEST_CERTS_DIR/server.localdomain.chain.crt"
-    server_key_path = "$TEST_CERTS_DIR/server.localdomain.nopass.key"
-	server_cert_name = "server.localdomain"
+	ca_cert_path = "$TESTDIR/$SERVICE_NAME/intermediate.crt"
+	server_cert_path = "$TESTDIR/$SERVICE_NAME/localhost.crt"
+	server_key_path = "$TESTDIR/$SERVICE_NAME/localhost.key"
+	server_cert_name = "localhost"
 
 # oauth
     use_oauth = false
@@ -322,15 +326,15 @@ ps -p $SERVICE_PID
 
 # run the grpc client as a test
 GRPC_CLIENT_BINARY="$GOPATH/bin/${SERVICE_NAME}_grpc_client"
-$GRPC_CLIENT_BINARY --address=":10000" --test-cert-dir="${TEST_CERTS_DIR}" > "${TOPDIR}/grpc_client.log" 2>&1
+$GRPC_CLIENT_BINARY --address=":10000" --test-cert-dir="$TESTDIR/$SERVICE_NAME" > "${TOPDIR}/grpc_client.log" 2>&1
 
 HTTP_CLIENT_BINARY="$GOPATH/bin/${SERVICE_NAME}_http_client"
 
 # hit the proxy
-$HTTP_CLIENT_BINARY --uri="https://127.0.0.1:8080/acme/services/hello?hello_text=ping" --test-cert-dir="${TEST_CERTS_DIR}" 
+$HTTP_CLIENT_BINARY --uri="https://127.0.0.1:8080/acme/services/hello?hello_text=ping" --test-cert-dir="$TESTDIR/$SERVICE_NAME" 
 
 # hit the metrics server
-$HTTP_CLIENT_BINARY --uri="https://127.0.0.1:10001/metrics" --test-cert-dir="${TEST_CERTS_DIR}"
+$HTTP_CLIENT_BINARY --uri="https://127.0.0.1:10001/metrics" --test-cert-dir="$TESTDIR/$SERVICE_NAME"
 
 # stop the server gracefuly
 kill $SERVICE_PID

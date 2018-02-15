@@ -15,6 +15,7 @@
 package tlsutil
 
 import (
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
@@ -24,6 +25,9 @@ import (
 	"net"
 	"net/http"
 	"strings"
+
+	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/peer"
 )
 
 // Opt sets an option on a *tls.Config
@@ -55,7 +59,7 @@ func WithClientAuth(auth tls.ClientAuthType) Opt {
 func NewTLSConfig(trustPath, certPath, keyPath string, opts ...Opt) (*tls.Config, error) {
 	trustBytes, err := ioutil.ReadFile(trustPath)
 	if err != nil {
-		return nil, fmt.Errorf("error parsing CA trust %s: %v", trustPath, err)
+		return nil, fmt.Errorf("error parsinGetDNFromContextg CA trust %s: %v", trustPath, err)
 	}
 	trustCertPool := x509.NewCertPool()
 	if !trustCertPool.AppendCertsFromPEM(trustBytes) {
@@ -250,4 +254,32 @@ func GetNormalizedDistinguishedName(distinguishedName string) string {
 		result = result[1:len(result)]
 	}
 	return result
+}
+
+// GetClientCertificatesFromContext retrieves the client's x509 certificates (if any)
+// from the context for a gRPC transaction
+// returns false if the transaction is not TLS
+func GetClientCertificatesFromContext(ctx context.Context) ([]*x509.Certificate, bool) {
+	p, ok := peer.FromContext(ctx)
+	if !ok {
+		return nil, false
+	}
+
+	switch authInfo := p.AuthInfo.(type) {
+	case credentials.TLSInfo:
+		return authInfo.State.PeerCertificates, ok
+	}
+
+	return nil, false
+}
+
+// GetDNFromContext retrieves the client's Distinguished Name (if any)
+// from the context for a gRPC transaction
+func GetDNFromContext(ctx context.Context) string {
+	certs, ok := GetClientCertificatesFromContext(ctx)
+	if !ok || len(certs) == 0 {
+		return ""
+	}
+
+	return GetDistinguishedName(certs[0])
 }
