@@ -59,7 +59,7 @@ func WithClientAuth(auth tls.ClientAuthType) Opt {
 func NewTLSConfig(trustPath, certPath, keyPath string, opts ...Opt) (*tls.Config, error) {
 	trustBytes, err := ioutil.ReadFile(trustPath)
 	if err != nil {
-		return nil, fmt.Errorf("error parsinGetDNFromContextg CA trust %s: %v", trustPath, err)
+		return nil, fmt.Errorf("error parsing CA trust %s: %v", trustPath, err)
 	}
 	trustCertPool := x509.NewCertPool()
 	if !trustCertPool.AppendCertsFromPEM(trustBytes) {
