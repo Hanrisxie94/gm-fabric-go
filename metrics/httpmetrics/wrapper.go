@@ -17,6 +17,7 @@ package httpmetrics
 import (
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/deciphernow/gm-fabric-go/metrics/headers"
@@ -45,12 +46,14 @@ func (e HTPStatusError) Error() string {
 type HTTPMetrics struct {
 	metricsChan chan<- subject.MetricsEvent
 	tags        []string
+	RollupPath  string
 }
 
 // wrappedMetrics wraps a single Handler
 type wrappedMetrics struct {
-	h    *HTTPMetrics
-	next http.Handler
+	h          *HTTPMetrics
+	next       http.Handler
+	rollupPath string
 }
 
 // countWriter implements the http.ResponseWriter protocol to
@@ -83,13 +86,20 @@ func NewWithTags(
 }
 
 // HandlerFunc returns an http.HandlerFunc
-func (h *HTTPMetrics) HandlerFunc(next http.HandlerFunc) http.HandlerFunc {
-	return wrappedMetrics{h: h, next: next}.ServeHTTP
+func (h *HTTPMetrics) HandlerFunc(next http.HandlerFunc, options ...func(*HTTPMetrics)) http.HandlerFunc {
+	return h.Handler(next, options...).ServeHTTP
 }
 
 // Handler returns an http.Handler
-func (h *HTTPMetrics) Handler(next http.Handler) http.Handler {
-	return wrappedMetrics{h: h, next: next}
+func (h *HTTPMetrics) Handler(next http.Handler, options ...func(*HTTPMetrics)) http.Handler {
+	wm := wrappedMetrics{h: h, next: next}
+	for _, option := range options {
+		option(h)
+	}
+	// ServeHTTP can only reference h because wm doesn't exist when creating options,
+	// so inject rollupPath passed in as an option exported through h
+	wm.rollupPath = h.RollupPath
+	return wm
 }
 
 // ServeHTTP implements the http.Handler interface
@@ -110,12 +120,18 @@ func (wm wrappedMetrics) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		req.Header.Add(headers.RequestIDHeader, requestID)
 	}
 
+	path := req.URL.EscapedPath()
+	if len(wm.rollupPath) > 0 {
+		if strings.HasPrefix(path, wm.rollupPath) {
+			path = wm.rollupPath[0 : len(wm.rollupPath)-1]
+		}
+	}
 	wm.h.metricsChan <- subject.MetricsEvent{
 		EventType: "rpc.InHeader",
 		Transport: transport,
 		RequestID: requestID,
 		Timestamp: time.Now(),
-		Key:       fmt.Sprintf("route%s/%s", req.URL.EscapedPath(), req.Method),
+		Key:       fmt.Sprintf("route%s/%s", path, req.Method),
 		Tags:      wm.h.tags,
 	}
 	wm.h.metricsChan <- subject.MetricsEvent{
