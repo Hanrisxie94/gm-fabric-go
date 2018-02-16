@@ -16,17 +16,18 @@ package grpcobserver
 
 // APIEndpointStats represents stats for a single endpoint, or the total for all
 type APIEndpointStats struct {
-	Avg   float64 `json:"latency_ms.avg"`
-	Count int64   `json:"latency_ms.count"`
-	Max   int64   `json:"latency_ms.max"`
-	Min   int64   `json:"latency_ms.min"`
-	Sum   int64   `json:"latency_ms.sum"`
-	P50   int64   `json:"latency_ms.p50"`
-	P90   int64   `json:"latency_ms.p90"`
-	P95   int64   `json:"latency_ms.p95"`
-	P99   int64   `json:"latency_ms.p99"`
-	P9990 int64   `json:"latency_ms.p9990"`
-	P9999 int64   `json:"latency_ms.p9999"`
+	Avg      float64 `json:"latency_ms.avg"`
+	BadInput int32   `json:"badinput.count"`
+	Count    int64   `json:"latency_ms.count"`
+	Max      int64   `json:"latency_ms.max"`
+	Min      int64   `json:"latency_ms.min"`
+	Sum      int64   `json:"latency_ms.sum"`
+	P50      int64   `json:"latency_ms.p50"`
+	P90      int64   `json:"latency_ms.p90"`
+	P95      int64   `json:"latency_ms.p95"`
+	P99      int64   `json:"latency_ms.p99"`
+	P9990    int64   `json:"latency_ms.p9990"`
+	P9999    int64   `json:"latency_ms.p9999"`
 
 	Errors int32 `json:"errors.count"`
 

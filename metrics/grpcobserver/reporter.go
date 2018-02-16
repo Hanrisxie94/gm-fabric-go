@@ -111,6 +111,7 @@ func (obs *GRPCObserver) Report(jWriter *flatjson.Writer) error {
 			{"latency_ms.p99", value.P99},
 			{"latency_ms.p9990", value.P9990},
 			{"latency_ms.p9999", value.P9999},
+			{"badinput.count", value.BadInput},
 			{"errors.count", value.Errors},
 			{"in_throughput", value.InThroughput},
 			{"out_throughput", value.OutThroughput},

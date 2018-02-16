@@ -151,7 +151,23 @@ func (wm wrappedMetrics) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	c := countWriter{next: w}
 	wm.next.ServeHTTP(&c, req)
 
-	if c.status != 0 && c.status != http.StatusOK {
+	// Note: Ignore codes less than 400.
+	// We may want to count some special cases.
+	// too noisy to even count: 200, 206, 304
+
+	// A 4xx error should indicate bad input
+	if 400 <= c.status && c.status < 500 {
+		wm.h.metricsChan <- subject.MetricsEvent{
+			EventType: "rpc.BadInput",
+			RequestID: requestID,
+			Timestamp: time.Now(),
+			Value:     HTPStatusError{StatusCode: c.status},
+			Tags:      wm.h.tags,
+		}
+	}
+
+	// A 5xx error definitely must be counted as a problem
+	if 500 <= c.status {
 		wm.h.metricsChan <- subject.MetricsEvent{
 			EventType: "rpc.End",
 			RequestID: requestID,
@@ -174,7 +190,6 @@ func (wm wrappedMetrics) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			Tags:      wm.h.tags,
 		}
 	}
-
 }
 
 // Header returns the header map that will be sent by
