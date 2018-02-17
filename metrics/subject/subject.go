@@ -44,14 +44,15 @@ const TagSep = ":"
 
 // MetricsEvent is a low level event.
 type MetricsEvent struct {
-	EventType string
-	Transport EventTransport
-	RequestID string
-	Key       string
-	PrevRoute string
-	Timestamp time.Time
-	Value     interface{}
-	Tags      []string
+	EventType  string
+	Transport  EventTransport
+	HTTPStatus int
+	RequestID  string
+	Key        string
+	PrevRoute  string
+	Timestamp  time.Time
+	Value      interface{}
+	Tags       []string
 }
 
 // Observer implements an individual observer of the observer design pattern.

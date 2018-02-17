@@ -15,6 +15,7 @@
 package grpcobserver
 
 import (
+	"fmt"
 	"strings"
 	"sync"
 	"time"
@@ -45,6 +46,7 @@ func Accumulate(entry APIStats, event subject.MetricsEvent) (APIStats, bool) {
 		entry.OutWireLength += numericEventValue(event.Value)
 	case "rpc.End":
 		entry.EndTime = event.Timestamp
+		entry.HTTPStatus = event.HTTPStatus
 		if event.Value != nil {
 			entry.Err = event.Value.(error)
 		}
@@ -71,6 +73,7 @@ type APIStats struct {
 	RequestID     string
 	Key           string
 	Transport     subject.EventTransport
+	HTTPStatus    int
 	PrevRoute     string
 	Err           error
 	BeginTime     time.Time
@@ -80,9 +83,11 @@ type APIStats struct {
 }
 
 type cumulativeCounts struct {
-	totalEvents     int64
-	transportEvents map[subject.EventTransport]int64
-	keyEvents       map[string]int64
+	totalEvents       int64
+	transportEvents   map[subject.EventTransport]int64
+	keyEvents         map[string]int64
+	statusEvents      map[int]int64
+	statusClassEvents map[string]int64
 }
 
 // LatencyStatsGetter provides access to latency statistics
@@ -95,7 +100,7 @@ type LatencyStatsGetter interface {
 // GRPCObserver implements the Observer interface. Also supports HTTP handlers.
 // Also implements the LatencyStatsGetter interface.
 type GRPCObserver struct {
-	lock sync.Mutex
+	sync.Mutex
 
 	startTime time.Time
 
@@ -120,8 +125,10 @@ func New(
 
 func newCumulativeCounts() cumulativeCounts {
 	return cumulativeCounts{
-		transportEvents: make(map[subject.EventTransport]int64),
-		keyEvents:       make(map[string]int64),
+		transportEvents:   make(map[subject.EventTransport]int64),
+		keyEvents:         make(map[string]int64),
+		statusEvents:      make(map[int]int64),
+		statusClassEvents: make(map[string]int64),
 	}
 }
 
@@ -134,6 +141,12 @@ func copyCumulativeCounts(inp cumulativeCounts) cumulativeCounts {
 	for key, value := range inp.transportEvents {
 		outp.transportEvents[key] = value
 	}
+	for key, value := range inp.statusEvents {
+		outp.statusEvents[key] = value
+	}
+	for key, value := range inp.statusClassEvents {
+		outp.statusClassEvents[key] = value
+	}
 
 	return outp
 }
@@ -145,8 +158,8 @@ func (obs *GRPCObserver) Observe(event subject.MetricsEvent) {
 		return
 	}
 
-	obs.lock.Lock()
-	defer obs.lock.Unlock()
+	obs.Lock()
+	defer obs.Unlock()
 
 	entry := obs.active[event.RequestID]
 	entry, end := Accumulate(entry, event)
@@ -155,6 +168,11 @@ func (obs *GRPCObserver) Observe(event subject.MetricsEvent) {
 		obs.totalEvents++
 		obs.transportEvents[entry.Transport]++
 		obs.keyEvents[entry.Key]++
+		if entry.Transport == subject.EventTransportHTTP ||
+			entry.Transport == subject.EventTransportHTTPS {
+			obs.statusEvents[entry.HTTPStatus]++
+			obs.statusClassEvents[statusClass(entry.HTTPStatus)]++
+		}
 		obs.cache.store(entry)
 		delete(obs.active, event.RequestID)
 	} else {
@@ -165,4 +183,9 @@ func (obs *GRPCObserver) Observe(event subject.MetricsEvent) {
 func numericEventValue(rawValue interface{}) int64 {
 	result, _ := rawValue.(int64)
 	return result
+}
+
+// statusClass returns a string of the form NXX for HTTP Status, e.g. 2XX
+func statusClass(status int) string {
+	return fmt.Sprintf("%dXX", status/100)
 }

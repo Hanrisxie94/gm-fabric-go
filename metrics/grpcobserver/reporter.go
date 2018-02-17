@@ -96,6 +96,20 @@ func (obs *GRPCObserver) Report(jWriter *flatjson.Writer) error {
 			return err
 		}
 
+		for stat, value := range counts.statusEvents {
+			err = jWriter.Write(fmt.Sprintf("%s/status/%d", path, stat), value)
+			if err != nil {
+				return err
+			}
+		}
+
+		for statClass, value := range counts.statusClassEvents {
+			err = jWriter.Write(fmt.Sprintf("%s/status/%s", path, statClass), value)
+			if err != nil {
+				return err
+			}
+		}
+
 		for _, x := range []struct {
 			label string
 			val   interface{}
@@ -162,8 +176,8 @@ func (obs *GRPCObserver) GetLatencyStats() (map[string]APIEndpointStats, error) 
 }
 
 func (obs *GRPCObserver) getAPIStats() (map[string]APIEndpointStats, cumulativeCounts, error) {
-	obs.lock.Lock()
-	defer obs.lock.Unlock()
+	obs.Lock()
+	defer obs.Unlock()
 
 	apiStats := make(map[string]APIEndpointStats)
 	apiElapsedMS := make(map[string][]float64)

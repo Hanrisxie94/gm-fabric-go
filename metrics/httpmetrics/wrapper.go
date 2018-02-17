@@ -151,28 +151,24 @@ func (wm wrappedMetrics) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	c := countWriter{next: w}
 	wm.next.ServeHTTP(&c, req)
 
-	if c.status != 0 && c.status != http.StatusOK {
-		wm.h.metricsChan <- subject.MetricsEvent{
-			EventType: "rpc.End",
-			RequestID: requestID,
-			Timestamp: time.Now(),
-			Value:     HTPStatusError{StatusCode: c.status},
-			Tags:      wm.h.tags,
-		}
-	} else {
-		wm.h.metricsChan <- subject.MetricsEvent{
-			EventType: "rpc.OutPayload",
-			RequestID: requestID,
-			Timestamp: time.Now(),
-			Value:     c.bytesWritten,
-			Tags:      wm.h.tags,
-		}
-		wm.h.metricsChan <- subject.MetricsEvent{
-			EventType: "rpc.End",
-			RequestID: requestID,
-			Timestamp: time.Now(),
-			Tags:      wm.h.tags,
-		}
+	wm.h.metricsChan <- subject.MetricsEvent{
+		EventType: "rpc.OutPayload",
+		RequestID: requestID,
+		Timestamp: time.Now(),
+		Value:     c.bytesWritten,
+		Tags:      wm.h.tags,
+	}
+
+	status := c.status
+	if status == 0 {
+		status = http.StatusOK
+	}
+	wm.h.metricsChan <- subject.MetricsEvent{
+		EventType:  "rpc.End",
+		RequestID:  requestID,
+		Timestamp:  time.Now(),
+		HTTPStatus: status,
+		Tags:       wm.h.tags,
 	}
 
 }
