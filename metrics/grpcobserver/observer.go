@@ -82,12 +82,16 @@ type APIStats struct {
 	OutWireLength int64
 }
 
-type cumulativeCounts struct {
-	totalEvents       int64
-	transportEvents   map[subject.EventTransport]int64
-	keyEvents         map[string]int64
+type keyEventsEntry struct {
+	events            int64
 	statusEvents      map[int]int64
 	statusClassEvents map[string]int64
+}
+
+type cumulativeCounts struct {
+	totalEvents     int64
+	transportEvents map[subject.EventTransport]int64
+	keyEvents       map[string]keyEventsEntry
 }
 
 // LatencyStatsGetter provides access to latency statistics
@@ -125,10 +129,8 @@ func New(
 
 func newCumulativeCounts() cumulativeCounts {
 	return cumulativeCounts{
-		transportEvents:   make(map[subject.EventTransport]int64),
-		keyEvents:         make(map[string]int64),
-		statusEvents:      make(map[int]int64),
-		statusClassEvents: make(map[string]int64),
+		transportEvents: make(map[subject.EventTransport]int64),
+		keyEvents:       make(map[string]keyEventsEntry),
 	}
 }
 
@@ -140,12 +142,6 @@ func copyCumulativeCounts(inp cumulativeCounts) cumulativeCounts {
 	}
 	for key, value := range inp.transportEvents {
 		outp.transportEvents[key] = value
-	}
-	for key, value := range inp.statusEvents {
-		outp.statusEvents[key] = value
-	}
-	for key, value := range inp.statusClassEvents {
-		outp.statusClassEvents[key] = value
 	}
 
 	return outp
@@ -167,12 +163,18 @@ func (obs *GRPCObserver) Observe(event subject.MetricsEvent) {
 	if end {
 		obs.totalEvents++
 		obs.transportEvents[entry.Transport]++
-		obs.keyEvents[entry.Key]++
+		keyEvents, ok := obs.keyEvents[entry.Key]
+		if !ok {
+			keyEvents.statusEvents = make(map[int]int64)
+			keyEvents.statusClassEvents = make(map[string]int64)
+		}
+		keyEvents.events++
 		if entry.Transport == subject.EventTransportHTTP ||
 			entry.Transport == subject.EventTransportHTTPS {
-			obs.statusEvents[entry.HTTPStatus]++
-			obs.statusClassEvents[statusClass(entry.HTTPStatus)]++
+			keyEvents.statusEvents[entry.HTTPStatus]++
+			keyEvents.statusClassEvents[statusClass(entry.HTTPStatus)]++
 		}
+		obs.keyEvents[entry.Key] = keyEvents
 		obs.cache.store(entry)
 		delete(obs.active, event.RequestID)
 	} else {

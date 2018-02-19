@@ -64,21 +64,31 @@ func (obs *GRPCObserver) Report(jWriter *flatjson.Writer) error {
 		}
 	}
 
-	var allEvents int64
+	allEvents := keyEventsEntry{
+		statusEvents:      make(map[int]int64),
+		statusClassEvents: make(map[string]int64),
+	}
 	for path := range summary.APIStats {
 		if path != "all" {
-			allEvents += counts.keyEvents[path]
+			keyEvents := counts.keyEvents[path]
+			allEvents.events += keyEvents.events
+			for key, value := range keyEvents.statusEvents {
+				allEvents.statusEvents[key] += value
+			}
+			for key, value := range keyEvents.statusClassEvents {
+				allEvents.statusClassEvents[key] += value
+			}
 		}
 	}
 
 	for path, value := range summary.APIStats {
-		var count int64
+		var keyEvents keyEventsEntry
 		if path == "all" {
-			count = allEvents
+			keyEvents = allEvents
 		} else {
-			count = counts.keyEvents[path]
+			keyEvents = counts.keyEvents[path]
 		}
-		err = jWriter.Write(fmt.Sprintf("%s/%s", path, "requests"), count)
+		err = jWriter.Write(fmt.Sprintf("%s/%s", path, "requests"), keyEvents.events)
 		if err != nil {
 			return err
 		}
@@ -96,15 +106,15 @@ func (obs *GRPCObserver) Report(jWriter *flatjson.Writer) error {
 			return err
 		}
 
-		for stat, value := range counts.statusEvents {
-			err = jWriter.Write(fmt.Sprintf("%s/status/%d", path, stat), value)
+		for stat, statValue := range keyEvents.statusEvents {
+			err = jWriter.Write(fmt.Sprintf("%s/status/%d", path, stat), statValue)
 			if err != nil {
 				return err
 			}
 		}
 
-		for statClass, value := range counts.statusClassEvents {
-			err = jWriter.Write(fmt.Sprintf("%s/status/%s", path, statClass), value)
+		for statClass, statClassValue := range keyEvents.statusClassEvents {
+			err = jWriter.Write(fmt.Sprintf("%s/status/%s", path, statClass), statClassValue)
 			if err != nil {
 				return err
 			}
@@ -297,7 +307,7 @@ func (obs *GRPCObserver) getAPIStats() (map[string]APIEndpointStats, cumulativeC
 func duration2ms(d time.Duration) int64 {
 	const nsPerMs = 1000000
 
-	return int64(d.Nanoseconds() / nsPerMs)
+	return d.Nanoseconds() / nsPerMs
 }
 
 func computePercentiles(elapsedMS []float64) ([]int64, error) {
