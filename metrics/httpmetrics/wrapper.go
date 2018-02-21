@@ -150,6 +150,10 @@ func (wm wrappedMetrics) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	c := countWriter{next: w}
 	wm.next.ServeHTTP(&c, req)
+	status := c.status
+	if status == 0 {
+		status = http.StatusOK
+	}
 
 	// Note: Ignore codes less than 400.
 	// We may want to count some special cases.
@@ -158,22 +162,22 @@ func (wm wrappedMetrics) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	// A 4xx error should indicate bad input
 	if 400 <= c.status && c.status < 500 {
 		wm.h.metricsChan <- subject.MetricsEvent{
-			EventType: "rpc.BadInput",
-			RequestID: requestID,
-			Timestamp: time.Now(),
-			Value:     HTPStatusError{StatusCode: c.status},
-			Tags:      wm.h.tags,
+			EventType:  "rpc.End",
+			RequestID:  requestID,
+			Timestamp:  time.Now(),
+			HTTPStatus: status,
+			Tags:       wm.h.tags,
 		}
 	}
 
 	// A 5xx error definitely must be counted as a problem
 	if 500 <= c.status {
 		wm.h.metricsChan <- subject.MetricsEvent{
-			EventType: "rpc.End",
-			RequestID: requestID,
-			Timestamp: time.Now(),
-			Value:     HTPStatusError{StatusCode: c.status},
-			Tags:      wm.h.tags,
+			EventType:  "rpc.End",
+			RequestID:  requestID,
+			Timestamp:  time.Now(),
+			HTTPStatus: status,
+			Tags:       wm.h.tags,
 		}
 	} else {
 		wm.h.metricsChan <- subject.MetricsEvent{
@@ -184,10 +188,11 @@ func (wm wrappedMetrics) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			Tags:      wm.h.tags,
 		}
 		wm.h.metricsChan <- subject.MetricsEvent{
-			EventType: "rpc.End",
-			RequestID: requestID,
-			Timestamp: time.Now(),
-			Tags:      wm.h.tags,
+			EventType:  "rpc.End",
+			RequestID:  requestID,
+			Timestamp:  time.Now(),
+			HTTPStatus: status,
+			Tags:       wm.h.tags,
 		}
 	}
 }
