@@ -75,17 +75,10 @@ func NewRedisConnection(connectionString string, password string) *redis.Pool {
 
 // WithRedis takes a redis connection pool, and injects a single connection into the request context
 func WithRedis(pool *redis.Pool) middleware.Middleware {
-	return middleware.MiddlewareFunc(func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			redisConnection := pool.Get()
-			defer redisConnection.Close()
-
-			r = r.WithContext(
-				context.WithValue(r.Context(), redisPoolKey, redisConnection),
-			)
-
-			next.ServeHTTP(w, r)
-		})
+	return withMiddleware(func(callback func(key, interface{})) {
+		connection := pool.Get()
+		defer connection.Close()
+		callback(redisPoolKey, connection)
 	})
 }
 
@@ -110,20 +103,11 @@ func NewMongoSession(connectionString string) *mgo.Session {
 }
 
 // WithMongo will pass around a mongo  session into the request context
-func WithMongo(sess *mgo.Session) middleware.Middleware {
-	return middleware.MiddlewareFunc(func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			// pull a connection from the pool.
-			reqSess := sess.Copy()
-			// Close after use to clean up
-			defer reqSess.Close()
-
-			r = r.WithContext(
-				context.WithValue(r.Context(), mongoSessKey, reqSess),
-			)
-
-			next.ServeHTTP(w, r)
-		})
+func WithMongo(session *mgo.Session) middleware.Middleware {
+	return withMiddleware(func(callback func(key, interface{})) {
+		copy := session.Copy()
+		defer copy.Close()
+		callback(mongoSessKey, copy)
 	})
 }
 
@@ -174,4 +158,15 @@ func ReadReqest(r *http.Request, value interface{}) error {
 
 	// if all goes smoothly, return nil
 	return nil
+}
+
+func withMiddleware(function func(callback func(key, interface{}))) middleware.Middleware {
+	return middleware.MiddlewareFunc(func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+			function(func(key key, value interface{}) {
+				request = request.WithContext(context.WithValue(request.Context(), key, value))
+				next.ServeHTTP(writer, request)
+			})
+		})
+	})
 }

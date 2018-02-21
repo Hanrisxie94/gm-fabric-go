@@ -34,13 +34,7 @@ func validateHS256(token, secret string) error {
 		return err
 	}
 
-	// Perform series of checks to validate token
-	if jwt.SigningMethodHS256.Alg() != parsedToken.Header["alg"] {
-		message := fmt.Sprintf("Expected %s signing method but token specified %s",
-			jwt.SigningMethodHS256.Alg(),
-			parsedToken.Header["alg"])
-		err := fmt.Errorf("Error validating token algorithm: %s", message)
-		log.Error().Err(err).Msg("Error validating token algorithm")
+	if err = validateTokenAlg(parsedToken, jwt.SigningMethodHS256.Alg()); err != nil {
 		return err
 	}
 
@@ -73,12 +67,7 @@ func validateRS256(token, keyPath string) error {
 		return err
 	}
 
-	if jwt.SigningMethodRS256.Alg() != parsedToken.Header["alg"] {
-		message := fmt.Sprintf("Expected %s signing method but token specified %s",
-			jwt.SigningMethodRS256.Alg(),
-			parsedToken.Header["alg"])
-		err := fmt.Errorf("Error validating token algorithm: %s", message)
-		log.Error().Err(err).Msg("Error validating token algorithm")
+	if err = validateTokenAlg(parsedToken, jwt.SigningMethodRS256.Alg()); err != nil {
 		return err
 	}
 
@@ -152,4 +141,16 @@ func authorize(ctx context.Context, options ValidationOptions, token string) (*P
 		}
 		return p, nil
 	}
+}
+
+func validateTokenAlg(token *jwt.Token, alg string) error {
+	if alg!= token.Header["alg"] {
+		message := fmt.Sprintf("Expected %s signing method but token specified %s",
+			alg,
+			token.Header["alg"])
+		err := fmt.Errorf("Error validating token algorithm: %s", message)
+		log.Error().Err(err).Msg("Error validating token algorithm")
+		return err
+	}
+	return nil
 }

@@ -84,24 +84,12 @@ func InitService(cfg config.Config, logger zerolog.Logger) error {
 		return err
 	}
 
-	if err = within(path.Join(cfg.VendorPath(), "github.com", "golang", "protobuf", cfg.ProtocGenGoPluginName()), func() error {
-		logger.Debug().Msg("Installing Golang Plugin...")
-		if output, err = exec.Command("go", "install", "-v").CombinedOutput(); err != nil {
-			return errors.Wrapf(err, "Failed executing command with output %", string(output))
-		}
-		return nil
-	}); err != nil {
-		return err
+	if err = install(path.Join(cfg.VendorPath(), "github.com", "golang", "protobuf", cfg.ProtocGenGoPluginName())); err != nil {
+		return err;
 	}
 
-	if err = within(path.Join(cfg.VendorPath(), "github.com", "grpc-ecosystem", "grpc-gateway", cfg.ProtocGenGatewayPluginName()), func() error {
-		logger.Debug().Msg("Installing Gateway Plugin...")
-		if output, err = exec.Command("go", "install", "-v").CombinedOutput(); err != nil {
-			return errors.Wrapf(err, "Failed executing command with output %", string(output))
-		}
-		return nil
-	}); err != nil {
-		return err
+	if err = install(path.Join(cfg.VendorPath(), "github.com", "grpc-ecosystem", "grpc-gateway", cfg.ProtocGenGatewayPluginName())); err != nil {
+		return err;
 	}
 
 	return nil
@@ -132,4 +120,13 @@ func within(directory string, callback func() error) error {
 	}
 
 	return nil
+}
+
+func install(directory string) error {
+	return within(directory, func() error {
+		if output, err := exec.Command("go", "install", "-v").CombinedOutput(); err != nil {
+			return errors.Wrapf(err, "Failed executing command with output %", string(output))
+		}
+		return nil
+	})
 }
