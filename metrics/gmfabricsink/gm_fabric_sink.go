@@ -34,100 +34,50 @@ type sinkStruct struct {
 }
 
 // SetGauge should retain the last value it is set to
-func (s *sinkStruct) SetGauge(key []string, val float32) {
-	k, tags := joinKey(key)
-	s.eventChan <- subject.MetricsEvent{
-		EventType: "go-metrics.SetGauge",
-		Key:       k,
-		Timestamp: time.Now().UTC(),
-		Value:     val,
-		Tags:      tags,
-	}
+func (s *sinkStruct) SetGauge(keys []string, val float32) {
+	s.emit("go-metrics.SetGauge", keys, nil, val)
 }
 
 // SetGaugeWithLabels should retain the last value it is set to
-func (s *sinkStruct) SetGaugeWithLabels(
-	key []string,
-	val float32,
-	labels []gometrics.Label,
-) {
-	k, tags := joinKey(key)
-	tags = append(tags, labels2tags(labels)...)
-	s.eventChan <- subject.MetricsEvent{
-		EventType: "go-metrics.SetGaugeWithLabels",
-		Key:       k,
-		Timestamp: time.Now().UTC(),
-		Value:     val,
-		Tags:      tags,
-	}
+func (s *sinkStruct) SetGaugeWithLabels(keys []string, val float32, labels []gometrics.Label) {
+	s.emit("go-metrics.SetGaugeWithLabels", keys, labels, val)
 }
 
 // EmitKey should emit a Key/Value pair for each call
-func (s *sinkStruct) EmitKey(key []string, val float32) {
-	k, tags := joinKey(key)
-	s.eventChan <- subject.MetricsEvent{
-		EventType: "go-metrics.EmitKey",
-		Key:       k,
-		Timestamp: time.Now().UTC(),
-		Value:     val,
-		Tags:      tags,
-	}
+func (s *sinkStruct) EmitKey(keys []string, val float32) {
+	s.emit("go-metrics.EmitKey", keys, nil, val)
 }
 
 // IncrCounter should accumulate a value in a counter
-func (s *sinkStruct) IncrCounter(key []string, val float32) {
-	k, tags := joinKey(key)
-	s.eventChan <- subject.MetricsEvent{
-		EventType: "go-metrics.IncrCounter",
-		Key:       k,
-		Timestamp: time.Now().UTC(),
-		Value:     val,
-		Tags:      tags,
-	}
+func (s *sinkStruct) IncrCounter(keys []string, val float32) {
+	s.emit("go-metrics.IncrCounter", keys, nil, val)
 }
 
 // IncrCounterWithLabels should accumulate a value in a counter
-func (s *sinkStruct) IncrCounterWithLabels(
-	key []string,
-	val float32,
-	labels []gometrics.Label,
-) {
-	k, tags := joinKey(key)
-	tags = append(tags, labels2tags(labels)...)
-	s.eventChan <- subject.MetricsEvent{
-		EventType: "go-metrics.IncrCounterWithLabels",
-		Key:       k,
-		Timestamp: time.Now().UTC(),
-		Value:     val,
-		Tags:      tags,
-	}
+func (s *sinkStruct) IncrCounterWithLabels(keys []string, val float32, labels []gometrics.Label) {
+	s.emit("go-metrics.IncrCounterWithLabels", keys, labels, val)
 }
 
 // AddSample for timing information, where quantiles are used
-func (s *sinkStruct) AddSample(key []string, val float32) {
-	k, tags := joinKey(key)
-	s.eventChan <- subject.MetricsEvent{
-		EventType: "go-metrics.AddSample",
-		Key:       k,
-		Timestamp: time.Now().UTC(),
-		Value:     val,
-		Tags:      tags,
-	}
+func (s *sinkStruct) AddSample(keys []string, val float32) {
+	s.emit("go-metrics.AddSample", keys, nil, val)
 }
 
 // AddSampleWithLabels for timing information, where quantiles are used
-func (s *sinkStruct) AddSampleWithLabels(
-	key []string,
-	val float32,
-	labels []gometrics.Label,
-) {
-	k, tags := joinKey(key)
-	tags = append(tags, labels2tags(labels)...)
-	s.eventChan <- subject.MetricsEvent{
-		EventType: "go-metrics.AddSampleWithLabels",
-		Key:       k,
+func (s *sinkStruct) AddSampleWithLabels(keys []string, val float32, labels []gometrics.Label) {
+	s.emit("go-metrics.AddSampleWithLabels", keys, labels, val)
+}
+
+func (sink *sinkStruct) emit(eventType string, keys []string, labels []gometrics.Label, value float32) {
+	key, tags := joinKey(keys)
+	if labels != nil {
+		tags = append(tags, labels2tags(labels)...)
+	}
+	sink.eventChan <- subject.MetricsEvent {
+		EventType: eventType,
+		Key:       key,
 		Timestamp: time.Now().UTC(),
-		Value:     val,
+		Value:     value,
 		Tags:      tags,
 	}
 }
