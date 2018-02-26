@@ -17,7 +17,6 @@ package httpmetrics
 import (
 	"fmt"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/deciphernow/gm-fabric-go/metrics/headers"
@@ -46,14 +45,14 @@ func (e HTPStatusError) Error() string {
 type HTTPMetrics struct {
 	metricsChan chan<- subject.MetricsEvent
 	tags        []string
-	RollupPath  string
+	KeyFunc     func(*http.Request) string
 }
 
 // wrappedMetrics wraps a single Handler
 type wrappedMetrics struct {
-	h          *HTTPMetrics
-	next       http.Handler
-	rollupPath string
+	h       *HTTPMetrics
+	next    http.Handler
+	keyFunc func(*http.Request) string
 }
 
 // countWriter implements the http.ResponseWriter protocol to
@@ -96,9 +95,8 @@ func (h *HTTPMetrics) Handler(next http.Handler, options ...func(*HTTPMetrics)) 
 	for _, option := range options {
 		option(h)
 	}
-	// ServeHTTP can only reference h because wm doesn't exist when creating options,
-	// so inject rollupPath passed in as an option exported through h
-	wm.rollupPath = h.RollupPath
+	// Users need to be able to send metrics to specific counting keys
+	wm.keyFunc = h.KeyFunc
 	return wm
 }
 
@@ -120,18 +118,19 @@ func (wm wrappedMetrics) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		req.Header.Add(headers.RequestIDHeader, requestID)
 	}
 
-	path := req.URL.EscapedPath()
-	if len(wm.rollupPath) > 0 {
-		if strings.HasPrefix(path, wm.rollupPath) {
-			path = wm.rollupPath[0 : len(wm.rollupPath)-1]
-		}
+	var key string
+	if wm.keyFunc == nil {
+		// This is the default keyFunc
+		key = req.URL.EscapedPath()
+	} else {
+		key = wm.keyFunc(req)
 	}
 	wm.h.metricsChan <- subject.MetricsEvent{
 		EventType: "rpc.InHeader",
 		Transport: transport,
 		RequestID: requestID,
 		Timestamp: time.Now(),
-		Key:       fmt.Sprintf("route%s/%s", path, req.Method),
+		Key:       fmt.Sprintf("route%s/%s", key, req.Method),
 		Tags:      wm.h.tags,
 	}
 	wm.h.metricsChan <- subject.MetricsEvent{
