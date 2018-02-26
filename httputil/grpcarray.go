@@ -140,14 +140,21 @@ func (aw *arrayWriter) flush() error {
 		return nil
 	}
 
-	// if we aren't working on a grpc array, just write the block and leave
-	if !aw.isGrpcArray {
-		_, err = aw.next.Write(aw.prevBuf)
-		if err != nil {
-			return errors.Wrap(err, "flush()")
-		}
-		return nil
+	if aw.isGrpcArray {
+		return aw.flushGRPCArray()
 	}
+
+	// if we aren't working on a grpc array, just write the block and leave
+	_, err = aw.next.Write(aw.prevBuf)
+	if err != nil {
+		return errors.Wrap(err, "flush()")
+	}
+
+	return nil
+}
+
+func (aw *arrayWriter) flushGRPCArray() error {
+	var err error
 
 	// don't write the final '}'
 	_, err = aw.next.Write(aw.prevBuf[0 : len(aw.prevBuf)-1])
