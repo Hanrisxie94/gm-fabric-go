@@ -34,7 +34,7 @@ mkdir $TESTDIR
 SERVICE_NAME="test_service"
 
 # initialize the service
-fabric --log-level="debug" --dir="$TESTDIR" --init $SERVICE_NAME
+fabric --log-level="debug" $1 --dir="$TESTDIR" --init $SERVICE_NAME
 
 # add method to the protocol buf definition by stuffing a whole new
 # file from a 'here' document
@@ -275,6 +275,7 @@ cat << SETTINGS > "$TESTDIR/$SERVICE_NAME/settings.toml"
     use_gateway_proxy = true
     gateway_proxy_host = ""
     gateway_proxy_port = 8080
+    gateway_serve_anonymous_arrays = true
 
 # tls
     ca_cert_path = "$TEST_CERTS_DIR/root.crt"
