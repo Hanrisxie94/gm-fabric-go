@@ -133,25 +133,32 @@ func (aw *arrayWriter) WriteHeader(status int) {
 
 // flush
 func (aw *arrayWriter) flush() error {
-	if (aw.status == 0 || aw.status == http.StatusOK) && aw.prevBuf != nil {
-		var err error
+	var err error
 
-		if aw.isGrpcArray {
-			// don't write the final '}'
-			_, err = aw.next.Write(aw.prevBuf[0 : len(aw.prevBuf)-1])
+	// if the preceding code failed, no point in flushing
+	if aw.status != 0 && aw.status != http.StatusOK {
+		return nil
+	}
 
-			// but do write something, so we don't change the content length
-			if err == nil {
-				_, err = aw.next.Write([]byte(" "))
-			}
-
-		} else {
-			_, err = aw.next.Write(aw.prevBuf)
-		}
-
+	// if we aren't working on a grpc array, just write the block and leave
+	if !aw.isGrpcArray {
+		_, err = aw.next.Write(aw.prevBuf)
 		if err != nil {
 			return errors.Wrap(err, "flush()")
 		}
+		return nil
+	}
+
+	// don't write the final '}'
+	_, err = aw.next.Write(aw.prevBuf[0 : len(aw.prevBuf)-1])
+
+	// but do write something, so we don't change the content length
+	if err == nil {
+		_, err = aw.next.Write([]byte(" "))
+	}
+
+	if err != nil {
+		return errors.Wrap(err, "flush()")
 	}
 
 	return nil
