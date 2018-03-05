@@ -33,8 +33,10 @@ mkdir $TESTDIR
 
 SERVICE_NAME="test_service"
 
+TEMPLATES="${1:-}"
+
 # initialize the service
-fabric --log-level="debug" $1 --dir="$TESTDIR" --init $SERVICE_NAME
+fabric --log-level="debug" $TEMPLATES --dir="$TESTDIR" --init $SERVICE_NAME
 
 # add method to the protocol buf definition by stuffing a whole new
 # file from a 'here' document
