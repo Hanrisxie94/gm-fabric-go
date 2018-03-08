@@ -51,55 +51,88 @@ func GenerateTraceParent() TraceParent {
 	}
 }
 
+type parseFunc func(*TraceParent, string) error
+
 // ParseTraceParent creates a TraceParent from a string
 func ParseTraceParent(s string) (TraceParent, error) {
 	var err error
 	var tp TraceParent
+	var parseFuncs = []parseFunc{
+		parseVersion,
+		parseTraceID,
+		parseSpanID,
+		parseOptions,
+	}
 
 	parts := strings.Split(s, "-")
 
-	if len(parts) != 4 {
+	if len(parts) != len(parseFuncs) {
 		return TraceParent{}, errors.Errorf(
 			"Not enough '-', found %d, expected %d",
 			len(parts),
-			4,
+			len(parseFuncs),
 		)
 	}
 
-	version, err := strconv.Atoi(parts[0])
+	for i := 0; i < len(parseFuncs); i++ {
+		if err = parseFuncs[i](&tp, parts[i]); err != nil {
+			return TraceParent{}, errors.Wrapf(err, "parseFunc[%d] %s",
+				i, parts[i],
+			)
+		}
+	}
+
+	return tp, nil
+}
+
+func parseVersion(tp *TraceParent, data string) error {
+	version, err := strconv.Atoi(data)
 	if err != nil {
-		return TraceParent{}, errors.Wrapf(err, "strconv.Atoi(%s)", parts[0])
+		return errors.Wrapf(err, "strconv.Atoi(%s)", data)
 	}
 
 	if version < minTraceParentVersion || version > maxTraceParentVersion {
-		return TraceParent{}, errors.Errorf(
+		return errors.Errorf(
 			"Invalid version: expected %d <= %d <= %d",
 			minTraceParentVersion,
 			version,
 			maxTraceParentVersion,
 		)
 	}
-	tp.Version = uint8(version)
 
-	traceBytes, err := hex.DecodeString(parts[1])
+	tp.Version = uint8(version)
+	return nil
+}
+
+func parseTraceID(tp *TraceParent, data string) error {
+	traceBytes, err := hex.DecodeString(data)
 	if err != nil {
-		return TraceParent{}, errors.Wrapf(err, "hex.DecodeString(%s)", parts[1])
+		return errors.Wrapf(err, "hex.DecodeString(%s)", data)
 	}
 	copy(tp.TraceID[:], traceBytes)
 
-	spanBytes, err := hex.DecodeString(parts[2])
+	return nil
+}
+
+func parseSpanID(tp *TraceParent, data string) error {
+	spanBytes, err := hex.DecodeString(data)
 	if err != nil {
-		return TraceParent{}, errors.Wrapf(err, "hex.DecodeString(%s)", parts[2])
+		return errors.Wrapf(err, "hex.DecodeString(%s)", data)
 	}
 	copy(tp.SpanID[:], spanBytes)
 
-	options, err := strconv.Atoi(parts[3])
+	return nil
+}
+
+func parseOptions(tp *TraceParent, data string) error {
+	options, err := strconv.Atoi(data)
 	if err != nil {
-		return TraceParent{}, errors.Wrapf(err, "strconv.Atoi(%s)", parts[3])
+		return errors.Wrapf(err, "strconv.Atoi(%s)", data)
 	}
+
 	tp.Options = uint8(options)
 
-	return tp, nil
+	return nil
 }
 
 // String returns a formatted string suitable for use in an HTTP header
