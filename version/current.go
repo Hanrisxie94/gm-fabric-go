@@ -1,3 +1,5 @@
+package version
+
 // Copyright 2017 Decipher Technology Studios LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -11,13 +13,11 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-package version
-
 import "fmt"
 
 // semver is the semantic version
 // see https://semver.org/
-const semver = "0.1.4-dev"
+const semver = "0.1.5-dev"
 
 // gitHash should be filled in at compile time with
 // GITHASH=`(git rev-parse --verify --short HEAD)`
