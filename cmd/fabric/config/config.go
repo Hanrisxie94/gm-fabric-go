@@ -357,7 +357,17 @@ func (cfg Config) ProtocGenGatewayPluginPath() string {
 	return filepath.Join(gopathBin(), cfg.ProtocGenGatewayPluginName())
 }
 
-// ProtoFileNameprotoc-gen-grpc-gateway the name of the protocol buffer file
+// ProtocGenSwaggerPluginName is the name of the plugin for --swagger_out
+func (cfg Config) ProtocGenSwaggerPluginName() string {
+	return "protoc-gen-swagger"
+}
+
+// ProtocGenSwaggerPluginPath is the path to the plugin for --swagger_out
+func (cfg Config) ProtocGenSwaggerPluginPath() string {
+	return filepath.Join(gopathBin(), cfg.ProtocGenSwaggerPluginName())
+}
+
+// ProtoFileName the name of the protocol buffer file
 func (cfg Config) ProtoFileName() string {
 	return fmt.Sprintf("%s.proto", strings.ToLower(cfg.ProtoServiceName()))
 }
