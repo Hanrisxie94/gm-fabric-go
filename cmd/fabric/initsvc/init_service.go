@@ -32,13 +32,12 @@ import (
 func InitService(cfg config.Config, logger zerolog.Logger) error {
 
 	var err error
-	var data interface{}
-
-	data = struct {
+	var data interface{} = struct {
 		ServiceName        string
 		ServicePath        string
 		GoServiceName      string
 		ProtoServiceName   string
+		ProtoFileName      string
 		ConfigPackage      string
 		ConfigPackageName  string
 		MethodsPackage     string
@@ -50,6 +49,7 @@ func InitService(cfg config.Config, logger zerolog.Logger) error {
 		cfg.ServicePath(),
 		cfg.GoServiceName(),
 		cfg.ProtoServiceName(),
+		cfg.ProtoFileName(),
 		cfg.ConfigPackageImportPath(),
 		cfg.ConfigPackageName(),
 		cfg.MethodsImportPath(),
@@ -85,11 +85,11 @@ func InitService(cfg config.Config, logger zerolog.Logger) error {
 	}
 
 	if err = install(path.Join(cfg.VendorPath(), "github.com", "golang", "protobuf", cfg.ProtocGenGoPluginName())); err != nil {
-		return err;
+		return err
 	}
 
 	if err = install(path.Join(cfg.VendorPath(), "github.com", "grpc-ecosystem", "grpc-gateway", cfg.ProtocGenGatewayPluginName())); err != nil {
-		return err;
+		return err
 	}
 
 	return nil
