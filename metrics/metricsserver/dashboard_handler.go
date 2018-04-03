@@ -21,8 +21,8 @@ import (
 	"github.com/deciphernow/gm-fabric-go/metrics/flatjson"
 )
 
-// DashboardMetricsVersion is the version of metrics avaialble from this handler
-const DashboardMetricsVersion = "1.0.0"
+// GreyMatterMetricsVersion is the version of metrics avaialble from this handler
+const GreyMatterMetricsVersion = "1.0.0"
 
 // ReportFunc reports dashboard metrics
 type ReportFunc func(*flatjson.Writer) error
@@ -51,7 +51,7 @@ func (dh dashboardHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	err = jWriter.Write("dashboard-metrics-version", DashboardMetricsVersion)
+	err = jWriter.Write("grey-matter-metrics-version", GreyMatterMetricsVersion)
 	if err != nil {
 		http.Error(
 			w,
