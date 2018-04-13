@@ -20,3 +20,6 @@
 # misc
     verbose_logging = true
     template_url = "git@github.com:deciphernow/gm-fabric-templates.git//default"
+
+    # colon separated list of paths to be '-I' included in the protoc execution
+    protoc_includes = ""

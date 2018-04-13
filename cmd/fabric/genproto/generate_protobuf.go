@@ -38,7 +38,8 @@ func GenerateProtobuf(cfg config.Config, logger zerolog.Logger) error {
 
 	apisPath := path.Join(
 		cfg.ServicePath(),
-		"vendor/github.com/grpc-ecosystem/grpc-gateway/third_party/googleapis",
+		"vendor",
+		"github.com/grpc-ecosystem/grpc-gateway/third_party/googleapis",
 	)
 
 	for _, entry := range []struct {
@@ -56,21 +57,18 @@ func GenerateProtobuf(cfg config.Config, logger zerolog.Logger) error {
 	} {
 		logger.Info().Str("service", cfg.ServiceName).
 			Str("generating", entry.outputDef).Msg("")
-		logger.Debug().Str("service", cfg.ServiceName).Msgf(
-			"protoc -I %s --proto_path %s --plugin=%s %s %s",
-			apisPath, cfg.ProtoPath(), entry.pluginPath,
-			entry.outputDef, cfg.ProtoFilePath(),
-		)
-		cmd := exec.Command(
-			"protoc",
-			"-I",
-			apisPath,
-			"--proto_path",
-			cfg.ProtoPath(),
-			fmt.Sprintf("--plugin=%s", entry.pluginPath),
-			entry.outputDef,
-			cfg.ProtoFilePath(),
-		)
+		cmd := exec.Command("protoc")
+		cmd.Args = append(cmd.Args, "-I")
+		cmd.Args = append(cmd.Args, apisPath)
+		for _, protocInclude := range cfg.ProtocIncludePaths {
+			cmd.Args = append(cmd.Args, "-I")
+			cmd.Args = append(cmd.Args, protocInclude)
+		}
+		cmd.Args = append(cmd.Args, fmt.Sprintf("--proto_path=%s", cfg.ProtoPath()))
+		cmd.Args = append(cmd.Args, fmt.Sprintf("--plugin=%s", entry.pluginPath))
+		cmd.Args = append(cmd.Args, entry.outputDef)
+		cmd.Args = append(cmd.Args, cfg.ProtoFilePath())
+		logger.Debug().Str("service", cfg.ServiceName).Msgf("protoc %s", cmd.Args)
 		if op, err = cmd.CombinedOutput(); err != nil {
 			return errors.Wrapf(err, "protoc %v: %s", entry, string(op))
 		}

@@ -50,12 +50,13 @@ const (
 
 // Config contains program configuration
 type Config struct {
-	Op          Operation
-	Version     string
-	ServiceName string
-	TemplateUrl string
-	OwnerDir    string
-	LogLevel    zerolog.Level
+	Op                 Operation
+	Version            string
+	ServiceName        string
+	TemplateUrl        string
+	OwnerDir           string
+	ProtocIncludePaths []string
+	LogLevel           zerolog.Level
 }
 
 // Load constructs the configuation from various sources
@@ -65,6 +66,7 @@ func Load(logger zerolog.Logger) (Config, error) {
 	var templateURL string
 	var generateService string
 	var configFilePath string
+	var protocIncludes string
 	var logLevel string
 	var cfg Config
 	var err error
@@ -77,6 +79,8 @@ func Load(logger zerolog.Logger) (Config, error) {
 		"URL of the template to generate")
 	pflag.StringVar(&generateService, "generate", "",
 		"generate protobuff for service")
+	pflag.StringVar(&protocIncludes, "protoc-includes", "",
+		"colon separated list of paths to be '-I' included in the protoc execution")
 	pflag.StringVar(&cfg.OwnerDir, "dir", "",
 		"path to the directory containing the service. Default: cwd")
 	pflag.StringVar(&configFilePath, "config", "",
@@ -144,6 +148,15 @@ func Load(logger zerolog.Logger) (Config, error) {
 
 	if cfg.TemplateUrl == "" {
 		cfg.TemplateUrl = viper.GetString("template_url")
+	}
+
+	if protocIncludes == "" {
+		protocIncludes = viper.GetString("protoc_includes")
+	}
+	for _, inc := range strings.Split(protocIncludes, ":") {
+		if inc != "" {
+			cfg.ProtocIncludePaths = append(cfg.ProtocIncludePaths, inc)
+		}
 	}
 
 	return cfg, nil
@@ -344,7 +357,7 @@ func (cfg Config) ProtocGenGatewayPluginPath() string {
 	return filepath.Join(gopathBin(), cfg.ProtocGenGatewayPluginName())
 }
 
-// ProtoFileName the name of the protocol buffer file
+// ProtoFileNameprotoc-gen-grpc-gateway the name of the protocol buffer file
 func (cfg Config) ProtoFileName() string {
 	return fmt.Sprintf("%s.proto", strings.ToLower(cfg.ProtoServiceName()))
 }
