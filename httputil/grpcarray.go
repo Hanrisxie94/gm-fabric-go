@@ -136,7 +136,7 @@ func (aw *arrayWriter) flush() error {
 	var err error
 
 	// if the preceding code failed, no point in flushing
-	if aw.status != 0 && aw.status != http.StatusOK {
+	if isHTTPError(aw.status) {
 		return nil
 	}
 
@@ -169,4 +169,11 @@ func (aw *arrayWriter) flushGRPCArray() error {
 	}
 
 	return nil
+}
+
+func isHTTPError(code int) bool {
+	// note that there is some debate on what is actually an HTTP error
+	// this code attempts to recognize the kind of errors where we don't
+	// want to flush the response body.
+	return code >= 400
 }
