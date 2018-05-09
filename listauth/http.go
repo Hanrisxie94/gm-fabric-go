@@ -53,7 +53,19 @@ func handlerFactory(
 			return
 		}
 
-		dn := tlsutil.GetDistinguishedName(r.TLS.PeerCertificates[0])
+		var dn string
+
+		// See Issue #232 List based authorization does not work for
+		// impersonation and oauth.
+		// If the user is being impersonated by a trusted proxy, we should get
+		// the original user name in a header.
+		// udn code copied from gm-data-fabric
+		udn := r.Header.Get("USER_DN")
+		if len(udn) > 0 {
+			dn = tlsutil.GetNormalizedDistinguishedName(udn)
+		} else {
+			dn = tlsutil.GetDistinguishedName(r.TLS.PeerCertificates[0])
+		}
 
 		authorized, err := authorizor.IsAuthorized(dn)
 		if err != nil {
