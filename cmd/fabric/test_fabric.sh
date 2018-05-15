@@ -307,8 +307,8 @@ cat << SETTINGS > "$TESTDIR/$SERVICE_NAME/settings.toml"
     statsd_mem_interval = ""
 
 # prometheus
-    report_prometheus = false
-    prometheus_mem_interval = "1m"
+    report_prometheus = true
+    prometheus_mem_interval = "10s"
 
 # misc
     verbose_logging = true
@@ -333,10 +333,14 @@ HTTP_CLIENT_BINARY="$GOPATH/bin/${SERVICE_NAME}_http_client"
 # hit the proxy
 $HTTP_CLIENT_BINARY --uri="https://127.0.0.1:8080/acme/services/hello?hello_text=ping" --test-cert-dir="$TESTDIR/$SERVICE_NAME" 
 
-# hit the metrics server
-$HTTP_CLIENT_BINARY --uri="https://127.0.0.1:10001/metrics" --test-cert-dir="$TESTDIR/$SERVICE_NAME"
+# dump the dashboard output
+$HTTP_CLIENT_BINARY --uri="https://127.0.0.1:10001/metrics" --test-cert-dir="$TESTDIR/$SERVICE_NAME" 
 
-# stop the server gracefuly
+
+# stop the server gracefuly# dump the prometheus output
+$HTTP_CLIENT_BINARY --uri="https://127.0.0.1:10001/prometheus" --test-cert-dir="$TESTDIR/$SERVICE_NAME"
+
+
 kill $SERVICE_PID
 
 wait
