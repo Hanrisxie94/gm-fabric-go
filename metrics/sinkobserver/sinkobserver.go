@@ -15,6 +15,7 @@
 package sinkobserver
 
 import (
+	"fmt"
 	"strings"
 	"sync"
 	"time"
@@ -140,11 +141,21 @@ func updateTagMap(tagMap map[string]string, event subject.MetricsEvent) {
 }
 
 // splitEntryKey cleans up the key by removing slashes
+// We have to handle HTTP routes separately because they include http method,
+// GET, POST, etc
 func splitEntryKey(rawKey string) string {
 	splitKey := strings.Split(rawKey, "/")
 
 	if len(splitKey) == 0 {
 		return rawKey
+	}
+
+	// take a key of the form route/movie/GET and return movie(GET)
+	if len(splitKey) > 2 && splitKey[0] == "route" {
+		uriKey := splitKey[len(splitKey)-2]
+		httpMethod := splitKey[len(splitKey)-1]
+
+		return fmt.Sprintf("%s(%s)", uriKey, httpMethod)
 	}
 
 	// return the last element
