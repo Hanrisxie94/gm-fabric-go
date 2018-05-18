@@ -187,6 +187,11 @@ func fixEntryKey(rawKey string) string {
 		return fixInvalidKey(rawKey)
 	}
 
+	return fixSplitKey(rawKey, splitKey)
+}
+
+func fixSplitKey(rawKey string, splitKey []string) string {
+
 	var fixedKey string
 
 	switch splitKey[0] {
@@ -228,12 +233,12 @@ func fixEntryKey(rawKey string) string {
 		)
 	default:
 		log.Printf("ERROR: unknown key for Prometheus: %s", rawKey)
-		return fixInvalidKey(rawKey)
+		fixedKey = fixInvalidKey(rawKey)
 	}
 
 	if matched := validPrometheusRegex.MatchString(fixedKey); !matched {
 		log.Printf("ERROR: unfixable key for Prometheus: %s, %s", rawKey, fixedKey)
-		return fixInvalidKey(rawKey)
+		fixedKey = fixInvalidKey(rawKey)
 	}
 
 	return fixedKey
