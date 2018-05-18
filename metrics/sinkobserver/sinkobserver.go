@@ -15,7 +15,8 @@
 package sinkobserver
 
 import (
-	"fmt"
+	"log"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -26,6 +27,16 @@ import (
 	"github.com/deciphernow/gm-fabric-go/metrics/memvalues"
 	"github.com/deciphernow/gm-fabric-go/metrics/subject"
 )
+
+var (
+	validPrometheusRegex   *regexp.Regexp
+	invalidPrometheusRegex *regexp.Regexp
+)
+
+func init() {
+	validPrometheusRegex = regexp.MustCompile("^[a-zA-Z_:]([a-zA-Z0-9_:])*$")
+	invalidPrometheusRegex = regexp.MustCompile("[^a-zA-Z0-9_:]")
+}
 
 type activeEntry struct {
 	stats  grpcobserver.APIStats
@@ -72,7 +83,7 @@ func (so *sinkObs) Observe(event subject.MetricsEvent) {
 		key := []string{
 			entry.tagMap["service"],
 			entry.tagMap["host"],
-			splitEntryKey(entry.stats.Key),
+			fixEntryKey(entry.stats.Key),
 		}
 		elapsed := entry.stats.EndTime.Sub(entry.stats.BeginTime)
 		so.sink.IncrCounter(
@@ -98,9 +109,14 @@ func (so *sinkObs) Observe(event subject.MetricsEvent) {
 
 func (so *sinkObs) reportMemory(reportInterval time.Duration) {
 	tickChan := time.Tick(reportInterval)
+MEM_LOOP:
 	for {
 		<-tickChan
-		memValues, _ := memvalues.GetMemValues()
+		memValues, err := memvalues.GetMemValues()
+		if err != nil {
+			log.Printf("ERROR: memvalues.GetMemValues(): %s", err)
+			continue MEM_LOOP
+		}
 		so.Lock()
 		so.sink.AddSample(
 			[]string{"memory", "system", "available"},
@@ -140,24 +156,93 @@ func updateTagMap(tagMap map[string]string, event subject.MetricsEvent) {
 	}
 }
 
-// splitEntryKey cleans up the key by removing slashes
-// We have to handle HTTP routes separately because they include http method,
-// GET, POST, etc
-func splitEntryKey(rawKey string) string {
-	splitKey := strings.Split(rawKey, "/")
-
-	if len(splitKey) == 0 {
+// fixEntryKey cleans up the key for Prometheus
+//
+// Prometheus metric names have to adhere to this regex:
+// [a-zA-Z_:]([a-zA-Z0-9_:])*
+//
+// we have a (dashboard)key of the form
+// route/repos/deciphernow/bouncycastle-maven-plugin/issues/GET/latency_ms.avg
+//
+// we want to produce a (temporary expedient) key acceptable to Prometheus
+// route:repos_deciphernow_bouncycastle-maven-plugin_issues:GET:latency_ms_avg
+//
+// for grpc we have a dashboard key of the form
+// function/HelloStream/errors.count
+//
+// we want to produce a (temporary expedient) key acceptable to Prometheus
+// function:HelloStream:errors_count
+func fixEntryKey(rawKey string) string {
+	// if Prometheus will accept this key as-is, don't change it
+	if matched := validPrometheusRegex.MatchString(rawKey); matched {
 		return rawKey
 	}
 
-	// take a key of the form route/movie/GET and return movie(GET)
-	if len(splitKey) > 2 && splitKey[0] == "route" {
-		uriKey := splitKey[len(splitKey)-2]
-		httpMethod := splitKey[len(splitKey)-1]
+	splitKey := strings.Split(rawKey, "/")
 
-		return fmt.Sprintf("%s(%s)", uriKey, httpMethod)
+	// if this key doesn't have slashes, and Prometheus doesn't like it,
+	// we can't fix it.
+	if len(splitKey) == 1 {
+		log.Printf("ERROR: unsplittable invalid key for Prometheus: %s", rawKey)
+		return fixInvalidKey(rawKey)
 	}
 
-	// return the last element
-	return splitKey[len(splitKey)-1]
+	var fixedKey string
+
+	switch splitKey[0] {
+	case "function":
+		// "function/HelloStream/errors.count
+		if len(splitKey) != 3 {
+			log.Printf("ERROR: invalid function key for Prometheus: %s", rawKey)
+			return fixInvalidKey(rawKey)
+		}
+		// assume we have 'function', function-name, metric
+		functionName := splitKey[len(splitKey)-2]
+		metricName := splitKey[len(splitKey)-1]
+		fixedKey = strings.Join(
+			[]string{
+				"function",
+				invalidPrometheusRegex.ReplaceAllLiteralString(functionName, "_"),
+				invalidPrometheusRegex.ReplaceAllLiteralString(metricName, "_"),
+			},
+			":",
+		)
+	case "route":
+		// route/repos/deciphernow/bouncycastle-maven-plugin/issues/GET/latency_ms.avg
+		if len(splitKey) < 4 {
+			log.Printf("ERROR: invalid route key for Prometheus: %s", rawKey)
+			return fixInvalidKey(rawKey)
+		}
+		// assume we have 'route', uri[0]...uri[n], method, metric
+		uri := strings.Join(splitKey[1:len(splitKey)-2], "_")
+		method := splitKey[len(splitKey)-2]
+		metricName := splitKey[len(splitKey)-1]
+		fixedKey = strings.Join(
+			[]string{
+				"route",
+				invalidPrometheusRegex.ReplaceAllLiteralString(uri, "_"),
+				invalidPrometheusRegex.ReplaceAllLiteralString(method, "_"),
+				invalidPrometheusRegex.ReplaceAllLiteralString(metricName, "_"),
+			},
+			":",
+		)
+	default:
+		log.Printf("ERROR: unknown key for Prometheus: %s", rawKey)
+		return fixInvalidKey(rawKey)
+	}
+
+	if matched := validPrometheusRegex.MatchString(fixedKey); !matched {
+		log.Printf("ERROR: unfixable key for Prometheus: %s, %s", rawKey, fixedKey)
+		return fixInvalidKey(rawKey)
+	}
+
+	return fixedKey
+}
+
+// fixInvalidKey brute force replaces all invalid characters in a key
+// so we can at least see the bad key
+func fixInvalidKey(rawKey string) string {
+	s := invalidPrometheusRegex.ReplaceAllLiteralString(rawKey, "_")
+	// the first character can't be numeric, so just brute force padd it
+	return "x" + s
 }
