@@ -197,37 +197,33 @@ func fixSplitKey(rawKey string, splitKey []string) string {
 	switch splitKey[0] {
 	case "function":
 		// "function/HelloStream/errors.count
-		if len(splitKey) != 3 {
+		if len(splitKey) != 2 {
 			log.Printf("ERROR: invalid function key for Prometheus: %s", rawKey)
 			return fixInvalidKey(rawKey)
 		}
-		// assume we have 'function', function-name, metric
-		functionName := splitKey[len(splitKey)-2]
-		metricName := splitKey[len(splitKey)-1]
+		// assume we have 'function', function-name
+		functionName := splitKey[1]
 		fixedKey = strings.Join(
 			[]string{
 				"function",
 				invalidPrometheusRegex.ReplaceAllLiteralString(functionName, "_"),
-				invalidPrometheusRegex.ReplaceAllLiteralString(metricName, "_"),
 			},
 			":",
 		)
 	case "route":
 		// route/repos/deciphernow/bouncycastle-maven-plugin/issues/GET/latency_ms.avg
-		if len(splitKey) < 4 {
+		if len(splitKey) < 3 {
 			log.Printf("ERROR: invalid route key for Prometheus: %s", rawKey)
 			return fixInvalidKey(rawKey)
 		}
 		// assume we have 'route', uri[0]...uri[n], method, metric
-		uri := strings.Join(splitKey[1:len(splitKey)-2], "_")
-		method := splitKey[len(splitKey)-2]
-		metricName := splitKey[len(splitKey)-1]
+		uri := strings.Join(splitKey[1:len(splitKey)-1], "_")
+		method := splitKey[len(splitKey)-1]
 		fixedKey = strings.Join(
 			[]string{
 				"route",
 				invalidPrometheusRegex.ReplaceAllLiteralString(uri, "_"),
 				invalidPrometheusRegex.ReplaceAllLiteralString(method, "_"),
-				invalidPrometheusRegex.ReplaceAllLiteralString(metricName, "_"),
 			},
 			":",
 		)

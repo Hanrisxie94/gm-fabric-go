@@ -37,8 +37,8 @@ func Test_fixEntryKey(t *testing.T) {
 		},
 		{
 			name: "valid function",
-			args: args{rawKey: "function/HelloStream/errors.count"},
-			want: "function:HelloStream:errors_count",
+			args: args{rawKey: "function/HelloStream"},
+			want: "function:HelloStream",
 		},
 		{
 			name: "invalid function",
@@ -47,13 +47,13 @@ func Test_fixEntryKey(t *testing.T) {
 		},
 		{
 			name: "valid route",
-			args: args{rawKey: "route/repos/deciphernow/bouncycastle-maven-plugin/issues/GET/latency_ms.avg"},
-			want: "route:repos_deciphernow_bouncycastle_maven_plugin_issues:GET:latency_ms_avg",
+			args: args{rawKey: "route/repos/deciphernow/bouncycastle-maven-plugin/issues/GET"},
+			want: "route:repos_deciphernow_bouncycastle_maven_plugin_issues:GET",
 		},
 		{
 			name: "invalid route",
-			args: args{rawKey: "route/GET/latency_ms.avg"},
-			want: "xroute_GET_latency_ms_avg",
+			args: args{rawKey: "route/GET"},
+			want: "xroute_GET",
 		},
 	}
 	for _, tt := range tests {
