@@ -28,8 +28,9 @@ var (
 type KeyFunc func(*http.Request) string
 
 type metricsState struct {
-	hvec *client.HistogramVec
-	rvec *client.CounterVec
+	requestDurationVec *client.HistogramVec
+	requestSizeVec     *client.CounterVec
+	responseSizeVec    *client.CounterVec
 }
 
 // HandlerFactory wraps an http.Handler (inner) and captures metrics
@@ -46,7 +47,7 @@ func NewHandlerFactory(
 ) (HandlerFactory, error) {
 	var state metricsState
 
-	state.hvec = client.NewHistogramVec(
+	state.requestDurationVec = client.NewHistogramVec(
 		client.HistogramOpts{
 			Name:    "http_request_duration_seconds",
 			Help:    "duration of a single http request",
@@ -54,19 +55,30 @@ func NewHandlerFactory(
 		},
 		LabelNames,
 	)
-	if err := client.Register(state.hvec); err != nil {
-		return nil, errors.Wrap(err, "prometheus.Register hvec")
+	if err := client.Register(state.requestDurationVec); err != nil {
+		return nil, errors.Wrap(err, "prometheus.Register requestDurationVec")
 	}
 
-	state.rvec = client.NewCounterVec(
+	state.requestSizeVec = client.NewCounterVec(
+		client.CounterOpts{
+			Name: "http_request_size_bytes",
+			Help: "number of bytes read from the request",
+		},
+		LabelNames,
+	)
+	if err := client.Register(state.requestSizeVec); err != nil {
+		return nil, errors.Wrap(err, "prometheus.Register requestSizeVec")
+	}
+
+	state.responseSizeVec = client.NewCounterVec(
 		client.CounterOpts{
 			Name: "http_response_size_bytes",
 			Help: "number of bytes written to the response",
 		},
 		LabelNames,
 	)
-	if err := client.Register(state.rvec); err != nil {
-		return nil, errors.Wrap(err, "prometheus.Register rvec")
+	if err := client.Register(state.responseSizeVec); err != nil {
+		return nil, errors.Wrap(err, "prometheus.Register responseSizeVec")
 	}
 
 	return &state, nil
@@ -82,7 +94,6 @@ func (mState *metricsState) NewHandlerWithKeyFunc(
 	keyFunc KeyFunc,
 	inner http.Handler,
 ) (http.Handler, error) {
-	// TODO: I think we could curry the HistogramVec here
 	var hState handlerState
 	hState.metricsState = mState
 	hState.keyFunc = keyFunc
@@ -99,9 +110,13 @@ func (mState *metricsState) NewHandler(
 
 // ServeHTTP implements the http.Handler interface
 func (hState *handlerState) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	c := httpmetrics.CountWriter{Next: w}
+	responseWriter := httpmetrics.CountWriter{Next: w}
+
+	requestReader := httpmetrics.CountReader{Next: req.Body}
+	req.Body = &requestReader
+
 	startTime := time.Now()
-	hState.inner.ServeHTTP(&c, req)
+	hState.inner.ServeHTTP(&responseWriter, req)
 	endTime := time.Now()
 
 	elapsed := endTime.Sub(startTime)
@@ -114,24 +129,36 @@ func (hState *handlerState) ServeHTTP(w http.ResponseWriter, req *http.Request) 
 		method = "GET"
 	}
 
+	status := responseWriter.Status
+	if status == 0 {
+		status = 200
+	}
+
 	labels := client.Labels{
 		"key":    hState.keyFunc(req),
 		"method": method,
-		"status": fmt.Sprintf("%d", c.Status),
+		"status": fmt.Sprintf("%d", status),
 	}
 
-	hv, err := hState.hvec.GetMetricWith(labels)
+	requestDuration, err := hState.requestDurationVec.GetMetricWith(labels)
 	if err != nil {
-		log.Printf("hState.hvec.GetMetricWith(%s) failed: %s", labels, err)
+		log.Printf("hState.requestDurationVec.GetMetricWith(%s) failed: %s", labels, err)
 		return
 	}
-	hv.Observe(elapsed.Seconds())
+	requestDuration.Observe(elapsed.Seconds())
 
-	rv, err := hState.rvec.GetMetricWith(labels)
+	requestSize, err := hState.requestSizeVec.GetMetricWith(labels)
 	if err != nil {
-		log.Printf("hState.rvec.GetMetricWith(%s) failed: %s", labels, err)
+		log.Printf("hState.requestSizeVec.GetMetricWith(%s) failed: %s", labels, err)
 		return
 	}
-	rv.Add(float64(c.BytesWritten))
+	requestSize.Add(float64(requestReader.BytesRead))
+
+	responseSize, err := hState.responseSizeVec.GetMetricWith(labels)
+	if err != nil {
+		log.Printf("hState.responseSizeVec.GetMetricWith(%s) failed: %s", labels, err)
+		return
+	}
+	responseSize.Add(float64(responseWriter.BytesWritten))
 
 }
