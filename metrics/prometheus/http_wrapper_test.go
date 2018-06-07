@@ -17,16 +17,15 @@ func TestHTTPWrappper(t *testing.T) {
 		t.Fatalf("NewHandlerFactory failed: %s", err)
 	}
 
-	const url = "/acme/services"
-	handler, err := hf.NewHandler(url, http.HandlerFunc(testHandler))
+	handler, err := hf.NewHandler(http.HandlerFunc(testHandler))
 	if err != nil {
-		t.Fatalf("NewHandler(%s... failed: %s", url, err)
+		t.Fatalf("NewHandler( failed: %s", err)
 	}
 
 	ts := httptest.NewServer(handler)
 	defer ts.Close()
 
-	http.Get(url)
+	http.Get("/ace/hardware")
 
 	promhttp.Handler()
 
