@@ -24,7 +24,8 @@ var (
 	}
 )
 
-// KeyFunc geneates a histogram key from information in the http request
+// KeyFunc geneates our Prometheus vector label 'key' from information in the
+// http request
 type KeyFunc func(*http.Request) string
 
 type metricsState struct {
@@ -39,7 +40,8 @@ type HandlerFactory interface {
 }
 
 // NewHandlerFactory returns an abject that implements the HandlerFactory interface
-// it is for use in creating
+// it is for use in creating individual http.Handler's that are instrumented
+// to collect our metrics.
 func NewHandlerFactory(
 	firstBucket float64,
 	bucketWidth float64,
@@ -90,6 +92,9 @@ type handlerState struct {
 	inner   http.Handler
 }
 
+// NewHandlerWithKeyFunc creates a new http.Handler instrumented to collect
+// our metrics.
+// With a specilaized key function.
 func (mState *metricsState) NewHandlerWithKeyFunc(
 	keyFunc KeyFunc,
 	inner http.Handler,
@@ -102,6 +107,8 @@ func (mState *metricsState) NewHandlerWithKeyFunc(
 	return &hState, nil
 }
 
+// NewHandler creates a new http.Handler instrumented to collect our metrics
+// NewHandler uses DefaultKeyFunc
 func (mState *metricsState) NewHandler(
 	inner http.Handler,
 ) (http.Handler, error) {
@@ -109,6 +116,10 @@ func (mState *metricsState) NewHandler(
 }
 
 // ServeHTTP implements the http.Handler interface
+// It collects:
+//      http_request_duration_seconds
+//      http_request_size_bytes
+//      http_response_size_bytes
 func (hState *handlerState) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	responseWriter := httpmetrics.CountWriter{Next: w}
 
