@@ -9,7 +9,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	client "github.com/prometheus/client_golang/prometheus"
+	prom "github.com/prometheus/client_golang/prometheus"
 
 	"github.com/deciphernow/gm-fabric-go/metrics/httpmetrics"
 )
@@ -29,9 +29,9 @@ var (
 type KeyFunc func(*http.Request) string
 
 type metricsState struct {
-	requestDurationVec *client.HistogramVec
-	requestSizeVec     *client.CounterVec
-	responseSizeVec    *client.CounterVec
+	requestDurationVec *prom.HistogramVec
+	requestSizeVec     *prom.CounterVec
+	responseSizeVec    *prom.CounterVec
 }
 
 // HandlerFactory wraps an http.Handler (inner) and captures metrics
@@ -40,46 +40,46 @@ type HandlerFactory interface {
 }
 
 // NewHandlerFactory returns an abject that implements the HandlerFactory interface
-// it is for use in creating individual http.Handler's that are instrumented
+// it is for use in creating individual http.Handlers that are instrumented
 // to collect our metrics.
-func NewHandlerFactory(
-	firstBucket float64,
-	bucketWidth float64,
-	bucketCount int,
-) (HandlerFactory, error) {
+func NewHandlerFactory(buckets []float64) (HandlerFactory, error) {
 	var state metricsState
 
-	state.requestDurationVec = client.NewHistogramVec(
-		client.HistogramOpts{
+	if len(buckets) == 0 {
+		buckets = prom.DefBuckets
+	}
+
+	state.requestDurationVec = prom.NewHistogramVec(
+		prom.HistogramOpts{
 			Name:    "http_request_duration_seconds",
 			Help:    "duration of a single http request",
-			Buckets: client.LinearBuckets(firstBucket, bucketWidth, bucketCount),
+			Buckets: buckets,
 		},
 		LabelNames,
 	)
-	if err := client.Register(state.requestDurationVec); err != nil {
+	if err := prom.Register(state.requestDurationVec); err != nil {
 		return nil, errors.Wrap(err, "prometheus.Register requestDurationVec")
 	}
 
-	state.requestSizeVec = client.NewCounterVec(
-		client.CounterOpts{
+	state.requestSizeVec = prom.NewCounterVec(
+		prom.CounterOpts{
 			Name: "http_request_size_bytes",
 			Help: "number of bytes read from the request",
 		},
 		LabelNames,
 	)
-	if err := client.Register(state.requestSizeVec); err != nil {
+	if err := prom.Register(state.requestSizeVec); err != nil {
 		return nil, errors.Wrap(err, "prometheus.Register requestSizeVec")
 	}
 
-	state.responseSizeVec = client.NewCounterVec(
-		client.CounterOpts{
+	state.responseSizeVec = prom.NewCounterVec(
+		prom.CounterOpts{
 			Name: "http_response_size_bytes",
 			Help: "number of bytes written to the response",
 		},
 		LabelNames,
 	)
-	if err := client.Register(state.responseSizeVec); err != nil {
+	if err := prom.Register(state.responseSizeVec); err != nil {
 		return nil, errors.Wrap(err, "prometheus.Register responseSizeVec")
 	}
 
@@ -145,7 +145,7 @@ func (hState *handlerState) ServeHTTP(w http.ResponseWriter, req *http.Request) 
 		status = 200
 	}
 
-	labels := client.Labels{
+	labels := prom.Labels{
 		"key":    hState.keyFunc(req),
 		"method": method,
 		"status": fmt.Sprintf("%d", status),
