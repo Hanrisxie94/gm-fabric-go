@@ -1,7 +1,7 @@
 # OAuth Go Service Middleware
 [![godoc](http://img.shields.io/badge/godoc-reference-blue.svg?style=flat)](https://godoc.org/github.com/deciphernow/gm-fabric-go/oauth)
 
-OAuth 2.0 middleware that supports HS256 (HMAC) token validation
+OAuth 2.0 GM Fabric Middleware for easy authentication/authorization with multiple identity stores. Checkout [CoreOS/Dex](https://github.com/coreos/dex) for more information on Oauth 2.0.
 
 1.  [Prerequisites](#prerequisites)
 2.  [Info](#info)
@@ -13,26 +13,22 @@ OAuth 2.0 middleware that supports HS256 (HMAC) token validation
 
 ## Info
 
-DIAGRAM GOES HERE
+The GM Fabric Oauth package has a hard dependency on CoreOS's Dex server for full Oauth 2.0 features. You aren't required to use Dex but you will have a limited feature set and we do not intend to support otherwise.
 
-```
-1. Service receives token
-2. Service locally validates token
-3. Service queries OAuth server for token validation
-4. Service receives user viewing permissions
-3. Service sends back data based on user viewing permissions
-```
+### OAuth 2.0 Authentication Flow
+![token-flow](https://raw.githubusercontent.com/coreos/dex/master/Documentation/img/dex-backend-flow.png)
+*Image used from Dex's documentation. For more info see [here](https://github.com/coreos/dex/blob/master/Documentation/getting-started.md)*
 
-## Usage
+## Installing
 
-1.  Go tooling:
+1. To install locally run the following command with the standard Go tooling:
 ```
 go get -u github.com/deciphernow/gm-fabric-go/oauth
 ```
 
-2.  Using [dep](https://github.com/golang/dep)
+2.  If you are importing this into a project we recommend using [golang/dep](https://golang.github.io/dep/)
 ```
-dep add github.com/deciphernow/gm-fabric-go/oauth
+dep ensure -add github.com/deciphernow/gm-fabric-go/oauth
 ```
 
 ## With Dex
@@ -52,6 +48,7 @@ server := grpc.NewServer(
 
 return server
 ```
+*Note* when this middleware is used, all methods on the grpc server are guarded by the OAuth middleware. If that is acceptable for your server design this is the easiest route for OAuth configuration.
 
 2.  Alternatively (recommended), you can validate on server methods individually. We recommend this route as you have more control over what data should be blocked.
 ```go
@@ -80,6 +77,7 @@ func (s *Server) GetItems(ctx context.Context, in *store.Item) (*store.Items, er
     return items, nil
 }
 ```
+Because we return the token and permissions, you can filter data based upon a users [groups](https://github.com/coreos/dex/blob/master/Documentation/custom-scopes-claims-clients.md#scopes). Dex provides a handy token field that holds which "groups" a user belongs to.
 
 ### HTTP Middleware
 
@@ -89,7 +87,6 @@ func (s *Server) GetItems(ctx context.Context, in *store.Item) (*store.Items, er
 // Inject the JWT middleware
 stack := middleware.Chain(
     // Adding this to the stack will require all API queries to provide a token in the auth http header
-    // Always pass the signing algorithm to expect and any necessary supporting data such as a signing secret or key path
     oauth.HTTPAuthenticate(oauth.WithProvider("http://127.0.0.1:5556/dex"), oauth.WithClientID("example-app")),
 )
 
