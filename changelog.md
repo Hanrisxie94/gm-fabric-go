@@ -1,4 +1,15 @@
-# 0.1.4
+# Changelog
+
+## 0.1.5
+
+* Show off Go Report Card
+* Various fixes to Prometheus metrics (in progress)
+* Add a version identifier to the metrics dashboard JSON stream 
+* make ProtoFileName available to templates 
+* add protoc-includes config option 
+* whitelist http middleware 
+
+## 0.1.4
 
 * (metrics) improve keys in statsd display (#127)
 * Enable fabric generator to get template URL from config file (in addition to commandline) (#148)
