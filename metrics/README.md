@@ -76,7 +76,7 @@ The metrics components must be set up in a specific order to satisfy dependencie
     }
     memReportingInterval = time.Minute
     sinkObserver := sinkobserver.New(statsdSink, memReportingInterval)
-
+	
     // Create Subject from Observer(s) (This creates the metrics event channel)
     metricsChan := subject.New(ctx, grpcObserver, goMetObserver, sinkObserver)
 

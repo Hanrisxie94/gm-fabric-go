@@ -185,6 +185,15 @@ func (obs *GRPCObserver) GetLatencyStats() (map[string]APIEndpointStats, error) 
 	return stats, err
 }
 
+// GetCumulativeCount returns the total events of a GRPCObserver's APIStats
+func (obs *GRPCObserver) GetCumulativeCount() int64 {
+	_, count, err := obs.getAPIStats()
+	if err != nil {
+		fmt.Errorf("couldn't grab grpc's cumulative count: %v", err)
+	}
+	return count.totalEvents
+}
+
 func (obs *GRPCObserver) getAPIStats() (map[string]APIEndpointStats, cumulativeCounts, error) {
 	obs.Lock()
 	defer obs.Unlock()

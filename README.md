@@ -269,7 +269,6 @@ With a basic microservice implemented you may extend the capabilities of that se
 
 | Package                            | Description                                                        |
 |------------------------------------|--------------------------------------------------------------------|
-| [cloudwatch](cloudwatch/README.md) | Auto-scale abilities using GM Fabric metrics and amazon cloudwatch |
 | [consul](consul/README.md)         | Easy integration with Hashicorps service discovery system          |
 | [dbutil](dbutil/README.md)         | Utilities for configuration/interaction with Mongo and Redis       |
 | [events](events/README.md)         | Prototyped event streaming                                         |
