@@ -14,36 +14,23 @@ import (
 	"github.com/deciphernow/gm-fabric-go/metrics/httpmetrics"
 )
 
-var (
-	// LabelNames is the list of valid lable names for this metric
-	LabelNames = []string{"key", "method", "status"}
-
-	// DefaultKeyFunc returns the URI as the metrics key
-	DefaultKeyFunc KeyFunc = func(req *http.Request) string {
-		return req.URL.EscapedPath()
-	}
-)
-
-// KeyFunc geneates our Prometheus vector label 'key' from information in the
-// http request
-type KeyFunc func(*http.Request) string
-
-type metricsState struct {
+type histogramMetricsState struct {
 	requestDurationVec *prom.HistogramVec
 	requestSizeVec     *prom.CounterVec
 	responseSizeVec    *prom.CounterVec
 }
 
-// HandlerFactory wraps an http.Handler (inner) and captures metrics
-type HandlerFactory interface {
+// HistogramHandlerFactory wraps an http.Handler (inner) and captures metrics
+type HistogramHandlerFactory interface {
 	NewHandler(inner http.Handler) (http.Handler, error)
 }
 
-// NewHandlerFactory returns an abject that implements the HandlerFactory interface
+// NewHistogramHandlerFactory returns an abject that implements the
+// HistogramHandlerFactory interface
 // it is for use in creating individual http.Handlers that are instrumented
 // to collect our metrics.
-func NewHandlerFactory(buckets []float64) (HandlerFactory, error) {
-	var state metricsState
+func NewHistogramHandlerFactory(buckets []float64) (HistogramHandlerFactory, error) {
+	var state histogramMetricsState
 
 	if len(buckets) == 0 {
 		buckets = prom.DefBuckets
@@ -86,21 +73,21 @@ func NewHandlerFactory(buckets []float64) (HandlerFactory, error) {
 	return &state, nil
 }
 
-type handlerState struct {
-	*metricsState
-	keyFunc KeyFunc
+type histogramHandlerState struct {
+	*histogramMetricsState
+	keyFunc HTTPKeyFunc
 	inner   http.Handler
 }
 
 // NewHandlerWithKeyFunc creates a new http.Handler instrumented to collect
 // our metrics.
 // With a specilaized key function.
-func (mState *metricsState) NewHandlerWithKeyFunc(
-	keyFunc KeyFunc,
+func (mState *histogramMetricsState) NewHandlerWithKeyFunc(
+	keyFunc HTTPKeyFunc,
 	inner http.Handler,
 ) (http.Handler, error) {
-	var hState handlerState
-	hState.metricsState = mState
+	var hState histogramHandlerState
+	hState.histogramMetricsState = mState
 	hState.keyFunc = keyFunc
 	hState.inner = inner
 
@@ -109,10 +96,10 @@ func (mState *metricsState) NewHandlerWithKeyFunc(
 
 // NewHandler creates a new http.Handler instrumented to collect our metrics
 // NewHandler uses DefaultKeyFunc
-func (mState *metricsState) NewHandler(
+func (mState *histogramMetricsState) NewHandler(
 	inner http.Handler,
 ) (http.Handler, error) {
-	return mState.NewHandlerWithKeyFunc(DefaultKeyFunc, inner)
+	return mState.NewHandlerWithKeyFunc(DefaultHTTPKeyFunc, inner)
 }
 
 // ServeHTTP implements the http.Handler interface
@@ -120,7 +107,7 @@ func (mState *metricsState) NewHandler(
 //      http_request_duration_seconds
 //      http_request_size_bytes
 //      http_response_size_bytes
-func (hState *handlerState) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+func (hState *histogramHandlerState) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	responseWriter := httpmetrics.CountWriter{Next: w}
 
 	requestReader := httpmetrics.CountReader{Next: req.Body}

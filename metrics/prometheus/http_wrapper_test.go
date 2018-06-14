@@ -12,9 +12,9 @@ import (
 
 func TestHTTPWrappper(t *testing.T) {
 
-	hf, err := NewHandlerFactory(nil)
+	hf, err := NewSummaryHandlerFactory()
 	if err != nil {
-		t.Fatalf("NewHandlerFactory failed: %s", err)
+		t.Fatalf("NewSummaryHandlerFactory failed: %s", err)
 	}
 
 	handler, err := hf.NewHandler(http.HandlerFunc(testHandler))
