@@ -32,10 +32,25 @@ type SummaryHandlerFactory interface {
 func NewSummaryHandlerFactory() (SummaryHandlerFactory, error) {
 	var state summaryMetricsState
 
+	// Objectives defines the quantile rank estimates with their respective
+	// absolute error. If Objectives[q] = e, then the value reported for q
+	// will be the φ-quantile value for some φ between q-e and q+e.
+	//
+	// This map of objectives is chosen to duplicate the dashboard metrics
+	objectives := map[float64]float64{
+		0.5:    0.05,
+		0.9:    0.01,
+		0.95:   0.001,
+		0.99:   0.001,
+		0.999:  0.0001,
+		0.9999: 0.00001,
+	}
+
 	state.requestDurationVec = prom.NewSummaryVec(
 		prom.SummaryOpts{
-			Name: "http_request_duration_seconds",
-			Help: "duration of a single http request",
+			Name:       "http_request_duration_seconds",
+			Help:       "duration of a single http request",
+			Objectives: objectives,
 		},
 		LabelNames,
 	)
