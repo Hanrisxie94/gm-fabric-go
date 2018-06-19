@@ -14,6 +14,9 @@ import (
 	"github.com/deciphernow/gm-fabric-go/metrics/httpmetrics"
 )
 
+// AllMetricsKey is a metrics key for the total of alll observations
+const AllMetricsKey = "all"
+
 type summaryMetricsState struct {
 	requestDurationVec *prom.SummaryVec
 	requestSizeVec     *prom.CounterVec
@@ -148,9 +151,22 @@ func (hState *summaryHandlerState) ServeHTTP(w http.ResponseWriter, req *http.Re
 		"status": fmt.Sprintf("%d", status),
 	}
 
+	allLabels := prom.Labels{
+		"key":    AllMetricsKey,
+		"method": "",
+		"status": fmt.Sprintf("%d", status),
+	}
+
 	requestDuration, err := hState.requestDurationVec.GetMetricWith(labels)
 	if err != nil {
 		log.Printf("hState.requestDurationVec.GetMetricWith(%s) failed: %s", labels, err)
+		return
+	}
+	requestDuration.Observe(elapsed.Seconds())
+
+	requestDuration, err = hState.requestDurationVec.GetMetricWith(allLabels)
+	if err != nil {
+		log.Printf("hState.requestDurationVec.GetMetricWith(%s) failed: %s", allLabels, err)
 		return
 	}
 	requestDuration.Observe(elapsed.Seconds())
@@ -162,9 +178,23 @@ func (hState *summaryHandlerState) ServeHTTP(w http.ResponseWriter, req *http.Re
 	}
 	requestSize.Add(float64(requestReader.BytesRead))
 
+	requestSize, err = hState.requestSizeVec.GetMetricWith(allLabels)
+	if err != nil {
+		log.Printf("hState.requestSizeVec.GetMetricWith(%s) failed: %s", allLabels, err)
+		return
+	}
+	requestSize.Add(float64(requestReader.BytesRead))
+
 	responseSize, err := hState.responseSizeVec.GetMetricWith(labels)
 	if err != nil {
 		log.Printf("hState.responseSizeVec.GetMetricWith(%s) failed: %s", labels, err)
+		return
+	}
+	responseSize.Add(float64(responseWriter.BytesWritten))
+
+	responseSize, err = hState.responseSizeVec.GetMetricWith(allLabels)
+	if err != nil {
+		log.Printf("hState.responseSizeVec.GetMetricWith(%s) failed: %s", allLabels, err)
 		return
 	}
 	responseSize.Add(float64(responseWriter.BytesWritten))
