@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.6
+
+* Add capability to emit metrics to CloudWatch
+
 ## 0.1.5
 
 * Show off Go Report Card
