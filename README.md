@@ -64,7 +64,7 @@ For convienence, we provide a Homebrew tap for installing the command line utili
 The following instructions leverage external sources heavily so please open an issue if you notice link rot or any other discrepancies.
 
 1. Download the Go archive for your platform from [https://golang.org/dl/](https://golang.org/dl/).
-1. Follow the installation instructions for your platform from [https://golang.org/doc/install](https://golang.org/dl/).
+1. Follow the installation instructions for your platform from [https://golang.org/doc/install](https://golang.org/doc/install).
 1. Define your `GOPATH`, the path in which Go will download, build and install software, as described [here](https://github.com/golang/go/wiki/SettingGOPATH). For example:
     ```bash
     export GOPATH="~/go" && echo "export GOPATH=${GOPATH}" >> ~/.bash_profile
