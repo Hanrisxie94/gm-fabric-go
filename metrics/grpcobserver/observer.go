@@ -120,7 +120,6 @@ func New(
 	cacheSize int,
 ) *GRPCObserver {
 	return &GRPCObserver{
-		startTime:        time.Now().UTC(),
 		active:           make(map[string]APIStats),
 		cache:            newAPIStatsCache(cacheSize),
 		cumulativeCounts: newCumulativeCounts(),

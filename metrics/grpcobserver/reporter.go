@@ -16,15 +16,14 @@ package grpcobserver
 
 import (
 	"fmt"
-	"runtime"
 	"strings"
 	"time"
 
+	"github.com/pkg/errors"
+
 	"github.com/montanaflynn/stats"
-	"github.com/shirou/gopsutil/cpu"
 
 	"github.com/deciphernow/gm-fabric-go/metrics/flatjson"
-	"github.com/deciphernow/gm-fabric-go/metrics/memvalues"
 	"github.com/deciphernow/gm-fabric-go/metrics/subject"
 )
 
@@ -41,12 +40,12 @@ func (obs *GRPCObserver) Report(jWriter *flatjson.Writer) error {
 	}
 
 	if summary.APIStats, counts, err = obs.getAPIStats(); err != nil {
-		return err
+		return errors.Wrap(err, "obs.getAPIStats()")
 	}
 
 	err = jWriter.Write(fmt.Sprintf("%s/%s", "Total", "requests"), counts.totalEvents)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "jWriter.Write Total requests")
 	}
 
 	for _, transport := range []subject.EventTransport{
@@ -60,7 +59,8 @@ func (obs *GRPCObserver) Report(jWriter *flatjson.Writer) error {
 			counts.transportEvents[transport],
 		)
 		if err != nil {
-			return err
+			return errors.Wrapf(err, "jWriter.Write %s requests",
+				transportLabels[transport])
 		}
 	}
 
@@ -90,7 +90,7 @@ func (obs *GRPCObserver) Report(jWriter *flatjson.Writer) error {
 		}
 		err = jWriter.Write(fmt.Sprintf("%s/%s", path, "requests"), keyEvents.events)
 		if err != nil {
-			return err
+			return errors.Wrapf(err, "jWriter.Write %s requests", path)
 		}
 
 		var routes string
@@ -103,20 +103,20 @@ func (obs *GRPCObserver) Report(jWriter *flatjson.Writer) error {
 		}
 		err = jWriter.Write(fmt.Sprintf("%s/%s", path, "routes"), routes)
 		if err != nil {
-			return err
+			return errors.Wrapf(err, "jWriter.Write %s routes", path)
 		}
 
 		for stat, statValue := range keyEvents.statusEvents {
 			err = jWriter.Write(fmt.Sprintf("%s/status/%d", path, stat), statValue)
 			if err != nil {
-				return err
+				return errors.Wrapf(err, "jWriter.Write %s status", path)
 			}
 		}
 
 		for statClass, statClassValue := range keyEvents.statusClassEvents {
 			err = jWriter.Write(fmt.Sprintf("%s/status/%s", path, statClass), statClassValue)
 			if err != nil {
-				return err
+				return errors.Wrapf(err, "jWriter.Write %s statClass", path)
 			}
 		}
 
@@ -141,38 +141,8 @@ func (obs *GRPCObserver) Report(jWriter *flatjson.Writer) error {
 		} {
 			err = jWriter.Write(fmt.Sprintf("%s/%s", path, x.label), x.val)
 			if err != nil {
-				return err
+				return errors.Wrapf(err, "jWriter.Write %s/%s", path, x.label)
 			}
-		}
-	}
-
-	memValues, err := memvalues.GetMemValues()
-	if err != nil {
-		return err
-	}
-
-	var cpuPercent []float64
-	cpuPercent, err = cpu.Percent(time.Second, false)
-	if err != nil {
-		return fmt.Errorf("cpu.Percent failed: %v", err)
-	}
-
-	for _, x := range []struct {
-		key   string
-		value interface{}
-	}{
-		{"system/start_time", duration2ms(time.Duration(obs.startTime.UnixNano()))},
-		{"system/cpu.pct", cpuPercent[0]},
-		{"system/cpu_cores", runtime.NumCPU()},
-		{"os", runtime.GOOS},
-		{"os_arch", runtime.GOARCH},
-		{"system/memory/available", memValues.SystemMemoryAvailable},
-		{"system/memory/used", memValues.SystemMemoryUsed},
-		{"system/memory/used_percent", memValues.SystemMemoryUsedPercent},
-		{"process/memory/used", memValues.ProcessMemoryUsed},
-	} {
-		if err = jWriter.Write(x.key, x.value); err != nil {
-			return err
 		}
 	}
 
@@ -189,7 +159,7 @@ func (obs *GRPCObserver) GetLatencyStats() (map[string]APIEndpointStats, error) 
 func (obs *GRPCObserver) GetCumulativeCount() int64 {
 	_, count, err := obs.getAPIStats()
 	if err != nil {
-		fmt.Errorf("couldn't grab grpc's cumulative count: %v", err)
+		fmt.Printf("couldn't grab grpc's cumulative count: %v\n", err)
 	}
 	return count.totalEvents
 }

@@ -16,6 +16,7 @@ package metricsserver
 
 import (
 	"crypto/tls"
+	"log"
 	"net/http"
 )
 
@@ -34,9 +35,17 @@ func Start(
 	server.Handler = mux
 
 	if server.TLSConfig == nil {
-		go server.ListenAndServe()
+		go func() {
+			if err := server.ListenAndServe(); err != nil {
+				log.Printf("server.ListenAndServe() failed: %v", err)
+			}
+		}()
 	} else {
-		go server.ListenAndServeTLS("", "")
+		go func() {
+			if err := server.ListenAndServeTLS("", ""); err != nil {
+				log.Printf("server.ListenAndServeTLS() failed: %v", err)
+			}
+		}()
 	}
 
 	return nil
