@@ -1,49 +1,38 @@
 version: 2
 jobs:
   build:
-    working_directory: ~/DecipherNow/gm-fabric-go
+    working_directory: /home/ubuntu/.go_workspace/src/github.com/deciphernow/gm-fabric-go
     parallelism: 1
     shell: /bin/bash --login
     environment:
-      CIRCLE_ARTIFACTS: /tmp/circleci-artifacts
-      CIRCLE_TEST_REPORTS: /tmp/circleci-test-results
-      IMPORT_PATH: github.com/deciphernow/gm-fabric-go
-      REPO_NAME: gm-fabric-go
       GODIST: go1.9.linux-amd64.tar.gz
       PROTOCDIST: protoc-3.3.0-linux-x86_64.zip
-      GOPATH: /home/ubuntu/.go_workspace
     docker:
     - image: circleci/build-image:ubuntu-14.04-XXL-upstart-1189-5614f37
       command: /sbin/init
     steps:
     - checkout
     - setup_remote_docker
-    - run:
-        command: |
-          curl -sSL https://s3.amazonaws.com/circle-downloads/install-circleci-docker.sh | bash -s -- 1.10.0
-          'sudo docker info >/dev/null 2>&1 || sudo service docker start; '
-          mkdir -p download
-          test -e download/$GODIST || curl -o download/$GODIST https://storage.googleapis.com/golang/$GODIST
-          sudo rm -rf /usr/local/go
-          sudo tar -C /usr/local -xzf download/$GODIST
-          curl -OL https://github.com/google/protobuf/releases/download/v3.3.0/$PROTOCDIST
-          sudo rm -rf /usr/bin/protoc
-          sudo unzip $PROTOCDIST -d protoc3
-          sudo ln -s ${PWD}/protoc3/bin/protoc /usr/bin/protoc
-          which protoc
-          protoc --version
-          sudo pip install docker-compose
-          docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS
-          sudo pip install docker-compose
-          sudo apt-get install -y pkg-config libssl1.0.0 libssl-dev libsasl2-dev
-          go get -u github.com/jteeuwen/go-bindata/...
-          go get -u github.com/grpc-ecosystem/grpc-gateway/protoc-gen-grpc-gateway
-          go get -u github.com/grpc-ecosystem/grpc-gateway/protoc-gen-swagger
-          go get -u github.com/golang/protobuf/protoc-gen-go
-          go get -u github.com/armon/go-metrics
-          go get -u github.com/dgrijalva/jwt-go
-          go get -u github.com/auth0/go-jwt-middleware
-          go get -u github.com/gorilla/mux
-          mkdir -p ~/.go_workspace/src/$IMPORT_PATH
-          rm -rf ~/.go_workspace/src/$IMPORT_PATH
-    # - run: cd ~/.go_workspace/src/$IMPORT_PATH && GOPATH=~/.go_workspace go test $(go list ./... | grep -v '/vendor/')
+    - run: mkdir -p download
+    - run: test -e download/$GODIST || curl -o download/$GODIST https://storage.googleapis.com/golang/$GODIST
+    - run: sudo rm -rf /usr/local/go
+    - run: sudo tar -C /usr/local -xzf download/$GODIST
+    - run: curl -OL https://github.com/google/protobuf/releases/download/v3.3.0/$PROTOCDIST
+    - run: sudo rm -rf /usr/bin/protoc
+    - run: sudo unzip $PROTOCDIST -d protoc3
+    - run: sudo ln -s ${PWD}/protoc3/bin/protoc /usr/bin/protoc
+    - run: sudo ln -s ${PWD}/protoc3/include/protobuf /usr/include/google/protobuf
+    - run: sudo pip install docker-compose
+    - run: docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS
+    - run: sudo apt-get install -y pkg-config libssl1.0.0 libssl-dev libsasl2-dev
+    - run: go get -u github.com/jteeuwen/go-bindata/...
+    - run: go get -u github.com/grpc-ecosystem/grpc-gateway/protoc-gen-grpc-gateway
+    - run: go get -u github.com/grpc-ecosystem/grpc-gateway/protoc-gen-swagger
+    - run: go get -u github.com/golang/protobuf/protoc-gen-go
+    - run: go get -u github.com/armon/go-metrics
+    - run: go get -u github.com/dgrijalva/jwt-go
+    - run: go get -u github.com/auth0/go-jwt-middleware
+    - run: go get -u github.com/gorilla/mux
+    - run: curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
+    - run: dep init && dep ensure
+    - run: go test $(go list ./... | grep -v '/vendor/')
