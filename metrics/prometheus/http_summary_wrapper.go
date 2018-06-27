@@ -1,3 +1,5 @@
+package prometheus
+
 // Copyright 2017 Decipher Technology Studios LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -11,7 +13,6 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-package prometheus
 
 import (
 	"fmt"
@@ -34,6 +35,8 @@ type summaryMetricsState struct {
 	requestDurationVec *prom.SummaryVec
 	requestSizeVec     *prom.CounterVec
 	responseSizeVec    *prom.CounterVec
+	tlsCount           prom.Counter
+	nonTLSCount        prom.Counter
 }
 
 // SummaryHandlerFactory wraps an http.Handler (inner) and captures metrics
@@ -94,6 +97,22 @@ func NewSummaryHandlerFactory() (SummaryHandlerFactory, error) {
 	)
 	if err := prom.Register(state.responseSizeVec); err != nil {
 		return nil, errors.Wrap(err, "prometheus.Register responseSizeVec")
+	}
+
+	state.tlsCount = prom.NewCounter(prom.CounterOpts{
+		Name: "tls_requests",
+		Help: "Number of requests using TLS.",
+	})
+	if err := prom.Register(state.tlsCount); err != nil {
+		return nil, errors.Wrap(err, "prometheus.Register tlsCount")
+	}
+
+	state.nonTLSCount = prom.NewCounter(prom.CounterOpts{
+		Name: "non_tls_requests",
+		Help: "Number of requests not using TLS.",
+	})
+	if err := prom.Register(state.nonTLSCount); err != nil {
+		return nil, errors.Wrap(err, "prometheus.Register nonTlsCount")
 	}
 
 	return &state, nil
@@ -188,6 +207,12 @@ func (hState *summaryHandlerState) ServeHTTP(w http.ResponseWriter, req *http.Re
 			return
 		}
 		responseSize.Add(float64(responseWriter.BytesWritten))
+	}
+
+	if req.TLS != nil {
+		hState.tlsCount.Inc()
+	} else {
+		hState.nonTLSCount.Inc()
 	}
 
 }

@@ -1,3 +1,5 @@
+package prometheus
+
 // Copyright 2017 Decipher Technology Studios LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -11,7 +13,6 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-package prometheus
 
 import (
 	"context"
@@ -347,8 +348,6 @@ func reportMetrics(
 		}
 
 		/*
-			"route/acme/services/catalog/GET/status/200": 122,
-			"route/acme/services/catalog/GET/status/2XX": 122,
 			"route/acme/services/catalog/GET/errors.count": 0,
 		*/
 	}
