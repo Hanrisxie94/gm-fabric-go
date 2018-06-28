@@ -61,7 +61,7 @@ import(
     )
 ```
 
-You must use the Prometeus job name to connect the metrics yoou are capturing with
+You must use the Prometheus job name to connect the metrics yoou are capturing with
 the metrics you report.
 
 ```yml
