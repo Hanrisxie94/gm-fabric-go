@@ -53,6 +53,12 @@ import(
         JobName:       "store-http", // from prometheus.yml
     }
     miscReporter := metricsserver.NewMiscReporter()
+
+    metricsMux := http.NewServeMux()
+    metricsMux.Handle(
+        viper.GetString("metrics_dashboard_prometheus_uri_path"),
+        metricsserver.NewDashboardHandler(promReporter.Report, miscReporter.Report),
+    )
 ```
 
 You must use the Prometeus job name to connect the metrics yoou are capturing with
