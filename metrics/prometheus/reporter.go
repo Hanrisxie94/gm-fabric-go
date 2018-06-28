@@ -20,6 +20,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/rs/zerolog"
+
 	"github.com/deciphernow/gm-fabric-go/metrics/flatjson"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/api"
@@ -28,21 +30,49 @@ import (
 )
 
 // PromReporter implements the Reporter interface
+// JobName is 'job_name' from 'scrape_configs' in the Prometheus config file
 type PromReporter struct {
 	PrometheusURI string
+	JobName       string
+	Logger        zerolog.Logger
 }
 
 // Report implements the Reporter interface
 func (rpt *PromReporter) Report(jWriter *flatjson.Writer) error {
 	var err error
 	reportMap := make(reportMapType)
+	var tlsCount uint64
+	var nonTLSCount uint64
 
-	if err = accumulateMetrics(rpt.PrometheusURI, reportMap); err != nil {
+	client, err := api.NewClient(
+		api.Config{Address: rpt.PrometheusURI},
+	)
+	if err != nil {
+		return errors.Wrap(err, "api.NewClient")
+	}
+
+	promAPI := v1.NewAPI(client)
+
+	timestamp := time.Now()
+
+	if err = rpt.accumulateRouteMetrics(promAPI, timestamp, reportMap); err != nil {
 		return errors.Wrap(err, "accumulateMetrics")
 	}
 
-	if err = reportMetrics(jWriter, reportMap); err != nil {
-		return errors.Wrap(err, "reportMetrics")
+	if tlsCount, err = rpt.getCount(promAPI, timestamp, "tls_requests"); err != nil {
+		return errors.Wrap(err, "getCount tls_requests")
+	}
+
+	if nonTLSCount, err = rpt.getCount(promAPI, timestamp, "non_tls_requests"); err != nil {
+		return errors.Wrap(err, "getCount non_tls_requests")
+	}
+
+	if err = reportRequestCounts(jWriter, tlsCount, nonTLSCount); err != nil {
+		return errors.Wrap(err, "reportRequestCounts")
+	}
+
+	if err = reportRouteMetrics(jWriter, reportMap); err != nil {
+		return errors.Wrap(err, "reportRouteMetrics")
 	}
 
 	return nil
@@ -52,11 +82,7 @@ func (rpt *PromReporter) Report(jWriter *flatjson.Writer) error {
 type httpStatus string
 
 type reportEntry struct {
-	// requests       uint64
-	statusCount map[httpStatus]uint64
-	//	latencyMsCount uint64
-	//	latencyMsMax   float64
-	//	latencyMsMin   float64
+	statusCount    map[httpStatus]uint64
 	latencyMsSum   float64
 	latencyMsP50   float64
 	latencyMsP90   float64
@@ -93,8 +119,9 @@ func computeReportKey(m *model.Sample) reportKey {
 
 type sampleFuncType func(*model.Sample, *reportEntry) error
 
-func accumulateMetrics(
-	prometheusURI string,
+func (rpt *PromReporter) accumulateRouteMetrics(
+	promAPI v1.API,
+	timestamp time.Time,
 	reportMap reportMapType,
 ) error {
 	var err error
@@ -125,21 +152,10 @@ func accumulateMetrics(
 		},
 	}
 
-	client, err := api.NewClient(
-		api.Config{Address: prometheusURI},
-	)
-	if err != nil {
-		return errors.Wrap(err, "api.NewClient")
-	}
-
-	promAPI := v1.NewAPI(client)
-
-	timeStamp := time.Now()
-
 	for i, accumulateRequest := range accumulateRequests {
-		err = accumulateReport(
+		err = rpt.accumulateReport(
 			promAPI,
-			timeStamp,
+			timestamp,
 			accumulateRequest.query,
 			reportMap,
 			accumulateRequest.sampleFunc,
@@ -204,9 +220,9 @@ func outSampleFunc(m *model.Sample, e *reportEntry) error {
 	return nil
 }
 
-func accumulateReport(
+func (rpt *PromReporter) accumulateReport(
 	promAPI v1.API,
-	timeStamp time.Time,
+	timestamp time.Time,
 	query string,
 	reportMap reportMapType,
 	sampleFunc sampleFuncType,
@@ -216,7 +232,7 @@ func accumulateReport(
 	ctx, cancelFunc := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancelFunc()
 
-	value, err := promAPI.Query(ctx, query, timeStamp)
+	value, err := promAPI.Query(ctx, query, timestamp)
 	if err != nil {
 		return errors.Wrapf(err, "promAPI.Query: %s", query)
 	}
@@ -228,8 +244,8 @@ func accumulateReport(
 
 VECTOR_LOOP:
 	for _, value := range vectorValue {
-		// expedient to weed out Prometheus metrics with the same name
-		if value.Metric["key"] == "" {
+		// look only for our own metrics
+		if string(value.Metric["job"]) != rpt.JobName {
 			continue VECTOR_LOOP
 		}
 		rk := computeReportKey(value)
@@ -246,7 +262,61 @@ VECTOR_LOOP:
 	return nil
 }
 
-func reportMetrics(
+func (rpt *PromReporter) getCount(
+	promAPI v1.API,
+	timestamp time.Time,
+	query string,
+) (uint64, error) {
+	var err error
+
+	ctx, cancelFunc := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancelFunc()
+
+	value, err := promAPI.Query(ctx, query, timestamp)
+	if err != nil {
+		return 0, errors.Wrapf(err, "promAPI.Query: %s", query)
+	}
+
+	vectorValue, ok := value.(model.Vector)
+	if !ok {
+		return 0, errors.Errorf("%s: unable to cast %T to vector", query, value)
+	}
+
+COUNT_VECTOR_LOOP:
+	for _, value := range vectorValue {
+
+		// look only for our own metrics
+		if string(value.Metric["job"]) != rpt.JobName {
+			continue COUNT_VECTOR_LOOP
+		}
+
+		// We assume there's only one
+		return uint64(value.Value), nil
+	}
+
+	return 0, nil
+}
+
+func reportRequestCounts(
+	jWriter *flatjson.Writer,
+	tlsCount uint64,
+	nonTLSCount uint64,
+) error {
+	var err error
+
+	if err = jWriter.Write("Total/requests", tlsCount+nonTLSCount); err != nil {
+		return errors.Wrap(err, "jWriter.Write")
+	}
+	if err = jWriter.Write("HTTP/requests", nonTLSCount); err != nil {
+		return errors.Wrap(err, "jWriter.Write")
+	}
+	if err = jWriter.Write("HTTPS/requests", tlsCount); err != nil {
+		return errors.Wrap(err, "jWriter.Write")
+	}
+	return nil
+}
+
+func reportRouteMetrics(
 	jWriter *flatjson.Writer,
 	reportMap reportMapType,
 ) error {
@@ -343,7 +413,7 @@ func reportMetrics(
 				routeLine.value,
 			)
 			if err != nil {
-				return errors.Wrap(err, "flatjson.New")
+				return errors.Wrap(err, "jWriter.Write")
 			}
 		}
 
