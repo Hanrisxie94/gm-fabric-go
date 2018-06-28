@@ -57,8 +57,6 @@ func (rpt *PromReporter) Report(jWriter *flatjson.Writer) error {
 }
 
 func (rpt *PromReporter) accumulateMetrics(reportMap reportMapType) (uint64, uint64, error) {
-	var tlsCount uint64
-	var nonTLSCount uint64
 	var err error
 
 	client, err := api.NewClient(
@@ -76,6 +74,14 @@ func (rpt *PromReporter) accumulateMetrics(reportMap reportMapType) (uint64, uin
 		return 0, 0, errors.Wrap(err, "accumulateMetrics")
 	}
 
+	return rpt.getCounts(promAPI, timestamp)
+}
+
+func (rpt *PromReporter) getCounts(promAPI v1.API, timestamp time.Time) (uint64, uint64, error) {
+	var tlsCount uint64
+	var nonTLSCount uint64
+	var err error
+
 	if tlsCount, err = rpt.getCount(promAPI, timestamp, "tls_requests"); err != nil {
 		return 0, 0, errors.Wrap(err, "getCount tls_requests")
 	}
@@ -85,6 +91,7 @@ func (rpt *PromReporter) accumulateMetrics(reportMap reportMapType) (uint64, uin
 	}
 
 	return tlsCount, nonTLSCount, nil
+
 }
 
 // httpStatus is a 3 character string of the form 100-599
