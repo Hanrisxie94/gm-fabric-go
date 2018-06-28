@@ -20,8 +20,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/rs/zerolog"
-
 	"github.com/deciphernow/gm-fabric-go/metrics/flatjson"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/api"
@@ -34,7 +32,6 @@ import (
 type PromReporter struct {
 	PrometheusURI string
 	JobName       string
-	Logger        zerolog.Logger
 }
 
 // Report implements the Reporter interface
@@ -44,27 +41,8 @@ func (rpt *PromReporter) Report(jWriter *flatjson.Writer) error {
 	var tlsCount uint64
 	var nonTLSCount uint64
 
-	client, err := api.NewClient(
-		api.Config{Address: rpt.PrometheusURI},
-	)
-	if err != nil {
-		return errors.Wrap(err, "api.NewClient")
-	}
-
-	promAPI := v1.NewAPI(client)
-
-	timestamp := time.Now()
-
-	if err = rpt.accumulateRouteMetrics(promAPI, timestamp, reportMap); err != nil {
+	if tlsCount, nonTLSCount, err = rpt.accumulateMetrics(reportMap); err != nil {
 		return errors.Wrap(err, "accumulateMetrics")
-	}
-
-	if tlsCount, err = rpt.getCount(promAPI, timestamp, "tls_requests"); err != nil {
-		return errors.Wrap(err, "getCount tls_requests")
-	}
-
-	if nonTLSCount, err = rpt.getCount(promAPI, timestamp, "non_tls_requests"); err != nil {
-		return errors.Wrap(err, "getCount non_tls_requests")
 	}
 
 	if err = reportRequestCounts(jWriter, tlsCount, nonTLSCount); err != nil {
@@ -76,6 +54,37 @@ func (rpt *PromReporter) Report(jWriter *flatjson.Writer) error {
 	}
 
 	return nil
+}
+
+func (rpt *PromReporter) accumulateMetrics(reportMap reportMapType) (uint64, uint64, error) {
+	var tlsCount uint64
+	var nonTLSCount uint64
+	var err error
+
+	client, err := api.NewClient(
+		api.Config{Address: rpt.PrometheusURI},
+	)
+	if err != nil {
+		return 0, 0, errors.Wrap(err, "api.NewClient")
+	}
+
+	promAPI := v1.NewAPI(client)
+
+	timestamp := time.Now()
+
+	if err = rpt.accumulateRouteMetrics(promAPI, timestamp, reportMap); err != nil {
+		return 0, 0, errors.Wrap(err, "accumulateMetrics")
+	}
+
+	if tlsCount, err = rpt.getCount(promAPI, timestamp, "tls_requests"); err != nil {
+		return 0, 0, errors.Wrap(err, "getCount tls_requests")
+	}
+
+	if nonTLSCount, err = rpt.getCount(promAPI, timestamp, "non_tls_requests"); err != nil {
+		return 0, 0, errors.Wrap(err, "getCount non_tls_requests")
+	}
+
+	return tlsCount, nonTLSCount, nil
 }
 
 // httpStatus is a 3 character string of the form 100-599
@@ -118,6 +127,10 @@ func computeReportKey(m *model.Sample) reportKey {
 }
 
 type sampleFuncType func(*model.Sample, *reportEntry) error
+type accumulateRequestType struct {
+	query      string
+	sampleFunc sampleFuncType
+}
 
 func (rpt *PromReporter) accumulateRouteMetrics(
 	promAPI v1.API,
@@ -125,10 +138,6 @@ func (rpt *PromReporter) accumulateRouteMetrics(
 	reportMap reportMapType,
 ) error {
 	var err error
-	type accumulateRequestType struct {
-		query      string
-		sampleFunc sampleFuncType
-	}
 	accumulateRequests := []accumulateRequestType{
 		accumulateRequestType{
 			query:      "http_request_duration_seconds",
@@ -156,9 +165,8 @@ func (rpt *PromReporter) accumulateRouteMetrics(
 		err = rpt.accumulateReport(
 			promAPI,
 			timestamp,
-			accumulateRequest.query,
 			reportMap,
-			accumulateRequest.sampleFunc,
+			accumulateRequest,
 		)
 		if err != nil {
 			return errors.Wrapf(err, "#%d: accumulateReport: %s", i+1, accumulateRequest.query)
@@ -223,23 +231,23 @@ func outSampleFunc(m *model.Sample, e *reportEntry) error {
 func (rpt *PromReporter) accumulateReport(
 	promAPI v1.API,
 	timestamp time.Time,
-	query string,
 	reportMap reportMapType,
-	sampleFunc sampleFuncType,
+	accumulateRequest accumulateRequestType,
 ) error {
 	var err error
 
 	ctx, cancelFunc := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancelFunc()
 
-	value, err := promAPI.Query(ctx, query, timestamp)
+	value, err := promAPI.Query(ctx, accumulateRequest.query, timestamp)
 	if err != nil {
-		return errors.Wrapf(err, "promAPI.Query: %s", query)
+		return errors.Wrapf(err, "promAPI.Query: %s", accumulateRequest.query)
 	}
 
 	vectorValue, ok := value.(model.Vector)
 	if !ok {
-		return errors.Errorf("%s: unable to cast %T to vector", query, value)
+		return errors.Errorf("%s: unable to cast %T to vector",
+			accumulateRequest.query, value)
 	}
 
 VECTOR_LOOP:
@@ -253,7 +261,7 @@ VECTOR_LOOP:
 		if !ok {
 			rm.statusCount = make(map[httpStatus]uint64)
 		}
-		if err = sampleFunc(value, &rm); err != nil {
+		if err = accumulateRequest.sampleFunc(value, &rm); err != nil {
 			return errors.Wrap(err, "sampleFunc")
 		}
 		reportMap[rk] = rm
@@ -316,16 +324,16 @@ func reportRequestCounts(
 	return nil
 }
 
+type routeLineType struct {
+	label string
+	value interface{}
+}
+
 func reportRouteMetrics(
 	jWriter *flatjson.Writer,
 	reportMap reportMapType,
 ) error {
 	var err error
-
-	type routeLineType struct {
-		label string
-		value interface{}
-	}
 
 	for mapKey, entry := range reportMap {
 		var route string
@@ -372,41 +380,8 @@ func reportRouteMetrics(
 
 		routeLines = append(routeLines, statusLines...)
 
-		var latencyMsAvg float64
-		if requestCount > 0 {
-			latencyMsAvg = entry.latencyMsSum / float64(requestCount)
-		}
+		routeLines = append(routeLines, generateEntryLines(entry, requestCount)...)
 
-		routeLines = append(routeLines, []routeLineType{
-			// "route/acme/services/catalog/GET/routes": "",
-			routeLineType{label: "routes", value: ""},
-			// "route/acme/services/catalog/GET/latency_ms.avg": 1206.598361,
-			routeLineType{label: "latency_ms.avg", value: latencyMsAvg},
-			// "route/acme/services/catalog/GET/latency_ms.count": 122,
-			routeLineType{label: "latency_ms.count", value: requestCount},
-			// "route/acme/services/catalog/GET/latency_ms.max": 1968,
-			routeLineType{label: "latency_ms.max", value: 0},
-			// "route/acme/services/catalog/GET/latency_ms.min": 513,
-			routeLineType{label: "latency_ms.min", value: 0},
-			// "route/acme/services/catalog/GET/latency_ms.sum": 147205,
-			routeLineType{label: "latency_ms.sum", value: uint64(entry.latencyMsSum)},
-			// "route/acme/services/catalog/GET/latency_ms.p50": 1172,
-			routeLineType{label: "latency_ms.p50", value: uint64(entry.latencyMsP50)},
-			// "route/acme/services/catalog/GET/latency_ms.p90": 1757,
-			routeLineType{label: "latency_ms.p90", value: uint64(entry.latencyMsP90)},
-			// "route/acme/services/catalog/GET/latency_ms.p95": 1825,
-			routeLineType{label: "latency_ms.p95", value: uint64(entry.latencyMsP95)},
-			// "route/acme/services/catalog/GET/latency_ms.p99": 1923,
-			routeLineType{label: "latency_ms.p99", value: uint64(entry.latencyMsP99)},
-			// "route/acme/services/catalog/GET/latency_ms.p9990": 1968,
-			routeLineType{label: "latency_ms.p9990", value: uint64(entry.latencyMsP9990)},
-			// "route/acme/services/catalog/GET/latency_ms.p9999": 1968,
-			routeLineType{label: "latency_ms.p9999", value: uint64(entry.latencyMsP9999)},
-			// "route/acme/services/catalog/GET/in_throughput": 0,
-			routeLineType{label: "in_throughput", value: entry.inThroughput},
-			// "route/acme/services/catalog/GET/out_throughput": 71287,
-			routeLineType{label: "out_throughput", value: entry.outThroughput},
-		}...)
 		for _, routeLine := range routeLines {
 			err = jWriter.Write(
 				fmt.Sprintf("%s%s", route, routeLine.label),
@@ -423,4 +398,42 @@ func reportRouteMetrics(
 	}
 
 	return nil
+}
+
+func generateEntryLines(entry reportEntry, requestCount uint64) []routeLineType {
+	var latencyMsAvg float64
+	if requestCount > 0 {
+		latencyMsAvg = entry.latencyMsSum / float64(requestCount)
+	}
+
+	return []routeLineType{
+		// "route/acme/services/catalog/GET/routes": "",
+		routeLineType{label: "routes", value: ""},
+		// "route/acme/services/catalog/GET/latency_ms.avg": 1206.598361,
+		routeLineType{label: "latency_ms.avg", value: latencyMsAvg},
+		// "route/acme/services/catalog/GET/latency_ms.count": 122,
+		routeLineType{label: "latency_ms.count", value: requestCount},
+		// "route/acme/services/catalog/GET/latency_ms.max": 1968,
+		routeLineType{label: "latency_ms.max", value: 0},
+		// "route/acme/services/catalog/GET/latency_ms.min": 513,
+		routeLineType{label: "latency_ms.min", value: 0},
+		// "route/acme/services/catalog/GET/latency_ms.sum": 147205,
+		routeLineType{label: "latency_ms.sum", value: uint64(entry.latencyMsSum)},
+		// "route/acme/services/catalog/GET/latency_ms.p50": 1172,
+		routeLineType{label: "latency_ms.p50", value: uint64(entry.latencyMsP50)},
+		// "route/acme/services/catalog/GET/latency_ms.p90": 1757,
+		routeLineType{label: "latency_ms.p90", value: uint64(entry.latencyMsP90)},
+		// "route/acme/services/catalog/GET/latency_ms.p95": 1825,
+		routeLineType{label: "latency_ms.p95", value: uint64(entry.latencyMsP95)},
+		// "route/acme/services/catalog/GET/latency_ms.p99": 1923,
+		routeLineType{label: "latency_ms.p99", value: uint64(entry.latencyMsP99)},
+		// "route/acme/services/catalog/GET/latency_ms.p9990": 1968,
+		routeLineType{label: "latency_ms.p9990", value: uint64(entry.latencyMsP9990)},
+		// "route/acme/services/catalog/GET/latency_ms.p9999": 1968,
+		routeLineType{label: "latency_ms.p9999", value: uint64(entry.latencyMsP9999)},
+		// "route/acme/services/catalog/GET/in_throughput": 0,
+		routeLineType{label: "in_throughput", value: entry.inThroughput},
+		// "route/acme/services/catalog/GET/out_throughput": 71287,
+		routeLineType{label: "out_throughput", value: entry.outThroughput},
+	}
 }

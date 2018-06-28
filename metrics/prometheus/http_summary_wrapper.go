@@ -56,14 +56,7 @@ func NewSummaryHandlerFactory() (SummaryHandlerFactory, error) {
 	// will be the φ-quantile value for some φ between q-e and q+e.
 	//
 	// This map of objectives is chosen to duplicate the dashboard metrics
-	objectives := map[float64]float64{
-		0.5:    0.05,
-		0.9:    0.01,
-		0.95:   0.001,
-		0.99:   0.001,
-		0.999:  0.0001,
-		0.9999: 0.00001,
-	}
+	objectives := setObjectives()
 
 	state.requestDurationVec = prom.NewSummaryVec(
 		prom.SummaryOpts{
@@ -73,9 +66,6 @@ func NewSummaryHandlerFactory() (SummaryHandlerFactory, error) {
 		},
 		LabelNames,
 	)
-	if err := prom.Register(state.requestDurationVec); err != nil {
-		return nil, errors.Wrap(err, "prometheus.Register requestDurationVec")
-	}
 
 	state.requestSizeVec = prom.NewCounterVec(
 		prom.CounterOpts{
@@ -84,9 +74,6 @@ func NewSummaryHandlerFactory() (SummaryHandlerFactory, error) {
 		},
 		LabelNames,
 	)
-	if err := prom.Register(state.requestSizeVec); err != nil {
-		return nil, errors.Wrap(err, "prometheus.Register requestSizeVec")
-	}
 
 	state.responseSizeVec = prom.NewCounterVec(
 		prom.CounterOpts{
@@ -95,27 +82,41 @@ func NewSummaryHandlerFactory() (SummaryHandlerFactory, error) {
 		},
 		LabelNames,
 	)
-	if err := prom.Register(state.responseSizeVec); err != nil {
-		return nil, errors.Wrap(err, "prometheus.Register responseSizeVec")
-	}
 
 	state.tlsCount = prom.NewCounter(prom.CounterOpts{
 		Name: "tls_requests",
 		Help: "Number of requests using TLS.",
 	})
-	if err := prom.Register(state.tlsCount); err != nil {
-		return nil, errors.Wrap(err, "prometheus.Register tlsCount")
-	}
 
 	state.nonTLSCount = prom.NewCounter(prom.CounterOpts{
 		Name: "non_tls_requests",
 		Help: "Number of requests not using TLS.",
 	})
-	if err := prom.Register(state.nonTLSCount); err != nil {
-		return nil, errors.Wrap(err, "prometheus.Register nonTlsCount")
+
+	for i, collector := range []prom.Collector{
+		state.requestDurationVec,
+		state.requestSizeVec,
+		state.responseSizeVec,
+		state.tlsCount,
+		state.nonTLSCount,
+	} {
+		if err := prom.Register(collector); err != nil {
+			return nil, errors.Wrapf(err, "#%d:prometheus.Register", i)
+		}
 	}
 
 	return &state, nil
+}
+
+func setObjectives() map[float64]float64 {
+	return map[float64]float64{
+		0.5:    0.05,
+		0.9:    0.01,
+		0.95:   0.001,
+		0.99:   0.001,
+		0.999:  0.0001,
+		0.9999: 0.00001,
+	}
 }
 
 type summaryHandlerState struct {
@@ -162,20 +163,11 @@ func (hState *summaryHandlerState) ServeHTTP(w http.ResponseWriter, req *http.Re
 	hState.inner.ServeHTTP(&responseWriter, req)
 	endTime := time.Now()
 
-	elapsed := endTime.Sub(startTime)
-	if elapsed < 0 {
-		elapsed = 0
-	}
+	elapsed := computeElapsed(startTime, endTime)
 
-	method := strings.ToUpper(req.Method)
-	if method == "" {
-		method = "GET"
-	}
+	method := normalizeMethod(req.Method)
 
-	status := responseWriter.Status
-	if status == 0 {
-		status = 200
-	}
+	status := normalizeStatus(responseWriter.Status)
 
 	for _, labels := range []prom.Labels{
 		prom.Labels{
@@ -215,4 +207,30 @@ func (hState *summaryHandlerState) ServeHTTP(w http.ResponseWriter, req *http.Re
 		hState.nonTLSCount.Inc()
 	}
 
+}
+
+func computeElapsed(startTime, endTime time.Time) time.Duration {
+	elapsed := endTime.Sub(startTime)
+	if elapsed < 0 {
+		elapsed = 0
+	}
+
+	return elapsed
+}
+
+func normalizeMethod(method string) string {
+	method = strings.ToUpper(method)
+	if method == "" {
+		method = "GET"
+	}
+
+	return method
+}
+
+func normalizeStatus(status int) int {
+	if status == 0 {
+		status = 200
+	}
+
+	return status
 }
