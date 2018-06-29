@@ -17,6 +17,7 @@ package prometheus
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"strconv"
 	"time"
 
@@ -32,6 +33,7 @@ import (
 type PromReporter struct {
 	PrometheusURI string
 	JobName       string
+	IsGRPC        bool
 }
 
 // Report implements the Reporter interface
@@ -45,11 +47,11 @@ func (rpt *PromReporter) Report(jWriter *flatjson.Writer) error {
 		return errors.Wrap(err, "accumulateMetrics")
 	}
 
-	if err = reportRequestCounts(jWriter, tlsCount, nonTLSCount); err != nil {
+	if err = rpt.reportRequestCounts(jWriter, tlsCount, nonTLSCount); err != nil {
 		return errors.Wrap(err, "reportRequestCounts")
 	}
 
-	if err = reportRouteMetrics(jWriter, reportMap); err != nil {
+	if err = rpt.reportRouteMetrics(jWriter, reportMap); err != nil {
 		return errors.Wrap(err, "reportRouteMetrics")
 	}
 
@@ -205,11 +207,18 @@ func durationSampleFunc(m *model.Sample, e *reportEntry) error {
 }
 
 func countSampleFunc(m *model.Sample, e *reportEntry) error {
+
 	rawStatus := string(m.Metric["status"])
 	numericStatus, err := strconv.Atoi(rawStatus)
 	if err != nil {
 		return errors.Wrapf(err, "strconv.Atoi(%s)", rawStatus)
 	}
+
+	// if we don't have an HTTP status, assume this is gRPC call it OK
+	if numericStatus == 0 {
+		numericStatus = http.StatusOK
+	}
+
 	if numericStatus < 100 || numericStatus > 599 {
 		return errors.Errorf("Invalid HTTP status %d", numericStatus)
 	}
@@ -312,7 +321,7 @@ COUNT_VECTOR_LOOP:
 	return 0, nil
 }
 
-func reportRequestCounts(
+func (rpt *PromReporter) reportRequestCounts(
 	jWriter *flatjson.Writer,
 	tlsCount uint64,
 	nonTLSCount uint64,
@@ -322,12 +331,35 @@ func reportRequestCounts(
 	if err = jWriter.Write("Total/requests", tlsCount+nonTLSCount); err != nil {
 		return errors.Wrap(err, "jWriter.Write")
 	}
-	if err = jWriter.Write("HTTP/requests", nonTLSCount); err != nil {
-		return errors.Wrap(err, "jWriter.Write")
+
+	if rpt.IsGRPC {
+		if err = jWriter.Write("HTTP/requests", 0); err != nil {
+			return errors.Wrap(err, "jWriter.Write")
+		}
+		if err = jWriter.Write("HTTPS/requests", 0); err != nil {
+			return errors.Wrap(err, "jWriter.Write")
+		}
+		if err = jWriter.Write("RPC/requests", nonTLSCount); err != nil {
+			return errors.Wrap(err, "jWriter.Write")
+		}
+		if err = jWriter.Write("RPC_TLS/requests", tlsCount); err != nil {
+			return errors.Wrap(err, "jWriter.Write")
+		}
+	} else {
+		if err = jWriter.Write("HTTP/requests", nonTLSCount); err != nil {
+			return errors.Wrap(err, "jWriter.Write")
+		}
+		if err = jWriter.Write("HTTPS/requests", tlsCount); err != nil {
+			return errors.Wrap(err, "jWriter.Write")
+		}
+		if err = jWriter.Write("RPC/requests", 0); err != nil {
+			return errors.Wrap(err, "jWriter.Write")
+		}
+		if err = jWriter.Write("RPC_TLS/requests", 0); err != nil {
+			return errors.Wrap(err, "jWriter.Write")
+		}
 	}
-	if err = jWriter.Write("HTTPS/requests", tlsCount); err != nil {
-		return errors.Wrap(err, "jWriter.Write")
-	}
+
 	return nil
 }
 
@@ -336,7 +368,7 @@ type routeLineType struct {
 	value interface{}
 }
 
-func reportRouteMetrics(
+func (rpt *PromReporter) reportRouteMetrics(
 	jWriter *flatjson.Writer,
 	reportMap reportMapType,
 ) error {
@@ -345,6 +377,8 @@ func reportRouteMetrics(
 	for mapKey, entry := range reportMap {
 		var route string
 		if reportAll(mapKey.key) {
+			route = fmt.Sprintf("%s/", mapKey.key)
+		} else if rpt.IsGRPC {
 			route = fmt.Sprintf("%s/", mapKey.key)
 		} else {
 			route = fmt.Sprintf("route%s/%s/", mapKey.key, mapKey.method)

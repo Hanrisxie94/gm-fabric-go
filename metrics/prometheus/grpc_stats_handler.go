@@ -24,6 +24,8 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/stats"
 
+	"github.com/pkg/errors"
+
 	"github.com/rs/zerolog"
 
 	"github.com/deciphernow/gm-fabric-go/metrics/headers"
@@ -47,16 +49,20 @@ func GRPCLoggerOption(logger zerolog.Logger) func(*StatsHandler) {
 
 // NewStatsHandler returns an object that implements the stats.Handler interface
 // https://godoc.org/google.golang.org/grpc/stats#Handler
-func NewStatsHandler(options ...func(*StatsHandler)) *StatsHandler {
+func NewStatsHandler(options ...func(*StatsHandler)) (*StatsHandler, error) {
 	var s StatsHandler
+	var err error
 
 	s.StatsData = make(map[string]CollectorEntry)
+	if s.Collector, err = NewCollector(); err != nil {
+		return nil, errors.Wrap(err, "NewCollector")
+	}
 
 	for _, f := range options {
 		f(&s)
 	}
 
-	return &s
+	return &s, nil
 }
 
 // TagConn can attach some information to the given context.
@@ -85,11 +91,11 @@ func (h *StatsHandler) TagRPC(
 	var prevRoute string
 
 	if inMD, ok := metadata.FromIncomingContext(ctx); ok {
-		id, _ := inMD[headers.RequestIDHeader]
+		id := inMD[headers.RequestIDHeader]
 		if len(id) == 1 {
 			requestID = id[0]
 		}
-		pr, _ := inMD[headers.PrevRouteHeader]
+		pr := inMD[headers.PrevRouteHeader]
 		if len(pr) == 1 {
 			prevRoute = pr[0]
 		}
