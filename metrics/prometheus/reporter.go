@@ -333,34 +333,48 @@ func (rpt *PromReporter) reportRequestCounts(
 	}
 
 	if rpt.IsGRPC {
-		if err = jWriter.Write("HTTP/requests", 0); err != nil {
-			return errors.Wrap(err, "jWriter.Write")
-		}
-		if err = jWriter.Write("HTTPS/requests", 0); err != nil {
-			return errors.Wrap(err, "jWriter.Write")
-		}
-		if err = jWriter.Write("RPC/requests", nonTLSCount); err != nil {
-			return errors.Wrap(err, "jWriter.Write")
-		}
-		if err = jWriter.Write("RPC_TLS/requests", tlsCount); err != nil {
-			return errors.Wrap(err, "jWriter.Write")
-		}
-	} else {
-		if err = jWriter.Write("HTTP/requests", nonTLSCount); err != nil {
-			return errors.Wrap(err, "jWriter.Write")
-		}
-		if err = jWriter.Write("HTTPS/requests", tlsCount); err != nil {
-			return errors.Wrap(err, "jWriter.Write")
-		}
-		if err = jWriter.Write("RPC/requests", 0); err != nil {
-			return errors.Wrap(err, "jWriter.Write")
-		}
-		if err = jWriter.Write("RPC_TLS/requests", 0); err != nil {
-			return errors.Wrap(err, "jWriter.Write")
-		}
+		return rpt.reportGRPCRequestCounts(jWriter, tlsCount, nonTLSCount)
 	}
 
-	return nil
+	return rpt.reportHTTPRequestCounts(jWriter, tlsCount, nonTLSCount)
+}
+
+func (rpt *PromReporter) reportGRPCRequestCounts(
+	jWriter *flatjson.Writer,
+	tlsCount uint64,
+	nonTLSCount uint64,
+) error {
+	var err error
+
+	if err = jWriter.Write("HTTP/requests", 0); err != nil {
+		return errors.Wrap(err, "jWriter.Write")
+	}
+	if err = jWriter.Write("HTTPS/requests", 0); err != nil {
+		return errors.Wrap(err, "jWriter.Write")
+	}
+	if err = jWriter.Write("RPC/requests", nonTLSCount); err != nil {
+		return errors.Wrap(err, "jWriter.Write")
+	}
+	return jWriter.Write("RPC_TLS/requests", tlsCount)
+}
+
+func (rpt *PromReporter) reportHTTPRequestCounts(
+	jWriter *flatjson.Writer,
+	tlsCount uint64,
+	nonTLSCount uint64,
+) error {
+	var err error
+
+	if err = jWriter.Write("HTTP/requests", nonTLSCount); err != nil {
+		return errors.Wrap(err, "jWriter.Write")
+	}
+	if err = jWriter.Write("HTTPS/requests", tlsCount); err != nil {
+		return errors.Wrap(err, "jWriter.Write")
+	}
+	if err = jWriter.Write("RPC/requests", 0); err != nil {
+		return errors.Wrap(err, "jWriter.Write")
+	}
+	return jWriter.Write("RPC_TLS/requests", 0)
 }
 
 type routeLineType struct {
