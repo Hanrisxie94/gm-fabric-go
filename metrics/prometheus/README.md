@@ -2,24 +2,31 @@
 
 ## Capturing
 
-To capture HTTP metrics, use the HandlerFactory to compose an HTTP handler into the handlers for each method
+To capture HTTP metrics,
+
+* create a ```Collector``` for Prometheus metrics
+* compose an HTTP handler into the handlers for each method
 
 ```go
 import (
     pm "github.com/deciphernow/gm-fabric-go/metrics/prometheus"
 )
 
-    hf, err := pm.NewSummaryHandlerFactory()
+    collector, err := pm.NewCollector()
     if err != nil {
-        log.Fatalf("pm.NewSummaryHandlerFactory failed: %s", err)
+        log.Fatalf("pm.NewCollector: %s", err)
     }
 
     mux := http.NewServeMux()
 
-    catalogHandler, err := hf.NewHandler(http.HandlerFunc(state.handleCatalog))
-    if err != nil {
-        log.Fatalf("hf.NewHandler failed: %s", err)
-    }
+    catalogHandler :=
+        pm.NewHandler(
+            collector,
+            httpm.HandlerFunc(
+                http.HandlerFunc(state.handleCatalog),
+            ),
+            pm.HTTPLoggerOption(logger),
+        )
 
     mux.HandleFunc(catalogPath, catalogHandler.ServeHTTP)
 ```
