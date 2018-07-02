@@ -39,11 +39,18 @@ dep ensure -add github.com/deciphernow/gm-fabric-go/oauth
 ```go
 // Inject token validation as a middleware interceptor
 // This use case has less flexibility. We recommend the other way of validating
-ctx := oauth.ContextWithOptions(context.Background(), oauth.WithProvider("http://127.0.0.1:5556/dex"), oauth.WithClientID("example-app"))
+
+interceptor, err := oauth.NewOauthInterceptor(
+    oauth.WithProvider("http://127.0.0.1:5556/dex"),
+    oauth.WithClientID("example-app"),
+)
+if err != nil {
+    return err
+}
 
 server := grpc.NewServer(
-    grpc.StreamInterceptor(grpc_auth.StreamServerInterceptor(oauth.ValidateToken(ctx))),
-    grpc.UnaryInterceptor(grpc_auth.UnaryServerInterceptor(oauth.ValidateToken(ctx))),
+    grpc.StreamInterceptor(grpc_auth.StreamServerInterceptor(interceptor)),
+    grpc.UnaryInterceptor(grpc_auth.UnaryServerInterceptor(interceptor)),
 )
 
 return server
@@ -109,11 +116,17 @@ s.ListenAndServe()
 ```go
 // Inject token validation as a middleware interceptor
 // This use case has less flexibility. We recommend the other way of validating
-ctx := oauth.ContextWithOptions(oauth.WithSigningAlg(HS256), oauth.WithTokenSecret("KbtfnXOHH3ezniXIsHYSd4WhZPBXH1vB"))
+interceptor, err := oauth.NewOauthInterceptor(
+    oauth.WithSigningAlg(oauth.HS256),
+    oauth.WithTokenSecret("KbtfnXOHH3ezniXIsHYSd4WhZPBXH1vB"),
+)
+if err != nil {
+    return err
+}
 
 server := grpc.NewServer(
-    grpc.StreamInterceptor(grpc_auth.StreamServerInterceptor(oauth.ValidateToken(ctx))),
-    grpc.UnaryInterceptor(grpc_auth.UnaryServerInterceptor(oauth.ValidateToken(ctx))),
+    grpc.StreamInterceptor(grpc_auth.StreamServerInterceptor(interceptor)),
+    grpc.UnaryInterceptor(grpc_auth.UnaryServerInterceptor(interceptor)),
 )
 
 return server
@@ -126,8 +139,8 @@ func (s *Server) GetItems(ctx context.Context, in *store.Item) (*store.Items, er
     _, err := oauth.ValidateToken(
         oauth.ContextWithOptions(
             ctx,
-            oauth.WithProvider("http://127.0.0.1:5556/dex"),
-            oauth.WithClientID("example-app"),
+            oauth.WithSigningAlg(oauth.HS256),
+            oauth.WithTokenSecret("KbtfnXOHH3ezniXIsHYSd4WhZPBXH1vB"),
         ),
     )
 
@@ -153,7 +166,7 @@ func (s *Server) GetItems(ctx context.Context, in *store.Item) (*store.Items, er
 stack := middleware.Chain(
     // Adding this to the stack will require all API queries to provide a token in the auth http header
     // Always pass the signing algorithm to expect and any necessary supporting data such as a signing secret or key path
-    oauth.HTTPAuthenticate(oauth.WithSigningAlg(HS256), oauth.WithHMACSecret("KbtfnXOHH3ezniXIsHYSd4WhZPBXH1vB")),
+    oauth.HTTPAuthenticate(oauth.WithSigningAlg(oauth.HS256), oauth.WithTokenSecret("KbtfnXOHH3ezniXIsHYSd4WhZPBXH1vB")),
 )
 
 // Create basic HTTP server
