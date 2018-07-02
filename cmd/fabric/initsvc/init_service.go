@@ -92,6 +92,10 @@ func InitService(cfg config.Config, logger zerolog.Logger) error {
 		return err
 	}
 
+	if err = install(path.Join(cfg.VendorPath(), "github.com", "grpc-ecosystem", "grpc-gateway", cfg.ProtocGenSwaggerPluginName())); err != nil {
+		return err
+	}
+
 	return nil
 
 }
