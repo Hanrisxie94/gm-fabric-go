@@ -144,7 +144,7 @@ func authorize(ctx context.Context, options ValidationOptions, token string) (*P
 }
 
 func validateTokenAlg(token *jwt.Token, alg string) error {
-	if alg!= token.Header["alg"] {
+	if alg != token.Header["alg"] {
 		message := fmt.Sprintf("Expected %s signing method but token specified %s",
 			alg,
 			token.Header["alg"])
