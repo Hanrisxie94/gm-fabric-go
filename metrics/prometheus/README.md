@@ -2,7 +2,7 @@
 
 ## Capturing
 
-To capture HTTP metrics,
+### HTTP metrics
 
 * create a ```Collector``` for Prometheus metrics
 * compose an HTTP handler into the handlers for each method
@@ -43,6 +43,31 @@ import (
         viper.GetString("metrics_prometheus_uri_path"),
         promhttp.Handler(),
     )
+```
+
+### gRPC Metrics
+
+* create a Prometheus metrics StatsHandler
+* add it to server options
+
+Note that gRPC will only report to one StatsHandler: whichever one
+gets added last gets the stats.
+
+```go
+import (
+    pm "github.com/deciphernow/gm-fabric-go/metrics/prometheus"
+)
+
+    pmStatsHandler, err := pm.NewStatsHandler(pm.GRPCLoggerOption(logger))
+    if err != nil {
+        logger.Fatal().Err(err).Msg("pm.NewStatsHandler")
+    }
+
+    opts := []grpc.ServerOption{
+        grpc.StatsHandler(pmStatsHandler),
+    }
+
+    grpcServer := grpc.NewServer(opts...)
 ```
 
 ## Reporting
