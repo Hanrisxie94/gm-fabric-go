@@ -1,0 +1,9 @@
+[default]
+aws_access_key_id = default_akid
+aws_secret_access_key = default_secret
+region = defaul_region
+
+[profile]
+aws_access_key_id = full_profile_akid
+aws_secret_access_key = full_profile_secret
+region = full_profile_region

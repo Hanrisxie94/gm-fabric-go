@@ -1,8 +1,12 @@
-// The cloudobserver package creates a cloudObs struct that can be used to publish fm-fabric-go metrics to AWS CloudWatch
+// The cloudobserver package creates a cloudObs struct that can be used to publish fm-fabric-go metrics to AWS CloudWatch.
+// It also contains various helper functions to assist in the configurability and ease of creation of those cloudObs options.
 package cloudobserver
 
 import (
 	"fmt"
+	"os"
+	"regexp"
+	"strings"
 	"sync"
 	"time"
 
@@ -12,6 +16,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cloudwatch"
 )
@@ -90,6 +95,119 @@ func CloudDimensions(dims ...*cloudwatch.Dimension) []*cloudwatch.Dimension {
 		dimensions = append(dimensions, dim)
 	}
 	return dimensions
+}
+
+// This is a helper function for parsing a string of dimensions.
+// After checking that the string is in a parsable pattern with CheckDimStringIntegrity,
+// the function gleans dimension names and values from that string
+// and returns them as an array of *cloudwatch.Dimension objects.
+// An empty string is allowed and will result in the metrics being stored under
+// "Metrics with no dimensions" (the AWS default category for metrics with no dimensions).
+// Both an empty string and a faulty string will return an empty dimensions array,
+// however a faulty string will also result in an error value not equal to nil.
+func ParseDimsFromString(dims string) ([]*cloudwatch.Dimension, error) {
+	var dimensions []*cloudwatch.Dimension
+
+	matched := CheckDimStringIntegrity(dims)
+	if matched == false && dims != "" {
+		err := errors.New("regex pattern matching error")
+		errors.Wrap(err, "The given dimensions string is not formatted correctly and can't be processed.  CloudWatch metrics reporting will be aborted.")
+		return dimensions, err
+	}
+
+	divideByComma := strings.Split(dims, ",")
+	for _, dim := range divideByComma {
+		dim = strings.TrimSpace(dim)
+		divideByColon := strings.Split(dim, ":")
+		dimName := strings.TrimSpace(divideByColon[0])
+		dimVal := strings.TrimSpace(divideByColon[1])
+		cwDim := NewDim(dimName, dimVal)
+		dimensions = append(dimensions, cwDim)
+	}
+
+	return dimensions, nil
+}
+
+// This is a  helper function meant to be used in ParseDimsFromString
+// in order to make sure the configured dimensions string can be parsed correctly.
+// It returns a bool value of True if the string follows this kind of pattern:
+// "DimensionName1: dimensionValue1, DimensionName2: dimensionValue2, ..., DimensionNameX: dimensionValueX".
+// The pattern ignores extraneous whitespace around the ":" and "," delimiters,
+// and purposely does not accept the special characters "@", "#", and "*"
+// because they have special meanings in AWS pipeline definitions.
+func CheckDimStringIntegrity(dims string) bool {
+	validPattern := regexp.MustCompile(`^\s*([a-zA-Z0-9_./&+-]+\s*\:\s*[a-zA-Z0-9_./&+-]+)\s*(\,\s*[a-zA-Z0-9_./&+-]+\:\s*[a-zA-Z0-9_./&+-]+)*$`)
+	return validPattern.MatchString(dims)
+}
+
+// A helper function to choose a non default method of AWS session connection
+// based on which of the possible session-starting variables are provided.
+// If a static credentials object is provided (can be built with the CreateStaticCreds function),
+// this will be the function's first choice of variables from which to create a session.
+// If a profile name is provided (and static credentials are not), the function will attempt
+// to create a session based on that profile name if it's found in a SharedConfig file.
+// If all else fails, the function will attempt to create a session based on an aws shared config file.
+// Along with an actual session, the function will return a string tag
+// that indicates what type of session was created ("default"", "static", or "profile")
+// and an error message if applicable.
+func ChooseSessionType(awsRegion string, awsProfile string, staticCreds *credentials.Credentials) (*session.Session, string, error) {
+	awsRegion = strings.TrimSpace(awsRegion)
+	awsProfile = strings.TrimSpace(awsProfile)
+
+	defaultSess := session.Must(session.NewSessionWithOptions(session.Options{SharedConfigState: session.SharedConfigEnable}))
+
+	creds, akErr := staticCreds.Get()
+	if akErr == nil {
+		if len(awsRegion) != 0 {
+			if len(creds.AccessKeyID) != 0 && len(creds.SecretAccessKey) != 0 {
+				staticSess := session.New(&aws.Config{
+					Region:      aws.String(awsRegion),
+					Credentials: staticCreds,
+				})
+				return staticSess, "static", nil
+			}
+		} else {
+			regionErr := errors.New("no region specified")
+			errors.Wrap(regionErr, "No region was specified for creating an AWS session.  Attempting to create a session based on a SharedConfigState.")
+		}
+	} else {
+		errors.Wrap(akErr, "The static credential variables (the AWS access key id, AWS secret access key, and AWS session token) were not set correctly.")
+	}
+
+	if len(os.Getenv("AWS_CONFIG_FILE")) == 0 {
+		trueErr := errors.New("No aws config file set.")
+		errors.Wrap(trueErr, "Cannot start a session with a hardcoded profile or the currently set shared config default profile.  This can't be done because the AWS_CONFIG_FILE variable is not set on this computer, so the default session will not work.")
+		return defaultSess, "", trueErr
+	}
+
+	if len(awsProfile) != 0 {
+		profileSess := session.Must(session.NewSessionWithOptions(session.Options{
+			SharedConfigState: session.SharedConfigEnable,
+			Profile:           awsProfile,
+		}))
+		return profileSess, "profile", nil
+	}
+
+	err := errors.New("Unable to create a custom session based on input recieved.")
+	errors.Wrap(err, "The combination of credential variables recieved was not sufficient to create an AWS session.  Attempting to start a session based on a SharedConfigState.")
+	return defaultSess, "default", nil
+
+}
+
+// A helper function that will return a new AWS *credentials.Credentials object based on three strings:
+// an aws access key id, an aws secret access key, and an aws session token.
+func CreateStaticCreds(awsAccessKeyId string, awsSecretAccessKey string, awsSessionToken string) *credentials.Credentials {
+	awsAccessKeyId = strings.TrimSpace(awsAccessKeyId)
+	awsSecretAccessKey = strings.TrimSpace(awsSecretAccessKey)
+	awsSessionToken = strings.TrimSpace(awsSessionToken)
+
+	staticCreds := credentials.NewStaticCredentials(
+		awsAccessKeyId,
+		awsSecretAccessKey,
+		awsSessionToken,
+	)
+
+	return staticCreds
 }
 
 // New returns an observer that feeds the go-metrics sink
