@@ -88,6 +88,9 @@ func (hState *HandlerState) ServeHTTP(w http.ResponseWriter, req *http.Request) 
 
 	entry.Status = normalizeStatus(responseWriter.Status)
 
+	entry.BytesRead = uint64(requestReader.BytesRead)
+	entry.BytesWritten = uint64(responseWriter.BytesWritten)
+
 	entry.TLS = req.TLS != nil
 
 	if err := hState.collector.Collect(entry); err != nil {
