@@ -3,7 +3,6 @@ package discovery
 import (
 	"context"
 	"io"
-	"log"
 
 	"github.com/envoyproxy/go-control-plane/envoy/api/v2"
 	"github.com/envoyproxy/go-control-plane/envoy/api/v2/core"
@@ -13,16 +12,32 @@ import (
 	"google.golang.org/grpc"
 )
 
-// Control is a config object so Fabric services can communicate with the Grey Matter envoy management server
-type Control struct {
-	URL           string   // URL to Envoy management server ex: control.deciphernow.com:10219
-	Region        string   // Envoy region/node that will initiate communication with a Fabric service
-	ResourceNames []string // List of Envoy resource names to subscribe to
-	ResourceType  string
+// Discovery is a config object so Fabric services can communicate with the Grey Matter envoy management server
+type Discovery struct {
+	Session *grpc.ClientConn
+	Options Options
+}
+
+// NewDiscoverySession creates a Control ADS grpc session
+func NewDiscoverySession(opts ...Option) (*Discovery, error) {
+	var options Options
+	for _, o := range opts {
+		o(&options)
+	}
+
+	sess, err := options.NewSession(grpc.WithInsecure())
+	if err != nil {
+		return nil, err
+	}
+
+	return &Discovery{
+		Session: sess,
+		Options: options,
+	}, nil
 }
 
 // NewSession will dial a new grpc session to the ADS management server
-func (a *Control) NewSession(opts ...grpc.DialOption) (*grpc.ClientConn, error) {
+func (a *Options) NewSession(opts ...grpc.DialOption) (*grpc.ClientConn, error) {
 	// Dial the grpc envoy management server
 	conn, err := grpc.Dial(a.URL, opts...)
 	if err != nil {
@@ -34,16 +49,9 @@ func (a *Control) NewSession(opts ...grpc.DialOption) (*grpc.ClientConn, error) 
 
 // Fetch consumes a channel and will publish envoy resources to it so services can consume
 // You'll want to start this in a go routine and just read the channels passed in as params. It will block
-func (a *Control) Fetch(resources chan *types.Any, errs chan error) {
-	conn, err := a.NewSession(grpc.WithInsecure())
-	if err != nil {
-		errs <- errors.Wrap(err, "error when fetching session")
-		close(resources)
-		return
-	}
-
-	// Create our cluster discovery client from the grpc conn
-	client := dv2.NewAggregatedDiscoveryServiceClient(conn)
+func (a *Discovery) Fetch(resources chan *types.Any, errs chan error) {
+	// Create our ADS client from the grpc conn
+	client := dv2.NewAggregatedDiscoveryServiceClient(a.Session)
 
 	// Fetch our stream
 	stream, err := client.StreamAggregatedResources(context.Background())
@@ -54,17 +62,15 @@ func (a *Control) Fetch(resources chan *types.Any, errs chan error) {
 	}
 
 	ctx := stream.Context()
-	log.Println(ctx)
-
 	done := make(chan bool, 1)
 
 	// Make requests for clusters
 	if err := stream.Send(&v2.DiscoveryRequest{
 		Node: &core.Node{
-			Id: a.Region,
+			Id: a.Options.Region,
 		},
-		ResourceNames: a.ResourceNames,
-		TypeUrl:       a.ResourceType,
+		ResourceNames: a.Options.ResourceNames,
+		TypeUrl:       a.Options.ResourceType,
 	}); err != nil {
 		errs <- errors.Wrap(err, "error when sending initial stream request")
 	}
@@ -84,7 +90,7 @@ func (a *Control) Fetch(resources chan *types.Any, errs chan error) {
 				}
 
 				// Acknowledge the successful response from Envoy ADS
-				go ack(stream, resp, a.Region, errs)
+				go ack(stream, resp, a.Options.Region, errs)
 			}
 		}
 	}()

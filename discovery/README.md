@@ -13,50 +13,62 @@ import (
 	"time"
     "log"
 
+	"github.com/deciphernow/gm-fabric-go/discovery"
 	"github.com/envoyproxy/go-control-plane/envoy/api/v2"
 	"github.com/envoyproxy/go-control-plane/pkg/cache"
 	"github.com/gogo/protobuf/types"
 )
 
 func main() {
-    // Create a buffered channel
-    clusters := make(chan *types.Any, 1)
-    errs := make(chan error, 1)
-    done := make(chan bool, 1)
+	// Create a buffered channel
+	clusters := make(chan *types.Any, 1)
+	errs := make(chan error, 1)
+	done := make(chan bool, 1)
 
-    // Setting a timeout is optional. The stream will stay open infinitely if none is set
-    timeout := time.After(10 * time.Second)
+	// Setting a timeout is optional. The stream will stay open infinitely if none is set
+	timeout := time.After(10 * time.Second)
 
-    // Create a control object with necessary metadata
-    c := &discovery.Control{
-        URL:          "control.deciphernow.com:10219", // URL to an ADS instance
-        Region:       "region-1",                      // Region ADS is apart of
-        ResourceType: cache.ClusterType,               // Envoy resource type we want
-    }
+	// Create a control object with necessary metadata
+	sess, err := discovery.NewDiscoverySession(WithRegion("region-1"), WithResourceType(cache.ClusterType), WithLocation("control.deciphernow.com:10219"))
+	if err != nil {
+		log.Fatal(err)
+	}
 
-    // Start our ADS resource stream
-    go c.Fetch(clusters, errs)
+	// Start our ADS resource stream
+	go sess.Fetch(clusters, errs)
 
-    // Watch our ADS resource stream
-    go func() {
-        for {
-            select {
-            case cluster := <-clusters:
-                var c v2.Cluster
-                if err := types.UnmarshalAny(cluster, &c); err != nil {
-                    log.Println(err)
-                    close(done)
-                }
-            case err := <-errs:
-                log.Println(err)
-                close(done)
-            case <-timeout:
-                close(done)
-            }
-        }
-    }()
 
-    // Block until we are finished watching
-    <-done    
+	// Watch our ADS resource stream
+	go func() {
+	    for {
+	        select {
+	        case cluster := <-clusters:
+	            var c v2.Cluster
+	            if err := types.UnmarshalAny(cluster, &c); err != nil {
+	                log.Println(err)
+	                close(done)
+	            }
+	        case err := <-errs:
+	            log.Println(err)
+	            close(done)
+	        case <-timeout:
+	            close(done)
+	        }
+	    }
+	}()
+
+	// Block until we are finished watching
+	<-done    
 }
+```
+
+## Performance
+Current performance of the Discovery package:
+```
+goos: darwin
+goarch: amd64
+pkg: github.com/deciphernow/gm-fabric-go/discovery
+BenchmarkFetch-8               1        1002320454 ns/op          139672 B/op        468 allocs/op
+PASS
+ok      github.com/deciphernow/gm-fabric-go/discovery   2.027s
 ```

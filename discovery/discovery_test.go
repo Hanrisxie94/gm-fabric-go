@@ -17,14 +17,13 @@ func TestFetch(t *testing.T) {
 	timeout := time.After(1 * time.Second)
 
 	// Create a control object with necessary metadata
-	c := &Control{
-		URL:          "control.deciphernow.com:10219", // URL to an ADS instance
-		Region:       "region-1",                      // Region ADS is apart of
-		ResourceType: cache.ClusterType,               // Envoy resource type we want
+	sess, err := NewDiscoverySession(WithRegion("region-1"), WithResourceType(cache.ClusterType), WithLocation("control.deciphernow.com:10219"))
+	if err != nil {
+		t.Error(err)
 	}
 
 	// Start our ADS resource stream
-	go c.Fetch(clusters, errs)
+	go sess.Fetch(clusters, errs)
 
 	// Watch our ADS resource stream
 	go func() {
@@ -58,14 +57,13 @@ func BenchmarkFetch(b *testing.B) {
 	timeout := time.After(1 * time.Second)
 
 	// Create a control object with necessary metadata
-	c := &Control{
-		URL:          "control.deciphernow.com:10219", // URL to an ADS instance
-		Region:       "region-1",                      // Region ADS is apart of
-		ResourceType: cache.ClusterType,               // Envoy resource type we want
+	sess, err := NewDiscoverySession(WithRegion("region-1"), WithResourceType(cache.ClusterType), WithLocation("control.deciphernow.com:10219"))
+	if err != nil {
+		b.Error(err)
 	}
 
 	// Start our ADS resource stream
-	go c.Fetch(clusters, errs)
+	go sess.Fetch(clusters, errs)
 
 	// Watch our ADS resource stream
 	go func() {
