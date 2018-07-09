@@ -102,42 +102,41 @@ func NewCollector() (*CollectorType, error) {
 // Collect statistics by sending them to Prometheus
 func (c *CollectorType) Collect(entry CollectorEntry) error {
 	elapsed := computeElapsed(entry.StartTime, entry.EndTime)
-	if elapsed == 0 {
-		return nil
-	}
-	for _, labels := range []prom.Labels{
-		prom.Labels{
-			"key":    entry.Key,
-			"method": entry.Method,
-			"status": fmt.Sprintf("%d", entry.Status),
-		},
-		prom.Labels{
-			"key":    AllMetricsKey,
-			"method": "",
-			"status": fmt.Sprintf("%d", entry.Status),
-		},
-	} {
-		requestDuration, err := c.requestDurationVec.GetMetricWith(labels)
-		if err != nil {
-			return errors.Wrapf(err, "requestDurationVec.GetMetricWith(%s)", labels)
+	if elapsed > 0 {
+		for _, labels := range []prom.Labels{
+			prom.Labels{
+				"key":    entry.Key,
+				"method": entry.Method,
+				"status": fmt.Sprintf("%d", entry.Status),
+			},
+			prom.Labels{
+				"key":    AllMetricsKey,
+				"method": "",
+				"status": fmt.Sprintf("%d", entry.Status),
+			},
+		} {
+			requestDuration, err := c.requestDurationVec.GetMetricWith(labels)
+			if err != nil {
+				return errors.Wrapf(err, "requestDurationVec.GetMetricWith(%s)", labels)
+			}
+			requestDuration.Observe(elapsed.Seconds())
+			requestSize, err := c.requestSizeVec.GetMetricWith(labels)
+			if err != nil {
+				return errors.Wrapf(err, "requestSizeVec.GetMetricWith(%s)", labels)
+			}
+			requestSize.Add(float64(entry.BytesRead))
+			responseSize, err := c.responseSizeVec.GetMetricWith(labels)
+			if err != nil {
+				return errors.Wrapf(err, "responseSizeVec.GetMetricWith(%s)", labels)
+			}
+			responseSize.Add(float64(entry.BytesWritten))
 		}
-		requestDuration.Observe(elapsed.Seconds())
-		requestSize, err := c.requestSizeVec.GetMetricWith(labels)
-		if err != nil {
-			return errors.Wrapf(err, "requestSizeVec.GetMetricWith(%s)", labels)
-		}
-		requestSize.Add(float64(entry.BytesRead))
-		responseSize, err := c.responseSizeVec.GetMetricWith(labels)
-		if err != nil {
-			return errors.Wrapf(err, "responseSizeVec.GetMetricWith(%s)", labels)
-		}
-		responseSize.Add(float64(entry.BytesWritten))
-	}
 
-	if entry.TLS {
-		c.tlsCount.Inc()
-	} else {
-		c.nonTLSCount.Inc()
+		if entry.TLS {
+			c.tlsCount.Inc()
+		} else {
+			c.nonTLSCount.Inc()
+		}
 	}
 
 	return nil
