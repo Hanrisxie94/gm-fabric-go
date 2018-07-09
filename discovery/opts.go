@@ -1,14 +1,11 @@
 package discovery
 
-import "time"
-
 // Options are configuration settings for the discovery object
 type Options struct {
 	URL           string   // URL to Envoy management server ex: control.deciphernow.com:10219
 	Region        string   // Envoy region/node that will initiate communication with a Fabric service
 	ResourceNames []string // List of Envoy resource names to subscribe to
 	ResourceType  string
-	StreamTimeout time.Duration // Length of timeout to be specified. If empty or 0 the stream will run infinitely
 }
 
 // Option follows the functional opts pattern
@@ -25,14 +22,6 @@ func WithLocation(url string) Option {
 func WithRegion(region string) Option {
 	return func(o *Options) {
 		o.Region = region
-	}
-}
-
-// WithStreamTimeout will inject a set time to the configuration object
-// for use inside the Fetch method
-func WithStreamTimeout(timeout time.Duration) Option {
-	return func(o *Options) {
-		o.StreamTimeout = timeout
 	}
 }
 
