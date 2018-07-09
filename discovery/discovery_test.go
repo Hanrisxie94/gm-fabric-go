@@ -1,7 +1,6 @@
 package discovery
 
 import (
-	"fmt"
 	"testing"
 	"time"
 
@@ -33,7 +32,6 @@ func TestFetch(t *testing.T) {
 			case cluster := <-clusters:
 				var c v2.Cluster
 				if err := types.UnmarshalAny(cluster, &c); err != nil {
-					fmt.Println(c.String())
 					t.Error(err)
 					close(done)
 				}
