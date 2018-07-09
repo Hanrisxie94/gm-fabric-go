@@ -65,10 +65,10 @@ func main() {
 ## Performance
 Current performance of the Discovery package:
 ```
-goos: darwin
+goos: linux
 goarch: amd64
 pkg: github.com/deciphernow/gm-fabric-go/discovery
-BenchmarkFetch-8               1        1002320454 ns/op          139672 B/op        468 allocs/op
+BenchmarkFetch-32              1        1000193976 ns/op           29296 B/op        289 allocs/op
 PASS
-ok      github.com/deciphernow/gm-fabric-go/discovery   2.027s
+ok      github.com/deciphernow/gm-fabric-go/discovery   2.011s
 ```
