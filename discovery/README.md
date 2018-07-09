@@ -9,17 +9,21 @@ Here is a basic example of fetching Clusters (an Envoy Resource Type) from the A
 package main
 
 import (
-	"testing"
+	"fmt"
+	"os"
 	"time"
-	"log"
 
 	"github.com/deciphernow/gm-fabric-go/discovery"
 	"github.com/envoyproxy/go-control-plane/envoy/api/v2"
 	"github.com/envoyproxy/go-control-plane/pkg/cache"
 	"github.com/gogo/protobuf/types"
+	"github.com/rs/zerolog"
 )
 
 func main() {
+	logger := zerolog.New(os.Stdout).With().Timestamp().Logger().
+		Output(zerolog.ConsoleWriter{Out: os.Stdout})
+
 	// Create a buffered channel
 	clusters := make(chan *types.Any, 1)
 	errs := make(chan error, 1)
@@ -29,38 +33,42 @@ func main() {
 	timeout := time.After(10 * time.Second)
 
 	// Create a control object with necessary metadata
-	sess, err := discovery.NewDiscoverySession(discovery.WithRegion("region-1"), discovery.WithResourceType(cache.ClusterType), discovery.WithLocation("control.deciphernow.com:10219"))
+	sess, err := discovery.NewDiscoverySession(discovery.WithRegion("region-1"), discovery.WithResourceType(cache.ListenerType), discovery.WithLocation("control.deciphernow.com:10219"))
 	if err != nil {
-		log.Fatal(err)
+		logger.Fatal().Err(err).Msg("failed when creating discovery session")
 	}
 
 	// Start our ADS resource stream
 	go sess.Fetch(clusters, errs)
 
-
 	// Watch our ADS resource stream
 	go func() {
-	    for {
-	        select {
-	        case cluster := <-clusters:
-	            var c v2.Cluster
-	            if err := types.UnmarshalAny(cluster, &c); err != nil {
-	                log.Println(err)
-	                close(done)
-	            }
-	        case err := <-errs:
-	            log.Println(err)
-	            close(done)
-	        case <-timeout:
-	            close(done)
-	        }
-	    }
+		for {
+			select {
+			case cluster := <-clusters:
+				var c v2.Cluster
+				if err := types.UnmarshalAny(cluster, &c); err != nil {
+					logger.Error().Err(err).Msg("failed to unmarshal cluster object")
+					close(done)
+				}
+				fmt.Println(c.String())
+			case err := <-errs:
+				logger.Error().Err(err).Msg("Received error from error channel")
+				close(done)
+			case <-timeout:
+				logger.Warn().Msg("timed out")
+				close(done)
+			}
+		}
 	}()
 
 	// Block until we are finished watching
-	<-done    
+	<-done
+	logger.Info().Msg("exiting")
 }
 ```
+
+The Envoy resource types are located [here](https://github.com/envoyproxy/go-control-plane/blob/master/pkg/cache/resource.go#L32). Because we are subscribing to the Aggregate Discovery model, you are required to provide a resource type URL, even if it is `cache.AnyType`. We recommend asking for your specific resource type otherwise the payload may get very large.
 
 ## Performance
 Current performance of the Discovery package:
