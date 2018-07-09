@@ -102,6 +102,9 @@ func NewCollector() (*CollectorType, error) {
 // Collect statistics by sending them to Prometheus
 func (c *CollectorType) Collect(entry CollectorEntry) error {
 	elapsed := computeElapsed(entry.StartTime, entry.EndTime)
+	if elapsed == 0 {
+		return nil
+	}
 	for _, labels := range []prom.Labels{
 		prom.Labels{
 			"key":    entry.Key,
