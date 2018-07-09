@@ -57,7 +57,6 @@ func (a *Discovery) Fetch(resources chan *types.Any, errs chan error) {
 	stream, err := client.StreamAggregatedResources(context.Background())
 	if err != nil {
 		errs <- errors.Wrap(err, "error when retreiving stream from client")
-		close(resources)
 		return
 	}
 
@@ -73,16 +72,21 @@ func (a *Discovery) Fetch(resources chan *types.Any, errs chan error) {
 		TypeUrl:       a.Options.ResourceType,
 	}); err != nil {
 		errs <- errors.Wrap(err, "error when sending initial stream request")
+		return
 	}
 
 	// Kick off a go routine to watch the stream
 	go func() {
 		for {
 			resp, err := stream.Recv()
-			// If we get an EOF we can assume nothing is left to stream (Envoy ADS should never send an EOF)
 			if err == io.EOF {
 				errs <- errors.New("received EOF from stream")
 				close(done)
+				return
+			} else if err != nil {
+				errs <- errors.Wrap(err, "failed in resource reception")
+				close(done)
+				return
 			}
 			if resp != nil {
 				for _, resource := range resp.Resources {
@@ -98,11 +102,11 @@ func (a *Discovery) Fetch(resources chan *types.Any, errs chan error) {
 	// Watch the stream context
 	go func() {
 		<-ctx.Done()
-		if err := ctx.Err(); err != nil {
-			if ctx.Err() != context.Canceled {
-				errs <- errors.Wrap(err, "stream context error received")
-			}
+		if err := ctx.Err(); err != nil && err != context.Canceled {
+			errs <- errors.Wrap(err, "stream context error received")
+			close(done)
 		}
+		close(done)
 	}()
 
 	<-done
@@ -117,7 +121,8 @@ func ack(stream v2.ClusterDiscoveryService_StreamClustersClient, resp *v2.Discov
 		},
 		VersionInfo:   resp.GetVersionInfo(),
 		ResponseNonce: resp.GetNonce(),
+		TypeUrl:       resp.GetTypeUrl(),
 	}); err != nil {
-		errs <- errors.Wrap(err, "error when sending ack response")
+		errs <- errors.Wrap(err, "error when sending acknowledgement response")
 	}
 }

@@ -13,8 +13,8 @@ func TestFetch(t *testing.T) {
 	// Create a buffered channel
 	clusters := make(chan *types.Any, 1)
 	errs := make(chan error, 1)
-	done := make(chan bool, 1)
 	timeout := time.After(1 * time.Second)
+	done := make(chan bool, 1)
 
 	// Create a control object with necessary metadata
 	sess, err := NewDiscoverySession(WithRegion("region-1"), WithResourceType(cache.ClusterType), WithLocation("control.deciphernow.com:10219"))
@@ -27,10 +27,10 @@ func TestFetch(t *testing.T) {
 
 	// Watch our ADS resource stream
 	go func() {
+		var c v2.Cluster
 		for {
 			select {
 			case cluster := <-clusters:
-				var c v2.Cluster
 				if err := types.UnmarshalAny(cluster, &c); err != nil {
 					t.Error(err)
 					close(done)
@@ -53,8 +53,8 @@ func BenchmarkFetch(b *testing.B) {
 	// Create a buffered channel
 	clusters := make(chan *types.Any, 1)
 	errs := make(chan error, 1)
-	done := make(chan bool, 1)
 	timeout := time.After(1 * time.Second)
+	done := make(chan bool, 1)
 
 	// Create a control object with necessary metadata
 	sess, err := NewDiscoverySession(WithRegion("region-1"), WithResourceType(cache.ClusterType), WithLocation("control.deciphernow.com:10219"))
@@ -67,10 +67,10 @@ func BenchmarkFetch(b *testing.B) {
 
 	// Watch our ADS resource stream
 	go func() {
+		var c v2.Cluster
 		for {
 			select {
 			case cluster := <-clusters:
-				var c v2.Cluster
 				if err := types.UnmarshalAny(cluster, &c); err != nil {
 					b.Error(err)
 					close(done)

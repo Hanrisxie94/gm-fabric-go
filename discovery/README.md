@@ -11,7 +11,7 @@ package main
 import (
 	"testing"
 	"time"
-    "log"
+	"log"
 
 	"github.com/deciphernow/gm-fabric-go/discovery"
 	"github.com/envoyproxy/go-control-plane/envoy/api/v2"
@@ -29,7 +29,7 @@ func main() {
 	timeout := time.After(10 * time.Second)
 
 	// Create a control object with necessary metadata
-	sess, err := discovery.NewDiscoverySession(WithRegion("region-1"), WithResourceType(cache.ClusterType), WithLocation("control.deciphernow.com:10219"))
+	sess, err := discovery.NewDiscoverySession(discovery.WithRegion("region-1"), discovery.WithResourceType(cache.ClusterType), discovery.WithLocation("control.deciphernow.com:10219"))
 	if err != nil {
 		log.Fatal(err)
 	}
