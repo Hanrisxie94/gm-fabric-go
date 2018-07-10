@@ -73,10 +73,10 @@ The Envoy resource types are located [here](https://github.com/envoyproxy/go-con
 ## Performance
 Current performance of the Discovery package:
 ```
-goos: linux
+goos: darwin
 goarch: amd64
 pkg: github.com/deciphernow/gm-fabric-go/discovery
-BenchmarkFetch-32              1        1000193976 ns/op           29296 B/op        289 allocs/op
+BenchmarkFetch-8               1        1000702613 ns/op           14648 B/op        167 allocs/op
 PASS
-ok      github.com/deciphernow/gm-fabric-go/discovery   2.011s
+ok      github.com/deciphernow/gm-fabric-go/discovery   2.021s
 ```
