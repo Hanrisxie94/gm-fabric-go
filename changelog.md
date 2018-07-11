@@ -27,7 +27,7 @@
 - Various fixes to Prometheus metrics
 - Add a version identifier to the metrics dashboard JSON stream
 
-## 0.1.4\
+## 0.1.4
 
 ### Added
 - Enable fabric generator to get template URL from config file (in addition to commandline) (#148)
