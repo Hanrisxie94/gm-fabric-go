@@ -5,17 +5,17 @@
 ### Added
 - Discovery package for Envoy management server communication
 
-## 0.1.7
+## 0.1.7 (July 11th, 2018)
 
 ### Added
 - Prometheus metrics extensions
 
-## 0.1.6
+## 0.1.6 (July 2nd, 2018)
 
 ### Added
 - Add capability to emit metrics to CloudWatch
 
-## 0.1.5
+## 0.1.5 (June 11th, 2018)
 
 ### Added
 - Show off Go Report Card
@@ -27,7 +27,7 @@
 - Various fixes to Prometheus metrics
 - Add a version identifier to the metrics dashboard JSON stream
 
-## 0.1.4
+## 0.1.4 (March 14th, 2018)
 
 ### Added
 - Enable fabric generator to get template URL from config file (in addition to commandline) (#148)
