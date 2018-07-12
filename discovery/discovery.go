@@ -108,7 +108,7 @@ func (a *Discovery) Fetch(resources chan *types.Any, errs chan error) {
 				}
 
 				// Acknowledge the successful response from Envoy ADS
-				go ack(stream, resp, a.Options.Region, errs)
+				ack(stream, resp, a.Options.Region, errs)
 			}
 		}
 	}()
