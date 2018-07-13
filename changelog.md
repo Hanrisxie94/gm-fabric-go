@@ -2,6 +2,9 @@
 
 ## WIP
 
+### Fixed
+- No status messages for an empty string CloudWatch metric input
+
 ### Added
 - Discovery package for Envoy management server communication
 
