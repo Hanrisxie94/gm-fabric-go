@@ -257,27 +257,29 @@ func (co *cloudObs) AddAWSMetrics() {
 	co.Lock()
 	defer co.Unlock()
 	for _, name := range co.metrics {
-		switch {
-		case name == "system/memory/used_percent":
-			co.putMetric(name, grabmetrics.MemUsedPercentVal(), "Percent")
+		if name != "" {
+			switch {
+			case name == "system/memory/used_percent":
+				co.putMetric(name, grabmetrics.MemUsedPercentVal(), "Percent")
 
-		case name == "all/errors.count":
-			co.putMetric(name, grabmetrics.ErrorsCountVal(co.grpc), "Count")
+			case name == "all/errors.count":
+				co.putMetric(name, grabmetrics.ErrorsCountVal(co.grpc), "Count")
 
-		case name == "all/in_throughput":
-			co.putMetric(name, grabmetrics.InThroughputVal(co.grpc), "Count")
+			case name == "all/in_throughput":
+				co.putMetric(name, grabmetrics.InThroughputVal(co.grpc), "Count")
 
-		case name == "all/latency_ms.p50":
-			co.putMetric(name, grabmetrics.LatencyP50Val(co.grpc), "Count")
+			case name == "all/latency_ms.p50":
+				co.putMetric(name, grabmetrics.LatencyP50Val(co.grpc), "Count")
 
-		case name == "all/latency_ms.p95":
-			co.putMetric(name, grabmetrics.LatencyP95Val(co.grpc), "Count")
+			case name == "all/latency_ms.p95":
+				co.putMetric(name, grabmetrics.LatencyP95Val(co.grpc), "Count")
 
-		case name == "Total/requests":
-			co.putMetric(name, grabmetrics.TotalRequestsVal(co.grpc), "Count")
+			case name == "Total/requests":
+				co.putMetric(name, grabmetrics.TotalRequestsVal(co.grpc), "Count")
 
-		default:
-			fmt.Println(name, "is not handled as a gm-fabric-go cloudwatch metric....yet.  Skipping to the next one.")
+			default:
+				fmt.Println(name, "is not currently handled as a gm-fabric-go cloudwatch metric.  Skipping to the next one.")
+			}
 		}
 	}
 }
