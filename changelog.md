@@ -1,11 +1,15 @@
 # Changelog
 
-## WIP
+## 0.1.8 (July 16th, 2018)
+
+### Fixed
+- Blank string errors when using Cloudwatch
 
 ### Fixed
 - No status messages for an empty string CloudWatch metric input
 
 ### Added
+- Impersonation support for middle-man proxy
 - Discovery package for Envoy management server communication
 
 ## 0.1.7 (July 11th, 2018)
