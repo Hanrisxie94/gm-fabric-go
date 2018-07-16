@@ -18,7 +18,7 @@ import "fmt"
 
 // semver is the semantic version
 // see https://semver.org/
-const semver = "0.1.9-pre"
+const semver = "0.1.8"
 
 // gitHash should be filled in at compile time with
 // GITHASH=`(git rev-parse --verify --short HEAD)`

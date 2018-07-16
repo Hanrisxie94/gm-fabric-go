@@ -3,9 +3,6 @@
 ## 0.1.8 (July 16th, 2018)
 
 ### Fixed
-- Blank string errors when using Cloudwatch
-
-### Fixed
 - No status messages for an empty string CloudWatch metric input
 
 ### Added
