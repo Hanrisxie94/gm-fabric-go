@@ -274,6 +274,7 @@ With a basic microservice implemented you may extend the capabilities of that se
 | [events](events/README.md)         | Prototyped event streaming                                         |
 | [fabric](https://github.com/DecipherNow/gm-fabric-go/cmd/fabric) | GM Fabric golang service generator (gRPC) |
 | [gk](gk/README.md)                 | Gatekeeper service announcement utility                            |
+| [impersonation](impersonation/README.md) | Gatekeeper service announcement utility                      |
 | [metrics](metrics/README.md)       | GM Fabric metrics (HTTP, gRPC)                                     |
 | [middleware](middleware/README.md) | HTTP middleware helpers                                            |
 | [oauth](oauth/README.md)           | OAuth 2.0 authorization code (recommended use with coreos/dex)     |
