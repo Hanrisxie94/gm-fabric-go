@@ -79,28 +79,10 @@ func GetIP() (string, error) {
 	}
 	myIPs, err := net.LookupIP(hostname)
 	if err != nil {
-
-		//Try local network
-		iface, err := net.InterfaceByName("lo0")
+		myIPs, err = net.LookupIP("localhost")
 		if err != nil {
-			return "", errors.New("could not find IP's for hostname, could not get network interface")
+			return "", errors.New("could not get a set of IPs for our hostname")
 		}
-
-		ifaceaddrs, err := iface.Addrs()
-		if err != nil {
-			return "", err
-		}
-
-		ip, _, err := net.ParseCIDR(ifaceaddrs[0].String())
-		if err != nil {
-			return "", err
-		}
-
-		if ip.To4() != nil {
-			return ip.String(), nil
-		}
-
-		return "", errors.New("could not get a set of IPs for our hostname")
 	}
 	if len(myIPs) <= 0 {
 		return "", errors.New("could not find IPv4 address")
