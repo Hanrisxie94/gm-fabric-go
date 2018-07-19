@@ -15,23 +15,31 @@
 package discovery
 
 import (
+	"context"
+	"net"
 	"testing"
-	"time"
 
 	"github.com/envoyproxy/go-control-plane/envoy/api/v2"
+	discovery "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v2"
 	"github.com/envoyproxy/go-control-plane/pkg/cache"
 	"github.com/gogo/protobuf/types"
+	"github.com/pkg/errors"
+	"google.golang.org/grpc"
 )
 
 func TestFetch(t *testing.T) {
+	err := createMockADSServer(context.Background())
+	if err != nil {
+		t.Error(err)
+	}
+
 	// Create a buffered channel
 	clusters := make(chan *types.Any, 1)
 	errs := make(chan error, 1)
-	timeout := time.After(1 * time.Second)
 	done := make(chan bool, 1)
 
 	// Create a control object with necessary metadata
-	sess, err := NewDiscoverySession(WithRegion("region-1"), WithResourceType(cache.ClusterType), WithLocation("control.deciphernow.com:10219"))
+	sess, err := NewDiscoverySession(WithRegion("region-1"), WithResourceType(cache.ClusterType), WithLocation("localhost:18011"))
 	if err != nil {
 		t.Error(err)
 	}
@@ -47,12 +55,10 @@ func TestFetch(t *testing.T) {
 			case cluster := <-clusters:
 				if err := types.UnmarshalAny(cluster, &c); err != nil {
 					t.Error(err)
-					close(done)
 				}
+				close(done)
 			case err := <-errs:
 				t.Error(err)
-				close(done)
-			case <-timeout:
 				close(done)
 			}
 		}
@@ -64,14 +70,18 @@ func TestFetch(t *testing.T) {
 
 // go test -bench=. -benchmem
 func BenchmarkFetch(b *testing.B) {
+	err := createMockADSServer(context.Background())
+	if err != nil {
+		b.Error(err)
+	}
+
 	// Create a buffered channel
 	clusters := make(chan *types.Any, 1)
 	errs := make(chan error, 1)
-	timeout := time.After(1 * time.Second)
 	done := make(chan bool, 1)
 
 	// Create a control object with necessary metadata
-	sess, err := NewDiscoverySession(WithRegion("region-1"), WithResourceType(cache.ClusterType), WithLocation("control.deciphernow.com:10219"))
+	sess, err := NewDiscoverySession(WithRegion("region-1"), WithResourceType(cache.ClusterType), WithLocation("localhost:18011"))
 	if err != nil {
 		b.Error(err)
 	}
@@ -87,12 +97,10 @@ func BenchmarkFetch(b *testing.B) {
 			case cluster := <-clusters:
 				if err := types.UnmarshalAny(cluster, &c); err != nil {
 					b.Error(err)
-					close(done)
 				}
+				close(done)
 			case err := <-errs:
 				b.Error(err)
-				close(done)
-			case <-timeout:
 				close(done)
 			}
 		}
@@ -100,4 +108,57 @@ func BenchmarkFetch(b *testing.B) {
 
 	// Block until we are finished watching
 	<-done
+}
+
+func createMockADSServer(ctx context.Context) error {
+	lis, err := net.Listen("tcp", ":18011")
+	if err != nil {
+		return err
+	}
+
+	go func() {
+		s := Server{}
+		grpcServer := grpc.NewServer()
+		discovery.RegisterAggregatedDiscoveryServiceServer(grpcServer, &s)
+
+		if e := grpcServer.Serve(lis); e != nil {
+			err = e
+		}
+	}()
+
+	return err
+}
+
+type Server struct{}
+
+func (s *Server) StreamAggregatedResources(stream discovery.AggregatedDiscoveryService_StreamAggregatedResourcesServer) error {
+	// Basic cluster info
+	clusters := []*v2.Cluster{
+		&v2.Cluster{Name: "cluster_1"},
+		&v2.Cluster{Name: "cluster_2"},
+		&v2.Cluster{Name: "cluster_3"},
+	}
+
+	var resources []types.Any
+	for _, cluster := range clusters {
+		c, err := types.MarshalAny(cluster)
+		if err != nil {
+			return err
+		}
+		resources = append(resources, *c)
+	}
+
+	for range resources {
+		stream.Send(&v2.DiscoveryResponse{
+			VersionInfo: "1",
+			TypeUrl:     cache.ClusterType,
+			Resources:   resources,
+		})
+	}
+
+	return nil
+}
+
+func (s *Server) IncrementalAggregatedResources(_ discovery.AggregatedDiscoveryService_IncrementalAggregatedResourcesServer) error {
+	return errors.New("not implemented")
 }

@@ -118,9 +118,9 @@ func (a *Discovery) Fetch(resources chan *types.Any, errs chan error) {
 		<-ctx.Done()
 		if err := ctx.Err(); err != nil && err != context.Canceled {
 			errs <- errors.Wrap(err, "stream context error received")
-			close(done)
+			return
 		}
-		close(done)
+		return
 	}()
 
 	<-done
