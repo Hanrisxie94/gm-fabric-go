@@ -9,7 +9,7 @@ func TestNewWhitelist(t *testing.T) {
 	dns := getServers()
 
 	w := NewWhitelist(dns)
-	for i, dn := range w.Servers {
+	for i, dn := range w.servers {
 		if strings.Compare(dns[i], dn) != 0 {
 			t.Errorf("Wanted %s, got: %s", dns[i], dn)
 		}

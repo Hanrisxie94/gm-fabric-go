@@ -11,20 +11,20 @@ import (
 
 // Whitelist object represents a list of servers to whitelist
 type Whitelist struct {
-	Servers []string `json:"server_whitelist"`
+	servers []string
 }
 
 // NewWhitelist will construct a whitelist object and return
 func NewWhitelist(servers []string) Whitelist {
 	return Whitelist{
-		Servers: servers,
+		servers: servers,
 	}
 }
 
 // CanImpersonate will check the server whitelist to see if the EXTERNAL_SYS_DN lives in it's store.
 // If not it will return false and the impersonation request should be denied
 func CanImpersonate(caller Caller, whitelist Whitelist) bool {
-	for _, server := range whitelist.Servers {
+	for _, server := range whitelist.servers {
 		if validate(strings.TrimSpace(caller.ExternalSystemDistinguishedName), strings.TrimSpace(server)) {
 			return true
 		}
