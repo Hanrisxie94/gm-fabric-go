@@ -127,7 +127,7 @@ func (a *Discovery) Fetch(resources chan *types.Any, errs chan error) {
 }
 
 // Acknowledge the reception of a new version of cache resources from Envoy ADS
-func ack(stream v2.ClusterDiscoveryService_StreamClustersClient, resp *v2.DiscoveryResponse, region string, errs chan error) {
+func ack(stream dv2.AggregatedDiscoveryService_StreamAggregatedResourcesClient, resp *v2.DiscoveryResponse, region string, errs chan error) {
 	// Construct our ACK request and send that through the stream
 	if err := stream.Send(&v2.DiscoveryRequest{
 		Node: &core.Node{

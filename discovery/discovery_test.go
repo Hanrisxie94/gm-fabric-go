@@ -16,6 +16,7 @@ package discovery
 
 import (
 	"context"
+	"io"
 	"net"
 	"testing"
 
@@ -55,11 +56,16 @@ func TestFetch(t *testing.T) {
 			case cluster := <-clusters:
 				if err := types.UnmarshalAny(cluster, &c); err != nil {
 					t.Error(err)
+					break
 				}
-				close(done)
+				break
 			case err := <-errs:
+				if err == io.EOF {
+					close(done)
+					break
+				}
 				t.Error(err)
-				close(done)
+				break
 			}
 		}
 	}()
@@ -98,10 +104,12 @@ func BenchmarkFetch(b *testing.B) {
 				if err := types.UnmarshalAny(cluster, &c); err != nil {
 					b.Error(err)
 				}
-				close(done)
 			case err := <-errs:
+				if err == io.EOF {
+					close(done)
+					break
+				}
 				b.Error(err)
-				close(done)
 			}
 		}
 	}()
@@ -148,13 +156,12 @@ func (s *Server) StreamAggregatedResources(stream discovery.AggregatedDiscoveryS
 		resources = append(resources, *c)
 	}
 
-	for range resources {
-		stream.Send(&v2.DiscoveryResponse{
-			VersionInfo: "1",
-			TypeUrl:     cache.ClusterType,
-			Resources:   resources,
-		})
-	}
+	// Send one streamg
+	stream.Send(&v2.DiscoveryResponse{
+		VersionInfo: "1",
+		TypeUrl:     cache.ClusterType,
+		Resources:   resources,
+	})
 
 	return nil
 }
