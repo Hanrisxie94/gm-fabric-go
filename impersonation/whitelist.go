@@ -24,19 +24,16 @@ func NewWhitelist(servers []string) Whitelist {
 // CanImpersonate will check the server whitelist to see if the EXTERNAL_SYS_DN lives in it's store.
 // If not it will return false and the impersonation request should be denied
 func CanImpersonate(caller Caller, whitelist Whitelist) bool {
-	var isValid bool
 	for _, server := range whitelist.Servers {
-		isValid = validate(caller.ExternalSystemDistinguishedName, server)
+		if validate(caller.ExternalSystemDistinguishedName, server) {
+			return true
+		}
 	}
-
-	return isValid
+	return false
 }
 
 func validate(sysDN, ws string) bool {
-	if strings.Compare(strings.Trim(sysDN, " "), strings.Trim(ws, " ")) == 0 {
-		return true
-	}
-	return false
+	return strings.Compare(strings.Trim(sysDN, " "), strings.Trim(ws, " ")) == 0
 }
 
 // ValidateCaller will check to see if the server is on the whitelist and if not, block the request
