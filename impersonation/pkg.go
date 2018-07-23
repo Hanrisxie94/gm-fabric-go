@@ -1,9 +1,9 @@
 package impersonation
 
 import (
-	"log"
-	"github.com/deciphernow/gm-fabric-go/tlsutil"
 	"crypto/x509"
+
+	"github.com/deciphernow/gm-fabric-go/tlsutil"
 )
 
 // Caller provides the distinguished names obtained from specific request
@@ -20,7 +20,7 @@ type Caller struct {
 }
 
 var (
-	USER_DN = "USER_DN"
+	USER_DN         = "USER_DN"
 	EXTERNAL_SYS_DN = "EXTERNAL_SYS_DN"
 )
 
@@ -63,25 +63,14 @@ Typical usage will look something like so:
 	)
 */
 func GetCaller(userDN string, externalSysDN string, cert *x509.Certificate) Caller {
-	const localDebug bool = false
 	var caller Caller
 	caller.UserDistinguishedName = userDN
 	caller.ExternalSystemDistinguishedName = externalSysDN
 	if caller.UserDistinguishedName != "" {
-		if localDebug {
-			log.Println("Assigning distinguished name from USER_DN")
-		}
 		caller.DistinguishedName = caller.UserDistinguishedName
 	} else {
 		if cert != nil {
-			if localDebug {
-				log.Println("Assigning distinguished name from peer certificate")
-			}
 			caller.DistinguishedName = tlsutil.GetDistinguishedName(cert)
-		} else {
-			if localDebug {
-				log.Println("WARNING: No distinguished name set!!!")
-			}
 		}
 	}
 	caller.DistinguishedName = tlsutil.GetNormalizedDistinguishedName(caller.DistinguishedName)
