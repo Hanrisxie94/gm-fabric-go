@@ -25,7 +25,7 @@ func NewWhitelist(servers []string) Whitelist {
 // If not it will return false and the impersonation request should be denied
 func CanImpersonate(caller Caller, whitelist Whitelist) bool {
 	for _, server := range whitelist.Servers {
-		if validate(caller.ExternalSystemDistinguishedName, server) {
+		if validate(strings.TrimSpace(caller.ExternalSystemDistinguishedName), strings.TrimSpace(server)) {
 			return true
 		}
 	}
@@ -33,7 +33,7 @@ func CanImpersonate(caller Caller, whitelist Whitelist) bool {
 }
 
 func validate(sysDN, ws string) bool {
-	return strings.Compare(strings.Trim(sysDN, " "), strings.Trim(ws, " ")) == 0
+	return strings.Compare(sysDN, ws) == 0
 }
 
 // ValidateCaller will check to see if the server is on the whitelist and if not, block the request

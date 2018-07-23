@@ -42,3 +42,22 @@ func getServers() []string {
 		"uid=server3,ou=Server,dc=example,dc=com",
 	}
 }
+
+func BenchmarkCanImpersonate(b *testing.B) {
+	// Create our test whitelist
+	w := NewWhitelist(getServers())
+	caller := GetCaller("cn=alec.holmes,dc=deciphernow,dc=com", "uid=server3,ou=Server,dc=example,dc=com", nil)
+
+	// Test the first case of impersonation
+	ci := CanImpersonate(caller, w)
+	if !ci {
+		b.Error("Expected true, got false")
+	}
+
+	// Change the sys DN to something that shouldn't pass
+	caller.ExternalSystemDistinguishedName = "uid=server4,ou=Server,dc=example,dc=com"
+	ci = CanImpersonate(caller, w)
+	if ci {
+		b.Error("Expected false, got true")
+	}
+}
