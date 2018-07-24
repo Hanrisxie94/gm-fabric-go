@@ -50,6 +50,7 @@ func ValidateCaller(whitelist Whitelist, logger zerolog.Logger) middleware.Middl
 				next.ServeHTTP(w, r)
 			} else {
 				logger.Error().Str(EXTERNAL_SYS_DN, caller.ExternalSystemDistinguishedName).Msg("Server not on authorized whitelist")
+				w.WriteHeader(http.StatusForbidden)
 				return
 			}
 		})
