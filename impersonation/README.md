@@ -19,9 +19,10 @@ if req.TLS != nil && len(req.TLS.PeerCertificates) > 0 {
 }
 
 caller := GetCaller(
-	req.Header.Get(impersonation.USER_DN),
-	req.Header.Get(impersonation.EXTERNAL_SYS_DN),
-	cert,
+    req.Header.Get(impersonation.USER_DN),
+    req.Header.Get(impersonation.S_CLIENT_S_DN),
+    req.Header.Get(impersonation.EXTERNAL_SYS_DN),
+    cert,
 )
 ```
 An x509 certificate can be provided to use as a fallback when a USER_DN header is not present, in which case the DN
@@ -74,4 +75,6 @@ This will wrap every `http.HandlerFunc` registered in your `http.Server` and pro
 ## Info
 **USER_DN** - The effective (possibly impersonated) Distinguished Name of requesting application
 
-**EXTERNAL_SYS_DN** - The Distinguished Name taken from the client certificate
+**S_CLIENT_S_DN** - The Distinguished Name taken from the system certificate
+
+**EXTERNAL_SYS_DN** - The Distinguished Name taken from the external system certificate (originally inside s_client_s_dn)

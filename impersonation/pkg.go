@@ -37,8 +37,10 @@ The proxy is expected to provide two headers:
 
 USER_DN
 	The effective (possibly impersonated) Distinguished Name of requesting application
+S_CLIENT_S_DN
+    The Distinguished Name taken from the system certificate
 EXTERNAL_SYS_DN
-	The Distinguished Name taken from the client certificate
+	The Distinguished Name taken from the external system certificate (originally inside s_client_s_dn)
 
 An x509 certificate can be provided to use as a fallback when a USER_DN header is not present, in which case the DN
 from the cert will be used. This should only be necessary in the unlikely scenario where you need to allow an
@@ -61,6 +63,7 @@ Typical usage will look something like so:
 
 	caller := GetCaller(
 		req.Header.Get(impersonation.USER_DN),
+        req.Header.Get(impersonation.S_CLIENT_S_DN),
 		req.Header.Get(impersonation.EXTERNAL_SYS_DN),
 		cert,
 	)
