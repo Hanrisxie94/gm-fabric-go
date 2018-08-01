@@ -13,6 +13,8 @@ type Caller struct {
 	DistinguishedName string
 	// UserDistinguishedName holds the value passed in header USER_DN
 	UserDistinguishedName string
+	// SystemDistinguishedName holds the value passed in header S_CLIENT_S_DN
+	SystemDistinguishedName string
 	// ExternalSystemDistinguishedName holds the value passed in header EXTERNAL_SYS_DN
 	ExternalSystemDistinguishedName string
 	// CommonName is the CN value part of the DistinguishedName
@@ -22,6 +24,7 @@ type Caller struct {
 var (
 	USER_DN         = "USER_DN"
 	EXTERNAL_SYS_DN = "EXTERNAL_SYS_DN"
+	S_CLIENT_S_DN   = "S_CLIENT_S_DN"
 )
 
 /*
@@ -62,10 +65,11 @@ Typical usage will look something like so:
 		cert,
 	)
 */
-func GetCaller(userDN string, externalSysDN string, cert *x509.Certificate) Caller {
+func GetCaller(userDN, sysDn, externalSysDN string, cert *x509.Certificate) Caller {
 	var caller Caller
 	caller.UserDistinguishedName = userDN
 	caller.ExternalSystemDistinguishedName = externalSysDN
+	caller.SystemDistinguishedName = sysDn
 	if caller.UserDistinguishedName != "" {
 		caller.DistinguishedName = caller.UserDistinguishedName
 	} else {

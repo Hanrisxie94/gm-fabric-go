@@ -26,7 +26,7 @@ func TestNewWhitelist(t *testing.T) {
 func TestCanImpersonate(t *testing.T) {
 	// Create our test whitelist
 	w := NewWhitelist(getServers())
-	caller := GetCaller("cn=alec.holmes,dc=deciphernow,dc=com", "uid=server3,ou=Server,dc=example,dc=com", nil)
+	caller := GetCaller("cn=alec.holmes,dc=deciphernow,dc=com", "uid=server3,ou=Server,dc=example,dc=com", "", nil)
 
 	// Test the first case of impersonation
 	ci := CanImpersonate(caller, w)
@@ -45,27 +45,30 @@ func TestCanImpersonate(t *testing.T) {
 func TestValidateCaller(t *testing.T) {
 	s := buildImpersonationServer()
 
-	req, err := http.NewRequest("GET", s.URL, nil)
-	if err != nil {
-		t.Error(err)
-	}
-	req.Header.Set("USER_DN", "cn=alec.holmes,dc=deciphernow,dc=com")
-	req.Header.Set("EXTERNAL_SYS_DN", "uid=server3,ou=Server,dc=example,dc=com")
+	for _, dn := range getServers() {
+		req, err := http.NewRequest("GET", s.URL, nil)
+		if err != nil {
+			t.Error(err)
+		}
+		req.Header.Set("USER_DN", "cn=alec.holmes,dc=deciphernow,dc=com")
+		req.Header.Set("EXTERNAL_SYS_DN", "")
+		req.Header.Set("S_CLIENT_S_DN", dn)
 
-	res, err := http.DefaultClient.Do(req)
-	if err != nil {
-		t.Error(err)
-	}
-	defer res.Body.Close()
-	if res.StatusCode != http.StatusOK {
-		t.Error(fmt.Errorf("Expected 200, got %d", res.StatusCode))
+		res, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Error(err)
+		}
+		defer res.Body.Close()
+		if res.StatusCode != http.StatusOK {
+			t.Error(fmt.Errorf("Expected 200, got %d", res.StatusCode))
+		}
 	}
 }
 
 func BenchmarkCanImpersonate(b *testing.B) {
 	// Create our test whitelist
 	w := NewWhitelist(getServers())
-	caller := GetCaller("cn=alec.holmes,dc=deciphernow,dc=com", "uid=server3,ou=Server,dc=example,dc=com", nil)
+	caller := GetCaller("cn=alec.holmes,dc=deciphernow,dc=com", "uid=server3,ou=Server,dc=example,dc=com", "", nil)
 
 	// Test the first case of impersonation
 	ci := CanImpersonate(caller, w)
@@ -91,6 +94,7 @@ func BenchmarkValidateCaller(b *testing.B) {
 		}
 		req.Header.Set("USER_DN", "cn=alec.holmes,dc=deciphernow,dc=com")
 		req.Header.Set("EXTERNAL_SYS_DN", dn)
+		req.Header.Set("S_CLIENT_S_DN", dn)
 
 		res, err := http.DefaultClient.Do(req)
 		if err != nil {
