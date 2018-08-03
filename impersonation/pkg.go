@@ -24,7 +24,7 @@ type Caller struct {
 var (
 	USER_DN         = "USER_DN"
 	EXTERNAL_SYS_DN = "EXTERNAL_SYS_DN"
-	S_CLIENT_S_DN   = "S_CLIENT_S_DN"
+	SSL_CLIENT_S_DN = "SSL_CLIENT_S_DN"
 )
 
 /*
@@ -63,7 +63,7 @@ Typical usage will look something like so:
 
 	caller := GetCaller(
 		req.Header.Get(impersonation.USER_DN),
-        req.Header.Get(impersonation.S_CLIENT_S_DN),
+		req.Header.Get(impersonation.SSL_CLIENT_S_DN),
 		req.Header.Get(impersonation.EXTERNAL_SYS_DN),
 		cert,
 	)

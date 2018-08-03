@@ -64,13 +64,13 @@ func ValidateCaller(whitelist Whitelist, logger zerolog.Logger) middleware.Middl
 			if r.TLS != nil && len(r.TLS.PeerCertificates) > 0 {
 				cert = r.TLS.PeerCertificates[0]
 			}
-			caller := GetCaller(r.Header.Get(USER_DN), r.Header.Get(S_CLIENT_S_DN), r.Header.Get(EXTERNAL_SYS_DN), cert)
+			caller := GetCaller(r.Header.Get(USER_DN), r.Header.Get(SSL_CLIENT_S_DN), r.Header.Get(EXTERNAL_SYS_DN), cert)
 
 			if CanImpersonate(caller, whitelist) {
-				logger.Info().Str(EXTERNAL_SYS_DN, caller.ExternalSystemDistinguishedName).Str(S_CLIENT_S_DN, caller.SystemDistinguishedName).Str(USER_DN, caller.UserDistinguishedName).Msg("Impersonation successful")
+				logger.Info().Str(EXTERNAL_SYS_DN, caller.ExternalSystemDistinguishedName).Str(SSL_CLIENT_S_DN, caller.SystemDistinguishedName).Str(USER_DN, caller.UserDistinguishedName).Msg("Impersonation successful")
 				next.ServeHTTP(w, r)
 			} else {
-				logger.Error().Str(EXTERNAL_SYS_DN, caller.ExternalSystemDistinguishedName).Str(S_CLIENT_S_DN, caller.SystemDistinguishedName).Str(USER_DN, caller.UserDistinguishedName).Msg("Server not on authorized whitelist")
+				logger.Error().Str(EXTERNAL_SYS_DN, caller.ExternalSystemDistinguishedName).Str(SSL_CLIENT_S_DN, caller.SystemDistinguishedName).Str(USER_DN, caller.UserDistinguishedName).Msg("Server not on authorized whitelist")
 				w.WriteHeader(http.StatusForbidden)
 				return
 			}

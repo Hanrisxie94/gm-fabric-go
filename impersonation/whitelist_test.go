@@ -52,7 +52,7 @@ func TestValidateCaller(t *testing.T) {
 		}
 		req.Header.Set("USER_DN", "cn=alec.holmes,dc=deciphernow,dc=com")
 		req.Header.Set("EXTERNAL_SYS_DN", "")
-		req.Header.Set("S_CLIENT_S_DN", dn)
+		req.Header.Set("SSL_CLIENT_S_DN", dn)
 
 		res, err := http.DefaultClient.Do(req)
 		if err != nil {
@@ -94,7 +94,7 @@ func BenchmarkValidateCaller(b *testing.B) {
 		}
 		req.Header.Set("USER_DN", "cn=alec.holmes,dc=deciphernow,dc=com")
 		req.Header.Set("EXTERNAL_SYS_DN", dn)
-		req.Header.Set("S_CLIENT_S_DN", dn)
+		req.Header.Set("SSL_CLIENT_S_DN", dn)
 
 		res, err := http.DefaultClient.Do(req)
 		if err != nil {
