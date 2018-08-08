@@ -73,6 +73,7 @@ func NewTLSConfig(trustPath, certPath, keyPath string, opts ...Opt) (*tls.Config
 		Certificates: []tls.Certificate{cert},
 		ClientCAs:    trustCertPool,
 		RootCAs:      trustCertPool,
+		ClientAuth:   tls.RequestClientCert,
 	}
 
 	for _, opt := range opts {
