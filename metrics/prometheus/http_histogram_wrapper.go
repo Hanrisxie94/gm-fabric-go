@@ -15,105 +15,54 @@ package prometheus
 // limitations under the License.
 
 import (
-	"fmt"
-	"log"
 	"net/http"
 	"strings"
 	"time"
 
-	"github.com/pkg/errors"
-
-	prom "github.com/prometheus/client_golang/prometheus"
+	"github.com/rs/zerolog"
 
 	"github.com/deciphernow/gm-fabric-go/metrics/httpmetrics"
 )
 
-type histogramMetricsState struct {
-	requestDurationVec *prom.HistogramVec
-	requestSizeVec     *prom.CounterVec
-	responseSizeVec    *prom.CounterVec
+// HandlerState implments the httpHandler
+type HandlerState struct {
+	collector Collector
+	keyFunc   HTTPKeyFunc
+	logger    zerolog.Logger
+	inner     http.Handler
 }
 
-// HistogramHandlerFactory wraps an http.Handler (inner) and captures metrics
-type HistogramHandlerFactory interface {
-	NewHandler(inner http.Handler) (http.Handler, error)
-}
-
-// NewHistogramHandlerFactory returns an abject that implements the
-// HistogramHandlerFactory interface
-// it is for use in creating individual http.Handlers that are instrumented
-// to collect our metrics.
-func NewHistogramHandlerFactory(buckets []float64) (HistogramHandlerFactory, error) {
-	var state histogramMetricsState
-
-	if len(buckets) == 0 {
-		buckets = prom.DefBuckets
-	}
-
-	state.requestDurationVec = prom.NewHistogramVec(
-		prom.HistogramOpts{
-			Name:    "http_request_duration_seconds",
-			Help:    "duration of a single http request",
-			Buckets: buckets,
-		},
-		LabelNames,
-	)
-	if err := prom.Register(state.requestDurationVec); err != nil {
-		return nil, errors.Wrap(err, "prometheus.Register requestDurationVec")
-	}
-
-	state.requestSizeVec = prom.NewCounterVec(
-		prom.CounterOpts{
-			Name: "http_request_size_bytes",
-			Help: "number of bytes read from the request",
-		},
-		LabelNames,
-	)
-	if err := prom.Register(state.requestSizeVec); err != nil {
-		return nil, errors.Wrap(err, "prometheus.Register requestSizeVec")
-	}
-
-	state.responseSizeVec = prom.NewCounterVec(
-		prom.CounterOpts{
-			Name: "http_response_size_bytes",
-			Help: "number of bytes written to the response",
-		},
-		LabelNames,
-	)
-	if err := prom.Register(state.responseSizeVec); err != nil {
-		return nil, errors.Wrap(err, "prometheus.Register responseSizeVec")
-	}
-
-	return &state, nil
-}
-
-type histogramHandlerState struct {
-	*histogramMetricsState
-	keyFunc HTTPKeyFunc
-	inner   http.Handler
-}
-
-// NewHandlerWithKeyFunc creates a new http.Handler instrumented to collect
-// our metrics.
-// With a specilaized key function.
-func (mState *histogramMetricsState) NewHandlerWithKeyFunc(
-	keyFunc HTTPKeyFunc,
+// NewHandler creates a new http.HandleFunc composed with an inntr handler
+func NewHandler(
+	collector Collector,
 	inner http.Handler,
-) (http.Handler, error) {
-	var hState histogramHandlerState
-	hState.histogramMetricsState = mState
-	hState.keyFunc = keyFunc
-	hState.inner = inner
+	options ...func(*HandlerState),
+) *HandlerState {
+	handler := HandlerState{
+		collector: collector,
+		keyFunc:   DefaultHTTPKeyFunc,
+		inner:     inner,
+	}
 
-	return &hState, nil
+	for _, f := range options {
+		f(&handler)
+	}
+
+	return &handler
 }
 
-// NewHandler creates a new http.Handler instrumented to collect our metrics
-// NewHandler uses DefaultKeyFunc
-func (mState *histogramMetricsState) NewHandler(
-	inner http.Handler,
-) (http.Handler, error) {
-	return mState.NewHandlerWithKeyFunc(DefaultHTTPKeyFunc, inner)
+// KeyFuncOption returns a function that sets the key function
+func KeyFuncOption(keyFunc HTTPKeyFunc) func(*HandlerState) {
+	return func(s *HandlerState) {
+		s.keyFunc = keyFunc
+	}
+}
+
+// HTTPLoggerOption returns an options function that sets the loggger
+func HTTPLoggerOption(logger zerolog.Logger) func(*HandlerState) {
+	return func(s *HandlerState) {
+		s.logger = logger
+	}
 }
 
 // ServeHTTP implements the http.Handler interface
@@ -121,56 +70,47 @@ func (mState *histogramMetricsState) NewHandler(
 //      http_request_duration_seconds
 //      http_request_size_bytes
 //      http_response_size_bytes
-func (hState *histogramHandlerState) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+func (hState *HandlerState) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	var entry CollectorEntry
+
 	responseWriter := httpmetrics.CountWriter{Next: w}
 
 	requestReader := httpmetrics.CountReader{Next: req.Body}
 	req.Body = &requestReader
 
-	startTime := time.Now()
+	entry.StartTime = time.Now()
 	hState.inner.ServeHTTP(&responseWriter, req)
-	endTime := time.Now()
+	entry.EndTime = time.Now()
 
-	elapsed := endTime.Sub(startTime)
-	if elapsed < 0 {
-		elapsed = 0
+	entry.Key = hState.keyFunc(req)
+
+	entry.Method = normalizeMethod(req.Method)
+
+	entry.Status = normalizeStatus(responseWriter.Status)
+
+	entry.BytesRead = uint64(requestReader.BytesRead)
+	entry.BytesWritten = uint64(responseWriter.BytesWritten)
+
+	entry.TLS = req.TLS != nil
+
+	if err := hState.collector.Collect(entry); err != nil {
+		hState.logger.Error().Err(err).Msg("Collect")
 	}
+}
 
-	method := strings.ToUpper(req.Method)
+func normalizeMethod(method string) string {
+	method = strings.ToUpper(method)
 	if method == "" {
 		method = "GET"
 	}
 
-	status := responseWriter.Status
+	return method
+}
+
+func normalizeStatus(status int) int {
 	if status == 0 {
 		status = 200
 	}
 
-	labels := prom.Labels{
-		"key":    hState.keyFunc(req),
-		"method": method,
-		"status": fmt.Sprintf("%d", status),
-	}
-
-	requestDuration, err := hState.requestDurationVec.GetMetricWith(labels)
-	if err != nil {
-		log.Printf("hState.requestDurationVec.GetMetricWith(%s) failed: %s", labels, err)
-		return
-	}
-	requestDuration.Observe(elapsed.Seconds())
-
-	requestSize, err := hState.requestSizeVec.GetMetricWith(labels)
-	if err != nil {
-		log.Printf("hState.requestSizeVec.GetMetricWith(%s) failed: %s", labels, err)
-		return
-	}
-	requestSize.Add(float64(requestReader.BytesRead))
-
-	responseSize, err := hState.responseSizeVec.GetMetricWith(labels)
-	if err != nil {
-		log.Printf("hState.responseSizeVec.GetMetricWith(%s) failed: %s", labels, err)
-		return
-	}
-	responseSize.Add(float64(responseWriter.BytesWritten))
-
+	return status
 }

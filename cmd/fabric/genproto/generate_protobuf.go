@@ -52,11 +52,11 @@ func GenerateProtobuf(cfg config.Config, logger zerolog.Logger) error {
 		},
 		{
 			pluginPath: cfg.ProtocGenGatewayPluginPath(),
-			outputDef:  fmt.Sprintf("--grpc-gateway_out=logtostderr=true:%s", cfg.ProtoPath()),
+			outputDef:  fmt.Sprintf("--grpc-gateway_out=logtostderr=true,allow_delete_body=true:%s", cfg.ProtoPath()),
 		},
 		{
 			pluginPath: cfg.ProtocGenSwaggerPluginPath(),
-			outputDef:  fmt.Sprintf("--swagger_out=logtostderr=true:%s", cfg.ProtoPath()),
+			outputDef:  fmt.Sprintf("--swagger_out=logtostderr=true,allow_delete_body=true:%s", cfg.ProtoPath()),
 		},
 	} {
 		logger.Info().Str("service", cfg.ServiceName).

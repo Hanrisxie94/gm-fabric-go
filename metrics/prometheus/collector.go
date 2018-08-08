@@ -8,7 +8,7 @@ import (
 	prom "github.com/prometheus/client_golang/prometheus"
 )
 
-// AllMetricsKey is a metrics key for the total of alll observations
+// AllMetricsKey is a metrics key for the total of  observations
 const AllMetricsKey = "all"
 
 // CollectorEntry contains the stats data for one transaction
@@ -31,7 +31,7 @@ type Collector interface {
 
 // CollectorType implements the Collector interface
 type CollectorType struct {
-	requestDurationVec *prom.SummaryVec
+	requestDurationVec *prom.HistogramVec
 	requestSizeVec     *prom.CounterVec
 	responseSizeVec    *prom.CounterVec
 	tlsCount           prom.Counter
@@ -42,18 +42,22 @@ type CollectorType struct {
 func NewCollector() (*CollectorType, error) {
 	var collector CollectorType
 
-	// Objectives defines the quantile rank estimates with their respective
-	// absolute error. If Objectives[q] = e, then the value reported for q
-	// will be the φ-quantile value for some φ between q-e and q+e.
+	// from github.com/prometheus/client_golang/prometheus/histogram.go
+	// see also LinearBuckets and ExponentialBuckets in the same file
 	//
-	// This map of objectives is chosen to duplicate the dashboard metrics
-	objectives := setObjectives()
+	// DefBuckets are the default Histogram buckets. The default buckets are
+	// tailored to broadly measure the response time (in seconds) of a network
+	// service. Most likely, however, you will be required to define buckets
+	// customized to your use case.
+	//
+	//	DefBuckets = []float64{.005, .01, .025, .05, .1, .25, .5, 1, 2.5, 5, 10}
+	//
 
-	collector.requestDurationVec = prom.NewSummaryVec(
-		prom.SummaryOpts{
-			Name:       "http_request_duration_seconds",
-			Help:       "duration of a single http request",
-			Objectives: objectives,
+	collector.requestDurationVec = prom.NewHistogramVec(
+		prom.HistogramOpts{
+			Name:    "http_request_duration_seconds",
+			Help:    "duration of a single http request",
+			Buckets: prom.DefBuckets,
 		},
 		LabelNames,
 	)
@@ -140,17 +144,6 @@ func (c *CollectorType) Collect(entry CollectorEntry) error {
 	}
 
 	return nil
-}
-
-func setObjectives() map[float64]float64 {
-	return map[float64]float64{
-		0.5:    0.05,
-		0.9:    0.01,
-		0.95:   0.001,
-		0.99:   0.001,
-		0.999:  0.0001,
-		0.9999: 0.00001,
-	}
 }
 
 func computeElapsed(startTime, endTime time.Time) time.Duration {

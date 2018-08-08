@@ -1,9 +1,9 @@
 package impersonation
 
 import (
-	"log"
-	"github.com/deciphernow/gm-fabric-go/tlsutil"
 	"crypto/x509"
+
+	"github.com/deciphernow/gm-fabric-go/tlsutil"
 )
 
 // Caller provides the distinguished names obtained from specific request
@@ -13,6 +13,8 @@ type Caller struct {
 	DistinguishedName string
 	// UserDistinguishedName holds the value passed in header USER_DN
 	UserDistinguishedName string
+	// SystemDistinguishedName holds the value passed in header S_CLIENT_S_DN
+	SystemDistinguishedName string
 	// ExternalSystemDistinguishedName holds the value passed in header EXTERNAL_SYS_DN
 	ExternalSystemDistinguishedName string
 	// CommonName is the CN value part of the DistinguishedName
@@ -20,8 +22,9 @@ type Caller struct {
 }
 
 var (
-	USER_DN = "USER_DN"
+	USER_DN         = "USER_DN"
 	EXTERNAL_SYS_DN = "EXTERNAL_SYS_DN"
+	SSL_CLIENT_S_DN = "SSL_CLIENT_S_DN"
 )
 
 /*
@@ -34,8 +37,10 @@ The proxy is expected to provide two headers:
 
 USER_DN
 	The effective (possibly impersonated) Distinguished Name of requesting application
+S_CLIENT_S_DN
+    The Distinguished Name taken from the system certificate
 EXTERNAL_SYS_DN
-	The Distinguished Name taken from the client certificate
+	The Distinguished Name taken from the external system certificate (originally inside s_client_s_dn)
 
 An x509 certificate can be provided to use as a fallback when a USER_DN header is not present, in which case the DN
 from the cert will be used. This should only be necessary in the unlikely scenario where you need to allow an
@@ -58,30 +63,21 @@ Typical usage will look something like so:
 
 	caller := GetCaller(
 		req.Header.Get(impersonation.USER_DN),
+		req.Header.Get(impersonation.SSL_CLIENT_S_DN),
 		req.Header.Get(impersonation.EXTERNAL_SYS_DN),
 		cert,
 	)
 */
-func GetCaller(userDN string, externalSysDN string, cert *x509.Certificate) Caller {
-	const localDebug bool = false
+func GetCaller(userDN, sysDn, externalSysDN string, cert *x509.Certificate) Caller {
 	var caller Caller
 	caller.UserDistinguishedName = userDN
 	caller.ExternalSystemDistinguishedName = externalSysDN
+	caller.SystemDistinguishedName = sysDn
 	if caller.UserDistinguishedName != "" {
-		if localDebug {
-			log.Println("Assigning distinguished name from USER_DN")
-		}
 		caller.DistinguishedName = caller.UserDistinguishedName
 	} else {
 		if cert != nil {
-			if localDebug {
-				log.Println("Assigning distinguished name from peer certificate")
-			}
 			caller.DistinguishedName = tlsutil.GetDistinguishedName(cert)
-		} else {
-			if localDebug {
-				log.Println("WARNING: No distinguished name set!!!")
-			}
 		}
 	}
 	caller.DistinguishedName = tlsutil.GetNormalizedDistinguishedName(caller.DistinguishedName)
