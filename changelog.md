@@ -1,6 +1,12 @@
 # Changelog
 
-## 0.1.9 (July 27, 2018)
+## 0.1.10 (August 8th, 2018)
+
+### Fixed
+
+- Impersonation not using cert when reading handshake
+
+- `tlsutil` defaulting to `tls.NoClientAuth`## 0.1.9 (July 27, 2018)
 
 ### Added
 
