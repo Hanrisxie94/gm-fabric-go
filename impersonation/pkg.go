@@ -70,17 +70,18 @@ Typical usage will look something like so:
 */
 func GetCaller(userDN, sysDn, externalSysDN string, cert *x509.Certificate) Caller {
 	var caller Caller
+
 	caller.UserDistinguishedName = userDN
 	caller.ExternalSystemDistinguishedName = externalSysDN
 	caller.SystemDistinguishedName = sysDn
-	if caller.UserDistinguishedName != "" {
-		caller.DistinguishedName = caller.UserDistinguishedName
-	} else {
-		if cert != nil {
-			caller.DistinguishedName = tlsutil.GetDistinguishedName(cert)
-		}
+
+	if cert != nil {
+		caller.DistinguishedName = tlsutil.GetDistinguishedName(cert)
+		caller.SystemDistinguishedName = tlsutil.GetDistinguishedName(cert)
 	}
+
 	caller.DistinguishedName = tlsutil.GetNormalizedDistinguishedName(caller.DistinguishedName)
 	caller.CommonName = tlsutil.GetCommonName(caller.DistinguishedName)
+
 	return caller
 }

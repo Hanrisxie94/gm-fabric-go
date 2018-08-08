@@ -1,5 +1,6 @@
 # Impersonation
 [![godoc](http://img.shields.io/badge/godoc-reference-blue.svg?style=flat)](https://godoc.org/github.com/deciphernow/gm-fabric-go/impersonation)
+
 Package for 2-Way SSL impersonation
 
 ## Usage

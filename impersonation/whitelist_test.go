@@ -112,6 +112,7 @@ func getServers() []string {
 		"uid=server1,ou=Server,dc=example,dc=com",
 		"uid=server2,ou=Server,dc=example,dc=com",
 		"uid=server3,ou=Server,dc=example,dc=com",
+		"cn=localhost,ou=engineering,o=decipher technology studios,l=alexandria,st=virginia,c=us",
 	}
 }
 
