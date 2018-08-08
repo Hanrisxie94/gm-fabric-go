@@ -111,13 +111,13 @@ func TestChooseSessionType(t *testing.T) {
 		},
 		{
 			configFile:         "",
-			expectedSess:       "",
+			expectedSess:       "default",
 			awsRegion:          "",
 			awsProfile:         "",
 			awsAccessKeyId:     "",
 			awsSecretAccessKey: "",
 			awsSessionToken:    "",
-			description:        "[9] expecting error: cannot start a default session without a config file",
+			description:        "[9] attempt to start session based on default locations/profiles/etc",
 		},
 	}
 
@@ -126,11 +126,15 @@ func TestChooseSessionType(t *testing.T) {
 
 			setAndTestEnv(t, tc.configFile)
 
-			_, tag, err := ChooseSessionType(tc.awsRegion, tc.awsProfile, CreateStaticCreds(tc.awsAccessKeyId, tc.awsSecretAccessKey, tc.awsSessionToken))
+			availRegions := []string{"region", "another-region"}
+
+			_, tag, err := ChooseSessionType(tc.awsRegion, tc.awsProfile, CreateStaticCreds(tc.awsAccessKeyId, tc.awsSecretAccessKey, tc.awsSessionToken), availRegions)
 			if len(tc.configFile) != 0 {
 				assert.NoError(t, err)
 			} else {
-				assert.Errorf(t, err, "expected error because there is no config file")
+				if len(tc.awsProfile) != 0 {
+					assert.Errorf(t, err, "expected error because there is no config file")
+				}
 			}
 			assert.Equal(t, tc.expectedSess, tag)
 

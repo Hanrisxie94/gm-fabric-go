@@ -17,6 +17,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cloudwatch"
 )
@@ -77,6 +78,11 @@ type cloudObs struct {
 	metrics    []string
 	dimensions []*cloudwatch.Dimension
 	namespace  string
+}
+
+type sessAndType struct {
+	sess     *session.Session
+	sessType string
 }
 
 // A helper function for defining a new AWS CloudWatch dimension
@@ -140,6 +146,65 @@ func CheckDimStringIntegrity(dims string) bool {
 	return validPattern.MatchString(dims)
 }
 
+// A helper function for ClientValidity to ignore parameter errors.
+func handlerErr(r *request.Request) error {
+	if r.Error != nil && strings.Contains(r.Error.Error(), "InvalidParameterCombination") == false {
+		return r.Error
+	}
+	return nil
+}
+
+// A helper function to retry running handlers.
+func handlerRetry(r *request.Request) {
+	r.Handlers.Retry.Run(r)
+	r.Handlers.AfterRetry.Run(r)
+}
+
+// A function that checks if the cloudwatch client is valid by mimicing the act
+// of inserting a metric into a test namespace (should not actually do anything).
+// If not nil, the cloudwatch code should not continue.
+// Leverages the fact that AWS prioritizes credential errors over invalid parameter errors.
+func ClientValidity(c *cloudwatch.CloudWatch) error {
+	namespace := "test/EC2"
+	mn := "testing"
+	test := []*cloudwatch.MetricDatum{&cloudwatch.MetricDatum{MetricName: &mn, Value: nil}}
+	input := &cloudwatch.PutMetricDataInput{MetricData: test, Namespace: &namespace}
+	r, _ := c.PutMetricDataRequest(input)
+
+	// A series of actions that might lead to a potential error message.
+	// from r.Build()
+	r.Handlers.Validate.Run(r)
+	err := handlerErr(r)
+	r.Handlers.Build.Run(r)
+	err = handlerErr(r)
+
+	// from r.Sign()
+	r.Handlers.Sign.Run(r)
+	err = handlerErr(r)
+
+	// from r.Send()
+	r.Handlers.Send.Run(r)
+	if r.Error != nil {
+		handlerRetry(r)
+		err = handlerErr(r)
+	}
+
+	r.Handlers.UnmarshalMeta.Run(r)
+	err = handlerErr(r)
+	r.Handlers.ValidateResponse.Run(r)
+	if r.Error != nil {
+		r.Handlers.UnmarshalError.Run(r)
+		handlerRetry(r)
+		err = handlerErr(r)
+	}
+	r.Handlers.Unmarshal.Run(r)
+	if r.Error != nil {
+		handlerRetry(r)
+		err = handlerErr(r)
+	}
+	return err
+}
+
 // A helper function to choose a non default method of AWS session connection
 // based on which of the possible session-starting variables are provided.
 // If a static credentials object is provided (can be built with the CreateStaticCreds function),
@@ -150,48 +215,93 @@ func CheckDimStringIntegrity(dims string) bool {
 // Along with an actual session, the function will return a string tag
 // that indicates what type of session was created ("default"", "static", or "profile")
 // and an error message if applicable.
-func ChooseSessionType(awsRegion string, awsProfile string, staticCreds *credentials.Credentials) (*session.Session, string, error) {
-	awsRegion = strings.TrimSpace(awsRegion)
-	awsProfile = strings.TrimSpace(awsProfile)
+func ChooseSessionType(awsRegion string, awsProfile string, staticCreds *credentials.Credentials, validRegions []string) (*session.Session, string, error) {
+	awsRegion, awsProfile, sess, sessType := presetValues(awsRegion, awsProfile)
+	st := sessAndType{sess: sess, sessType: sessType}
 
-	defaultSess := session.Must(session.NewSessionWithOptions(session.Options{SharedConfigState: session.SharedConfigEnable}))
-
-	creds, akErr := staticCreds.Get()
-	if akErr == nil {
-		if len(awsRegion) != 0 {
-			if len(creds.AccessKeyID) != 0 && len(creds.SecretAccessKey) != 0 {
-				staticSess := session.New(&aws.Config{
-					Region:      aws.String(awsRegion),
-					Credentials: staticCreds,
-				})
-				return staticSess, "static", nil
-			}
-		} else {
-			regionErr := errors.New("no region specified")
-			errors.Wrap(regionErr, "No region was specified for creating an AWS session.  Attempting to create a session based on a SharedConfigState.")
-		}
-	} else {
-		errors.Wrap(akErr, "The static credential variables (the AWS access key id, AWS secret access key, and AWS session token) were not set correctly.")
+	st, err, cont := useStaticSess(staticCreds, st, awsRegion, validRegions)
+	if cont != true {
+		return st.sess, st.sessType, err
 	}
 
+	st, err, cont = tryConfigSess(st, awsProfile, awsRegion, validRegions)
+	if cont != true {
+		return st.sess, st.sessType, err
+	}
+
+	st, err, cont = noConfigExplicitlySet(st, awsProfile)
+	if cont != true {
+		return st.sess, st.sessType, err
+	}
+
+	err = errors.Wrap(
+		errors.New("Could not start AWS session based on combination of variables given."),
+		"Provide a valid combination of 'AWS_ ' environment variables.",
+	)
+	return sess, "", err
+}
+
+func noConfigExplicitlySet(st sessAndType, awsProfile string) (sessAndType, error, bool) {
+	if len(awsProfile) == 0 {
+		return st, nil, false
+	}
+
+	return st, nil, true
+}
+
+func tryConfigSess(st sessAndType, awsProfile string, awsRegion string, validRegions []string) (sessAndType, error, bool) {
 	if len(os.Getenv("AWS_CONFIG_FILE")) == 0 {
-		trueErr := errors.New("No aws config file set.")
-		errors.Wrap(trueErr, "Cannot start a session with a hardcoded profile or the currently set shared config default profile.  This can't be done because the AWS_CONFIG_FILE variable is not set on this computer, so the default session will not work.")
-		return defaultSess, "", trueErr
+		return st, nil, true
 	}
 
 	if len(awsProfile) != 0 {
-		profileSess := session.Must(session.NewSessionWithOptions(session.Options{
+		sessType := "profile"
+		if len(awsRegion) != 0 {
+			sess := session.Must(session.NewSessionWithOptions(session.Options{
+				Config:  aws.Config{Region: aws.String(awsRegion)},
+				Profile: awsProfile,
+			}))
+			sessType, err := ValidRegion(awsRegion, validRegions, sessType)
+			st := sessAndType{sess: sess, sessType: sessType}
+			return st, err, false
+		}
+		sess := session.Must(session.NewSessionWithOptions(session.Options{
 			SharedConfigState: session.SharedConfigEnable,
 			Profile:           awsProfile,
 		}))
-		return profileSess, "profile", nil
+		st := sessAndType{sess: sess, sessType: sessType}
+		return st, nil, false
+
 	}
+	return st, nil, false
+}
 
-	err := errors.New("Unable to create a custom session based on input recieved.")
-	errors.Wrap(err, "The combination of credential variables recieved was not sufficient to create an AWS session.  Attempting to start a session based on a SharedConfigState.")
-	return defaultSess, "default", nil
+func useStaticSess(staticCreds *credentials.Credentials, st sessAndType, awsRegion string, validRegions []string) (sessAndType, error, bool) {
+	creds, err := staticCreds.Get()
+	if err != nil {
+		errors.Wrap(err, "The static credential variables (the AWS access key id, AWS secret access key, and AWS session token) were not set correctly.")
+		return st, err, true
+	}
+	if len(awsRegion) != 0 && len(creds.AccessKeyID) != 0 && len(creds.SecretAccessKey) != 0 {
+		sess := session.New(&aws.Config{
+			Region:      aws.String(awsRegion),
+			Credentials: staticCreds,
+		})
+		sessType, err := ValidRegion(awsRegion, validRegions, "static")
+		st := sessAndType{sess: sess, sessType: sessType}
+		return st, err, false
+	}
+	return st, err, true
+}
 
+func presetValues(awsRegion string, awsProfile string) (string, string, *session.Session, string) {
+	awsRegion = strings.TrimSpace(awsRegion)
+	awsProfile = strings.TrimSpace(awsProfile)
+
+	sess := session.Must(session.NewSessionWithOptions(session.Options{SharedConfigState: session.SharedConfigEnable}))
+	sessType := "default"
+
+	return awsRegion, awsProfile, sess, sessType
 }
 
 // A helper function that will return a new AWS *credentials.Credentials object based on three strings:
@@ -210,7 +320,27 @@ func CreateStaticCreds(awsAccessKeyId string, awsSecretAccessKey string, awsSess
 	return staticCreds
 }
 
-// New returns an observer that feeds the go-metrics sink
+// A helper function for creating an AWS session that will check if the provided region is valid.
+func ValidRegion(inputRegion string, validRegions []string, sessType string) (string, error) {
+	err := errors.New("No region provided.")
+	if len(inputRegion) != 0 {
+		for _, region := range validRegions {
+			if strings.ToLower(region) == strings.ToLower(inputRegion) {
+				return sessType, nil
+			}
+		}
+		err = errors.Wrap(
+			errors.New("Input region does not match any AWS regions allowed for this operation."),
+			"Check the spelling of the input region",
+		)
+		return "", err
+	}
+
+	errors.Wrap(err, "A valid region must be specified to connect to AWS CloudWatch.")
+	return "", err
+}
+
+// New returns an observer that feeds the go-metrics sink.
 func New(reportInterval time.Duration, setters ...CloudOption) subject.Observer {
 	// default options
 	args := &CloudOptions{
