@@ -86,16 +86,8 @@ func GenerateProtobuf(cfg config.Config, logger zerolog.Logger) error {
 	logger.Info().Msgf("interface (%sServer) defines %d methods",
 		serverDef.ServerName, len(serverDef.Prototypes))
 
-	// if we don't have a methods directory yet, initialize it
-	methodsExists, err := fileExists(cfg.MethodsPath())
-	if err != nil {
-		return errors.Wrapf(err, "fileExists(%s)", cfg.MethodsPath())
-	}
-
-	if !methodsExists {
-		if err = initializeMethodsDir(cfg, logger, serverDef); err != nil {
-			return errors.Wrap(err, "initializeMethodsDir")
-		}
+	if err = initializeMethodsDir(cfg, logger, serverDef); err != nil {
+		return errors.Wrap(err, "initializeMethodsDir")
 	}
 
 	if err = createMethodFiles(cfg, logger, serverDef); err != nil {
@@ -121,21 +113,30 @@ func initializeMethodsDir(
 	logger zerolog.Logger,
 	serverDef ServerInterfaceData,
 ) error {
+	var methodsExists bool
 	var err error
 
-	if err = os.Mkdir(cfg.MethodsPath(), os.ModePerm); err != nil {
-		return errors.Wrapf(err, "os.Mkdir(%s)", cfg.MethodsPath())
+	methodsExists, err = fileExists(cfg.MethodsPath())
+	if err != nil {
+		return errors.Wrapf(err, "fileExists(%s)", cfg.MethodsPath())
 	}
+
+	if !methodsExists {
+		if err = os.Mkdir(cfg.MethodsPath(), os.ModePerm); err != nil {
+			return errors.Wrapf(err, "os.Mkdir(%s)", cfg.MethodsPath())
+		}
+	}
+
+	// See issue #312
+	// The methods directory may be in an indeterminate state due to some
+	// earlier failure. So let's write out the template files each time.
+	// It doesn't cost very much and it leaves us in a known state.
 
 	if err = writeServerNew(cfg, logger, serverDef); err != nil {
 		return errors.Wrap(err, "writeServerNew")
 	}
 
-	if err = writeProxyTemplate(cfg, logger, serverDef); err != nil {
-		return errors.Wrap(err, "writeProxyTemplate")
-	}
-
-	return nil
+	return writeProxyTemplate(cfg, logger, serverDef)
 }
 
 func createMethodFiles(
