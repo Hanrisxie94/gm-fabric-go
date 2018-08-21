@@ -42,6 +42,46 @@ func TestCanImpersonate(t *testing.T) {
 	}
 }
 
+func TestCanImpersonateDNPortions(t *testing.T) {
+    // Create our test whitelist
+	w := NewWhitelist(getAltServers())
+	caller := GetCaller("cn=alec.holmes,dc=deciphernow,dc=com", "", "uid=server19,ou=Server,dc=example,dc=com", nil)
+
+	// Test the first case of impersonation
+	ci := CanImpersonateDNPortions(caller, w)
+	if ci {
+		t.Error("Expected false, got false")
+	}
+
+	// Test with dn with spaces in whitelist.
+	caller.ExternalSystemDistinguishedName="uid=server1,ou=Server,dc=example,dc=com"
+	ci = CanImpersonateDNPortions(caller, w)
+	if !ci {
+		t.Error("Expected false, got true")
+	}
+
+	// Test with Spaces and some uppercase for External DN.
+	caller.ExternalSystemDistinguishedName="uid=server1, ou=Server, dc=example, dc=com"
+	ci = CanImpersonateDNPortions(caller, w)
+	if !ci {
+		t.Error("Expected false, got true")
+	}
+
+	// Test with all uppercase DN and different DN portion order.
+	caller.ExternalSystemDistinguishedName="UID=SERVER1, DC=COM, OU=SERVER, DC=EXAMPLE"
+	ci = CanImpersonateDNPortions(caller, w)
+	if !ci {
+		t.Error("Expected false, got true")
+	}
+
+	// Test with Spaces and some uppercase for External DN and plus in Whitelist.
+	caller.ExternalSystemDistinguishedName="uid=server8, ou=Server, dc=example, dc=com"
+	ci = CanImpersonateDNPortions(caller, w)
+	if !ci {
+		t.Error("Expected false, got true")
+	}
+}
+
 func TestValidateCaller(t *testing.T) {
 	s := buildImpersonationServer()
 
@@ -104,6 +144,15 @@ func BenchmarkValidateCaller(b *testing.B) {
 		if res.StatusCode != http.StatusOK {
 			b.Error(fmt.Errorf("Expected 200, got %d", res.StatusCode))
 		}
+	}
+}
+
+
+func getAltServers() []string {
+	return []string{
+		"uid=server1, ou=Server, dc=example, dc=com",
+		"uid=server8+ou=Server+dc=example,dc=com",
+		"UID=server2,OU=Server,DC=example,DC=com",
 	}
 }
 

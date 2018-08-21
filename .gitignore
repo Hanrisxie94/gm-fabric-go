@@ -4,3 +4,4 @@ vendor*
 Gopkg.lock
 Gopkg.toml
 .vs/
+.idea/

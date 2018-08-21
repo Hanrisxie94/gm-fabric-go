@@ -6,6 +6,8 @@ import (
 
 	"github.com/deciphernow/gm-fabric-go/middleware"
 	"github.com/rs/zerolog"
+	"strings"
+	"sort"
 )
 
 // Whitelist object represents a list of servers to whitelist
@@ -24,6 +26,51 @@ func NewWhitelist(servers []string) Whitelist {
 // If not it will return false and the impersonation request should be denied
 func CanImpersonate(caller Caller, whitelist Whitelist) bool {
 	return validate(caller, whitelist)
+}
+
+func CanImpersonateDNPortions(caller Caller, whitelist Whitelist) bool {
+	for _, server := range whitelist.servers {
+		if validateDNPortions(strings.TrimSpace(caller.ExternalSystemDistinguishedName), strings.TrimSpace(server)) {
+			return true
+		}
+	}
+	return false
+}
+
+func validateDNPortions(sysDn, ws string) bool {
+	sysDn = removeQuirks(sysDn)
+	splitSysDN := strings.Split(sysDn, ",")
+	ws = removeQuirks(ws)
+	splitWs := strings.Split(ws, ",")
+	var countDnPortions = 0
+	for index := range splitSysDN {
+		found := findPortionDn(splitWs, splitSysDN[index])
+		if found {
+			countDnPortions++
+		}
+	}
+
+	if countDnPortions == len(splitWs) {
+		return true
+	}
+	return false
+}
+
+func removeQuirks(dn string) string {
+	dn = strings.ToLower(dn)
+	dn = strings.Replace(dn, "+", ",", -1)
+	dn = strings.Replace(dn, ", ", ",", -1)
+
+	return dn
+}
+
+func findPortionDn(dnArray [] string, dnPortion string) bool {
+	sort.Strings(dnArray)
+	i := sort.Search(len(dnArray), func(i int) bool { return dnArray[i] >= dnPortion })
+	if i < len(dnArray) && dnArray[i] == dnPortion {
+		return true
+	}
+	return false
 }
 
 func validate(caller Caller, whitelist Whitelist) bool {
