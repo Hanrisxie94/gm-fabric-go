@@ -71,14 +71,22 @@ func New(rawJSON io.Reader) (Authorizor, error) {
 		return Authorizor{}, errors.Wrap(err, "loadRawData")
 	}
 
+	return NewFromLists(r.UserBlacklist, r.UserWhitelist)
+}
+
+// NewFromLists creates an authorizer from a blacklist and a whitelist
+func NewFromLists(userBlacklist, userWhitelist []string) (Authorizor, error) {
 	var a Authorizor
-	a.bl, err = parseList(r.UserBlacklist)
+	var err error
+
+	a.bl, err = parseList(userBlacklist)
 	if err != nil {
-		return Authorizor{}, errors.Wrap(err, "parseList UserBlacklist")
+		return Authorizor{}, errors.Wrap(err, "parseList userBlacklist")
 	}
-	a.wl, err = parseList(r.UserWhitelist)
+
+	a.wl, err = parseList(userWhitelist)
 	if err != nil {
-		return Authorizor{}, errors.Wrap(err, "parseList UserWhitelist")
+		return Authorizor{}, errors.Wrap(err, "parseList userWhitelist")
 	}
 
 	return a, nil

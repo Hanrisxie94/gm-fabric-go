@@ -19,8 +19,8 @@ import (
 	"testing"
 )
 
-// TestCreateAuth tests creating an authorizor
-func TestCreateAuth(t *testing.T) {
+// TestCreateAuthNew tests creating an authorizor with New
+func TestCreateAuthNew(t *testing.T) {
 	type testData struct {
 		name        string
 		s           string
@@ -98,8 +98,65 @@ func TestCreateAuth(t *testing.T) {
 			expectError: false,
 		},
 	} {
+		// run the tests with JSON input
 		t.Run(td.name, func(t *testing.T) {
 			_, err := New(strings.NewReader(td.s))
+			foundError := err != nil
+			if foundError != td.expectError {
+				t.Fatalf("%s: expectedError = %t, foundError = %t",
+					td.name, td.expectError, foundError)
+			}
+		})
+	}
+}
+
+// TestCreateAuthNewFromLists tests creating an authorizor with NewFromLists
+func TestCreateAuthNewFromLists(t *testing.T) {
+	type testData struct {
+		name        string
+		blacklist   []string
+		whitelist   []string
+		expectError bool
+	}
+	for _, td := range []testData{
+		{
+			name:        "both lists empty",
+			expectError: false,
+		},
+		{
+			name:        "invalid blacklist content",
+			blacklist:   []string{"jjj"},
+			expectError: true,
+		},
+		{
+			name:        "valid blacklist content",
+			blacklist:   []string{"key=value"},
+			expectError: false,
+		},
+		{
+			name:        "invalid whitelist content",
+			whitelist:   []string{"xxx"},
+			expectError: true,
+		},
+		{
+			name:        "valid whitelist content",
+			whitelist:   []string{"key1=value1", "key2=value2"},
+			expectError: false,
+		},
+		{
+			name:      "valid both list content",
+			blacklist: []string{"key0=value0"},
+			whitelist: []string{
+				"key1=value1, key2=value2",
+				"key5=value5",
+				"key6=value6, key7=value7",
+			},
+			expectError: false,
+		},
+	} {
+		// run the tests with list input
+		t.Run(td.name, func(t *testing.T) {
+			_, err := NewFromLists(td.blacklist, td.whitelist)
 			foundError := err != nil
 			if foundError != td.expectError {
 				t.Fatalf("%s: expectedError = %t, foundError = %t",
