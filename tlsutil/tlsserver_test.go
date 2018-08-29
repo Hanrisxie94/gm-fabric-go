@@ -15,6 +15,7 @@
 package tlsutil
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 	"io/ioutil"
@@ -101,7 +102,6 @@ func TestHttps(t *testing.T) {
 	}
 	logNow(t, "* Test https on %s", addr)
 	go httpServer.ListenAndServeTLS(serverCert, serverKey)
-	defer httpServer.Shutdown(nil)
 
 	go func() {
 		time.Sleep(2 * time.Second)
@@ -166,6 +166,10 @@ func TestHttps(t *testing.T) {
 	}()
 
 	handleResult(t, testResult, timeout, true)
+
+	ctx, cancelFunc := context.WithTimeout(context.Background(), time.Second)
+	httpServer.Shutdown(ctx)
+	cancelFunc()
 }
 
 func TestServerCorrect(t *testing.T) {

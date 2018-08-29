@@ -125,16 +125,15 @@ func initializeMethodsDir(
 		if err = os.Mkdir(cfg.MethodsPath(), os.ModePerm); err != nil {
 			return errors.Wrapf(err, "os.Mkdir(%s)", cfg.MethodsPath())
 		}
+		if err = writeServerNew(cfg, logger, serverDef); err != nil {
+			return errors.Wrap(err, "writeServerNew")
+		}
 	}
 
 	// See issue #312
 	// The methods directory may be in an indeterminate state due to some
-	// earlier failure. So let's write out the template files each time.
+	// earlier failure. So let's write out the gateway proxy template each time.
 	// It doesn't cost very much and it leaves us in a known state.
-
-	if err = writeServerNew(cfg, logger, serverDef); err != nil {
-		return errors.Wrap(err, "writeServerNew")
-	}
 
 	return writeProxyTemplate(cfg, logger, serverDef)
 }

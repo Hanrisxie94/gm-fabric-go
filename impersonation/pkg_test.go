@@ -8,16 +8,23 @@ import (
 	"fmt"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/deciphernow/gm-fabric-go/tlsutil"
 )
 
 func TestGetCaller(t *testing.T) {
+	const delay = time.Second * 5
+
 	server := buildTestServer(t)
 	defer server.Shutdown(context.Background())
 	go func() {
-		server.ListenAndServeTLS("./testcerts/localhost.crt", "./testcerts/localhost.key")
+		err := server.ListenAndServeTLS("./testcerts/localhost.crt", "./testcerts/localhost.key")
+		t.Logf("server.ListenAndServeTLS ends with %s", err)
 	}()
+
+	t.Logf("waiting %s for server to start", delay)
+	time.Sleep(delay)
 
 	req := buildRequest(t)
 	client, err := tlsutil.NewTLSClientConnFactory(
