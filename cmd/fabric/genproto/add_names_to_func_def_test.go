@@ -31,9 +31,19 @@ func Test_addNamesToFuncDef(t *testing.T) {
 			want: "Hello(ctx context.Context, request *pb.HelloRequest) (*pb.HelloResponse, error)",
 		},
 		{
+			name: "simple-empty",
+			args: args{rawDef: "Hello(context.Context, *empty.Empty) (*HelloResponse, error)"},
+			want: "Hello(ctx context.Context, request *empty.Empty) (*pb.HelloResponse, error)",
+		},
+		{
 			name: "stream",
 			args: args{rawDef: "HelloStream(*HelloStreamRequest, TestService_HelloStreamServer) error"},
 			want: "HelloStream(request *pb.HelloStreamRequest, stream pb.TestService_HelloStreamServer) error",
+		},
+		{
+			name: "stream-empty",
+			args: args{rawDef: "HelloStream(*empty.Empty, TestService_HelloStreamServer) error"},
+			want: "HelloStream(request *empty.Empty, stream pb.TestService_HelloStreamServer) error",
 		},
 		{
 			name: "unparseable",

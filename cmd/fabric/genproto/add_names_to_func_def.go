@@ -62,11 +62,11 @@ func addNamesToFuncDef(rawDef string) string {
 	if matches := unitaryRegexp.FindStringSubmatch(rawDef); matches != nil {
 		name := matches[1]
 		request := matches[2]
-		if request != "google_protobuf.Empty" {
+		if request != "empty.Empty" {
 			request = strings.Join([]string{"pb", request}, ".")
 		}
 		response := matches[3]
-		if response != "google_protobuf.Empty" {
+		if response != "empty.Empty" {
 			response = strings.Join([]string{"pb", response}, ".")
 		}
 		return fmt.Sprintf(
@@ -79,7 +79,7 @@ func addNamesToFuncDef(rawDef string) string {
 	if matches := streamRegexp.FindStringSubmatch(rawDef); matches != nil {
 		name := matches[1]
 		request := matches[2]
-		if request != "google_protobuf.Empty" {
+		if request != "empty.Empty" {
 			request = strings.Join([]string{"pb", request}, ".")
 		}
 		stream := matches[3]

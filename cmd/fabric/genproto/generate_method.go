@@ -54,8 +54,8 @@ func generateMethod(
 	if err != nil {
 		return errors.Wrapf(err, "loadTemplateFromCache %s", templateName)
 	}
-	if strings.Contains(methodDeclaration, "google_protobuf") {
-		protobufImport = `google_protobuf "github.com/golang/protobuf/ptypes/empty"`
+	if strings.Contains(methodDeclaration, "*empty.Empty") {
+		protobufImport = `"github.com/golang/protobuf/ptypes/empty"`
 	}
 	if strings.Contains(methodDeclaration, "*pb.") {
 		pbImport = fmt.Sprintf(`pb "%s"`, cfg.PBImportPath())
