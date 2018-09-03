@@ -3,6 +3,9 @@
 [![CircleCI](https://circleci.com/gh/DecipherNow/gm-fabric-go.svg?style=shield&circle-token=6cfc1eb2506e2e4318762eb78596beddb6efadb4)](https://circleci.com/gh/DecipherNow/gm-fabric-go)
 [![godoc](http://img.shields.io/badge/godoc-reference-blue.svg?style=flat)](https://godoc.org/github.com/deciphernow/gm-fabric-go)
 [![Go Report Card](https://goreportcard.com/badge/github.com/deciphernow/gm-fabric-go)](https://goreportcard.com/report/github.com/deciphernow/gm-fabric-go)
+[![Maintainability](https://api.codeclimate.com/v1/badges/df5ae4362becbe58c481/maintainability)](https://codeclimate.com/github/DecipherNow/gm-fabric-go/maintainability)
+[![Test Coverage](https://api.codeclimate.com/v1/badges/df5ae4362becbe58c481/test_coverage)](https://codeclimate.com/github/DecipherNow/gm-fabric-go/test_coverage)
+
 
 Grey Matter is an enterprise framework and ecosystem covering common use cases and patterns, so your team can focus on what they do best. This repository contains the source code for the Golang software development kit (SDK) and command line utilities for building fabric enabled microservices.
 

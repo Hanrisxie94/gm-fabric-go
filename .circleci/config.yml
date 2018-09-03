@@ -1,4 +1,5 @@
 version: 2
+
 jobs:
   build:
     working_directory: /home/ubuntu/.go_workspace/src/github.com/deciphernow/gm-fabric-go
@@ -13,6 +14,10 @@ jobs:
     steps:
     - checkout
     - setup_remote_docker
+    - run:
+        name: Install Code Climate Test Reporter
+        command: |
+          if [ ! -f cc-test-reporter ]; then curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 > ./cc-test-reporter && chmod +x ./cc-test-reporter; fi
     - run: mkdir -p download
     - run: test -e download/$GODIST || curl -o download/$GODIST https://storage.googleapis.com/golang/$GODIST
     - run: sudo rm -rf /usr/local/go
@@ -35,4 +40,21 @@ jobs:
     - run: go get -u github.com/gorilla/mux
     - run: curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
     - run: dep init && dep ensure
-    - run: go test $(go list ./... | grep -v '/vendor/')
+    - run:
+        name: Prepare Code Climate Test Reporter
+        command: ./cc-test-reporter before-build
+    - run: 
+        name: Run the global package tests 
+        command: go test $(go list ./... | grep -v '/vendor/')
+    - run:
+        name: Codeclimate coverage individual tests
+        command: for pkg in $(go list ./... | grep -v '/vendor/'); do go test -coverprofile=cover_${pkg//\//\_}.out $pkg; done
+    - run: 
+        name: Convert gocov outputs to json
+        command: for output in *.out; do ./cc-test-reporter format-coverage $output -t gocov --output "coverage/$output.json"; done
+    - run: 
+        name: Aggregate the coverage tests together
+        command: ./cc-test-reporter sum-coverage coverage/*.json -o coverage/total.json
+    - run: 
+        name: Upload to Codeclimate
+        command: ./cc-test-reporter upload-coverage -i coverage/total.json
