@@ -37,7 +37,7 @@ The proxy is expected to provide two headers:
 
 USER_DN
 	The effective (possibly impersonated) Distinguished Name of requesting application
-S_CLIENT_S_DN
+SSL_CLIENT_S_DN
     The Distinguished Name taken from the system certificate
 EXTERNAL_SYS_DN
 	The Distinguished Name taken from the external system certificate (originally inside s_client_s_dn)

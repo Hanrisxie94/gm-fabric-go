@@ -6,9 +6,10 @@ Package for 2-Way SSL impersonation
 ## Usage
 A `Caller` is a description of the (possibly impersonated) identity of the initiator of an incoming request. An important assumption is that there exists a trustworthy, TLS-terminating proxy between the replying service and the application making the request.
 
-The proxy is expected to provide two headers:
+The proxy is expected to provide three headers:
 - USER_DN
 - EXTERNAL_SYS_DN
+- SSL_CLIENT_S_DN
 
 Typical usage will look something like:
 ```go
@@ -21,7 +22,7 @@ if req.TLS != nil && len(req.TLS.PeerCertificates) > 0 {
 
 caller := GetCaller(
     req.Header.Get(impersonation.USER_DN),
-    req.Header.Get(impersonation.S_CLIENT_S_DN),
+    req.Header.Get(impersonation.SSL_CLIENT_S_DN),
     req.Header.Get(impersonation.EXTERNAL_SYS_DN),
     cert,
 )
@@ -76,6 +77,6 @@ This will wrap every `http.HandlerFunc` registered in your `http.Server` and pro
 ## Info
 **USER_DN** - The effective (possibly impersonated) Distinguished Name of requesting application
 
-**S_CLIENT_S_DN** - The Distinguished Name taken from the system certificate
+**SSL_CLIENT_S_DN** - The Distinguished Name taken from the system certificate
 
 **EXTERNAL_SYS_DN** - The Distinguished Name taken from the external system certificate (originally inside s_client_s_dn)
