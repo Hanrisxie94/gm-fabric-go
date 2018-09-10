@@ -1,12 +1,28 @@
 # Changelog
 
+## 0.1.11 (September 8th, 2018)
+
+### Fixed
+
+- fabric: handle empty.Empty as a parameter and/or return value for methods 
+
+- fabric: only write new_server.go the first time we create the methods directory
+
+### Added
+
+- expose system metrics to Prometheus
+
+### Changed
+
+- modify listauth to take the lists as arguments (still supports environment variable)
+
 ## 0.1.10 (August 8th, 2018)
 
 ### Fixed
 
 - Impersonation not using cert when reading handshake
 
-- `tlsutil` defaulting to `tls.NoClientAuth`## 0.1.9 (July 27, 2018)
+- `tlsutil` defaulting to `tls.NoClientAuth`
 
 ### Added
 
