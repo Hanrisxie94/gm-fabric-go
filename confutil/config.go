@@ -1,10 +1,30 @@
 package confutil
 
 import (
+	"encoding/base64"
 	"fmt"
+	"io/ioutil"
+	"log"
 	"os"
+	"strings"
 	"text/template"
 )
+
+// CreateConfigFromBase64 will read in a base64 string from an env var and create a file with its contents decoded
+func CreateConfigFromBase64(envVar, path string) error {
+	ev := strings.TrimSpace(os.Getenv(envVar))
+	if ev == "" {
+		log.Println("No value found in environment variable: " + envVar)
+		return nil
+	}
+
+	data, err := base64.StdEncoding.DecodeString(ev)
+	if err != nil {
+		return err
+	}
+
+	return ioutil.WriteFile(path, data, 0755)
+}
 
 // CreateConfigFromTemplate creates a config file by filling a template
 // using environment variables.

@@ -1,6 +1,7 @@
 package confutil
 
 import (
+	"encoding/base64"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -19,9 +20,7 @@ metrics:
 	announcePort: {{with $x := "ZK_METRICS_ANNOUNCE_PORT" | getenv }}{{$x}}{{end}}
 `
 
-func TestCreateConfigFromTemplate(t *testing.T) {
-
-	expectedResult := strings.TrimSpace(`
+const validGMConfig = `
 zookeeper:
 addrs: dashboard:2181,zk:2181
 announcePath: /services/examples/0.0.1
@@ -30,7 +29,9 @@ announcePort: 8080
 usingTLS: false
 metrics:
 	announcePort: 
-	`)
+`
+
+func TestCreateConfigFromTemplate(t *testing.T) {
 
 	testPath := filepath.Join(os.TempDir(), "TestCreateConfigFromTemplate")
 	err := os.Remove(testPath)
@@ -63,6 +64,51 @@ metrics:
 	}
 	testResult := strings.TrimSpace(string(testResultBytes))
 
+	expectedResult := strings.TrimSpace(validGMConfig)
+	if testResult != expectedResult {
+		for i, r := range testResult {
+			t.Logf("('%c', '%c'\n", r, rune(expectedResult[i]))
+			if r != rune(expectedResult[i]) {
+				t.Fatalf("mismatch at %d '%c' != '%c'", i, r, rune(expectedResult[i]))
+			}
+		}
+		t.Fatalf("result (%d):\n%s\n!= expected result (%d):\n%s\n",
+			len(testResult), testResult,
+			len(expectedResult), expectedResult)
+	}
+}
+
+func TestCreateConfigFromBase64(t *testing.T) {
+	const testEnvVar = "TEST_CREATE_CONFIG_FROM_BASE64"
+
+	testPath := filepath.Join(os.TempDir(), "TestCreateConfigFromBase64")
+	err := os.Remove(testPath)
+	if err != nil && !os.IsNotExist(err) {
+		t.Fatalf("os.Remove(%s) failed: %s", testPath, err)
+	}
+
+	encodedData := base64.StdEncoding.EncodeToString([]byte(validGMConfig))
+
+	// we expect no error if the environment variable isn't set
+	os.Setenv(testEnvVar, "")
+	err = CreateConfigFromBase64(testEnvVar, testPath)
+	if err != nil {
+		t.Fatalf("CreateConfigFromBase64 failed: %s", err)
+	}
+
+	os.Setenv(testEnvVar, encodedData)
+	err = CreateConfigFromBase64(testEnvVar, testPath)
+	if err != nil {
+		t.Fatalf("CreateConfigFromBase64 failed: %s", err)
+	}
+
+	testResultBytes, err := ioutil.ReadFile(testPath)
+	if err != nil {
+		t.Fatalf("ioutil.ReadFile(%s) failed: %s", testPath, err)
+	}
+	testResult := strings.TrimSpace(string(testResultBytes))
+
+	expectedResult := strings.TrimSpace(validGMConfig)
 	if testResult != expectedResult {
 		for i, r := range testResult {
 			t.Logf("('%c', '%c'\n", r, rune(expectedResult[i]))
