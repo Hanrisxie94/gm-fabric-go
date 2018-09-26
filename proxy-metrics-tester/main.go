@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"crypto/tls"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -9,10 +10,13 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strconv"
 	"sync"
 	"syscall"
 	"time"
+
+	"github.com/deciphernow/gm-fabric-go/tlsutil"
 )
 
 type handlerConfig struct {
@@ -33,10 +37,17 @@ func main() {
 		log.Fatalf("Invalid PMTEST_MAX_BODY_SIZE '%s'", getEnv("PMTEST_MAX_BODY_SIZE", "1048576"))
 	}
 	exposedAddress := getEnv("PMTEST_EXPOSED_ADDRESS", "127.0.0.1:3000")
+
+	certDir := getEnv("PMTEST_CERT_DIR", "")
+	scheme := "http"
+	if certDir != "" {
+		scheme = "https"
+	}
+
 	testURLs := []string{
-		fmt.Sprintf("http://%s/slow", exposedAddress),
-		fmt.Sprintf("http://%s/medium", exposedAddress),
-		fmt.Sprintf("http://%s/fast", exposedAddress),
+		fmt.Sprintf("%s://%s/slow", scheme, exposedAddress),
+		fmt.Sprintf("%s://%s/medium", scheme, exposedAddress),
+		fmt.Sprintf("%s://%s/fast", scheme, exposedAddress),
 	}
 
 	mux := http.NewServeMux()
@@ -81,9 +92,22 @@ func main() {
 		log.Printf("server terminates: %s", server.ListenAndServe())
 	}()
 
-	log.Printf("starting %d test clients", clientCount)
+	var tlsConf *tls.Config
+	if certDir != "" {
+		tlsConf, err = tlsutil.NewTLSClientConfig(
+			filepath.Join(certDir, "intermediate.crt"),
+			filepath.Join(certDir, "localhost.crt"),
+			filepath.Join(certDir, "localhost.key"),
+			"localhost",
+		)
+		if err != nil {
+			log.Fatalf("tlsutil.NewTLSClientConfig failed: %s", err)
+		}
+	}
 
 	haltChan := make(chan struct{})
+
+	log.Printf("starting %d test clients; certDir = '%s'", clientCount, certDir)
 
 	var wg sync.WaitGroup
 	for i := 0; i < clientCount; i++ {
@@ -91,7 +115,7 @@ func main() {
 		clientID := i + 1
 		go func() {
 			defer wg.Done()
-			testClient(clientID, testURLs, maxBodySize, haltChan)
+			testClient(clientID, testURLs, maxBodySize, tlsConf, haltChan)
 		}()
 	}
 
@@ -161,6 +185,7 @@ func testClient(
 	clientID int,
 	testURLs []string,
 	maxBodySize int,
+	tlsConf *tls.Config,
 	haltChan <-chan struct{},
 ) {
 CLIENT_LOOP:
@@ -181,6 +206,7 @@ CLIENT_LOOP:
 		)
 
 		var client http.Client
+		client.Transport = &http.Transport{TLSClientConfig: tlsConf}
 
 		body := bytes.Repeat([]byte{'*'}, bodySize)
 		req, err := http.NewRequest("GET", url, bytes.NewReader(body))
