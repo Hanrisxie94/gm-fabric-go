@@ -15,7 +15,7 @@ addrs: {{with $x := "ZK_ADDRS" | getenv }}{{$x}}{{end}}
 announcePath: {{with $x := "ZK_ANNOUNCE_PATH" | getenv }}{{$x}}{{end}}
 announceHost: {{with $x := "ZK_ANNOUNCE_HOST" | getenv }}{{$x}}{{end}}
 announcePort: {{with $x := "ZK_ANNOUNCE_PORT" | getenv }}{{$x}}{{end}}
-usingTLS: {{with $x := "ZK_USING_TLS" | getenv }}{{$x}}{{end}}
+usingTLS: {{with $x := "ZK_USING_TLS" | getbool }}{{$x}}{{else}}false{{end}}
 metrics:
 	announcePort: {{with $x := "ZK_METRICS_ANNOUNCE_PORT" | getenv }}{{$x}}{{end}}
 `
@@ -26,7 +26,7 @@ addrs: dashboard:2181,zk:2181
 announcePath: /services/examples/0.0.1
 announceHost: 
 announcePort: 8080
-usingTLS: false
+usingTLS: true
 metrics:
 	announcePort: 
 `
@@ -47,7 +47,7 @@ func TestCreateConfigFromTemplate(t *testing.T) {
 		{"ZK_ANNOUNCE_PATH", "/services/examples/0.0.1"},
 		{"ZK_ANNOUNCE_HOST", ""},
 		{"ZK_ANNOUNCE_PORT", "8080"},
-		{"ZK_USING_TLS", "false"},
+		{"ZK_USING_TLS", "true"},
 		{"ZK_METRICS_ANNOUNCE_PORT", ""},
 	} {
 		os.Setenv(e.key, e.value)

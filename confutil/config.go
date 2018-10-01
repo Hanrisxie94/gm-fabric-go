@@ -31,8 +31,16 @@ func CreateConfigFromBase64(envVar, path string) error {
 func CreateConfigFromTemplate(templateText string, path string) error {
 	// First we create a FuncMap with which to register the function.
 	funcMap := template.FuncMap{
-		// The name "getenv" is what the function will be called in the template text.
+		// getenv will return the contents of an environment variable
+		// it will return an empty string if the environment variable does
+		// not exist
 		"getenv": os.Getenv,
+
+		// getbool will return the empty string unless the environment
+		// variable is exactly equal to 'true'
+		"getbool": func(key string) bool {
+			return os.Getenv(key) == "true"
+		},
 	}
 
 	tmpl, err := template.New("config").Funcs(funcMap).Parse(templateText)
