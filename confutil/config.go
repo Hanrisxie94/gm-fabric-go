@@ -26,21 +26,20 @@ func CreateConfigFromBase64(envVar, path string) error {
 	return ioutil.WriteFile(path, data, 0755)
 }
 
-var funcMap template.FuncMap = template.FuncMap{
-	// getenv will return the contents of an environment variable
-	// it will return an empty string if the environment variable does
-	// not exist
-	"getenv": os.Getenv,
-
-	// getbool will return false unless the environment variable is exactly
-	// equal to 'true'
-	"getbool": func(key string) bool { return os.Getenv(key) == "true" },
-}
-
 // CreateConfigFromTemplate creates a config file by filling a template
 // using environment variables.
 func CreateConfigFromTemplate(templateText string, path string) error {
 	// First we create a FuncMap with which to register the function.
+	var funcMap template.FuncMap = template.FuncMap{
+		// getenv will return the contents of an environment variable
+		// it will return an empty string if the environment variable does
+		// not exist
+		"getenv": os.Getenv,
+
+		// getbool will return false unless the environment variable is exactly
+		// equal to 'true'
+		"getbool": func(key string) bool { return os.Getenv(key) == "true" },
+	}
 
 	tmpl, err := template.New("config").Funcs(funcMap).Parse(templateText)
 	if err != nil {
