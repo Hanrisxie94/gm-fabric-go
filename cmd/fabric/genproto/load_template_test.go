@@ -1,7 +1,9 @@
 package genproto
 
 import (
+	"io/ioutil"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/deciphernow/gm-fabric-go/cmd/fabric/config"
@@ -11,13 +13,42 @@ import (
 func TestLoadTemplate(t *testing.T) {
 	ownerDir := os.TempDir()
 	const serviceName = "service-name"
+	const templateName = "testTemplate"
 
 	logger := zerolog.New(os.Stderr).With().Timestamp().Logger()
-	os.Args = []string{"xxx", "--init", serviceName, "--dir", ownerDir}
-	cfg, err := config.Load(logger)
-	if err != nil {
-		t.Fatalf("Load failed: %s", err)
+	cfg := config.Config{
+		ServiceName: serviceName,
+		OwnerDir:    ownerDir,
 	}
 
-	t.Logf("cfg.TemplateCachePath() = %v", cfg.TemplateCachePath())
+	err := os.MkdirAll(cfg.TemplateCachePath(), os.ModePerm)
+	if err != nil {
+		t.Fatalf("os.MkdirAll(%s) failed: %s", cfg.TemplateCachePath(), err)
+	}
+
+	// we expect an error when there is no file
+	_, err = loadTemplateFromCache(
+		cfg,
+		logger,
+		templateName,
+	)
+	if err == nil {
+		t.Fatalf("expecting 'file not found'")
+	}
+
+	templatePath := filepath.Join(cfg.TemplateCachePath(), templateName)
+	err = ioutil.WriteFile(templatePath, []byte{'x', 'y', 'z'}, 0777)
+	if err != nil {
+		t.Fatalf("ioutil.WriteFile '%s' failed: %s", templatePath, err)
+	}
+
+	// we expect no error when there is a file
+	_, err = loadTemplateFromCache(
+		cfg,
+		logger,
+		templateName,
+	)
+	if err != nil {
+		t.Fatalf("loadTemplateFromCache failed: %v", err)
+	}
 }

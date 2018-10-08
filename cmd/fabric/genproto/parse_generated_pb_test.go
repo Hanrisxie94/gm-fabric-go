@@ -16,11 +16,11 @@ func TestParseGeneratedPB(t *testing.T) {
 
 	logger := zerolog.New(os.Stderr).With().Timestamp().Logger()
 	os.Args = []string{"xxx", "--init", serviceName, "--dir", ownerDir}
-	cfg, err := config.Load(logger)
-	if err != nil {
-		t.Fatalf("Load failed: %s", err)
+	cfg := config.Config{
+		ServiceName: serviceName,
+		OwnerDir:    ownerDir,
 	}
-	err = os.MkdirAll(cfg.ProtoPath(), os.ModePerm)
+	err := os.MkdirAll(cfg.ProtoPath(), os.ModePerm)
 	if err != nil {
 		t.Fatalf("os.MkdirAll(%s) failed: %s", cfg.ProtoPath(), err)
 	}
