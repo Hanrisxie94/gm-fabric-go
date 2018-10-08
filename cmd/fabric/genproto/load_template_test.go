@@ -26,6 +26,12 @@ func TestLoadTemplate(t *testing.T) {
 		t.Fatalf("os.MkdirAll(%s) failed: %s", cfg.TemplateCachePath(), err)
 	}
 
+	templatePath := filepath.Join(cfg.TemplateCachePath(), templateName)
+	err = os.Remove(templatePath)
+	if err != nil && !os.IsNotExist(err) {
+		t.Fatalf("os.Remove(%s) failed: %s", templatePath, err)
+	}
+
 	// we expect an error when there is no file
 	_, err = loadTemplateFromCache(
 		cfg,
@@ -36,7 +42,6 @@ func TestLoadTemplate(t *testing.T) {
 		t.Fatalf("expecting 'file not found'")
 	}
 
-	templatePath := filepath.Join(cfg.TemplateCachePath(), templateName)
 	err = ioutil.WriteFile(templatePath, []byte{'x', 'y', 'z'}, 0777)
 	if err != nil {
 		t.Fatalf("ioutil.WriteFile '%s' failed: %s", templatePath, err)
