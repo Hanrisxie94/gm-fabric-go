@@ -15,7 +15,6 @@ func TestParseGeneratedPB(t *testing.T) {
 	const serviceName = "service-name"
 
 	logger := zerolog.New(os.Stderr).With().Timestamp().Logger()
-	os.Args = []string{"xxx", "--init", serviceName, "--dir", ownerDir}
 	cfg := config.Config{
 		ServiceName: serviceName,
 		OwnerDir:    ownerDir,
