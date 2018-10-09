@@ -127,7 +127,7 @@ func Load(logger zerolog.Logger) (Config, error) {
 
 	viper.SetDefault(
 		"template_url",
-		"git@github.com:deciphernow/gm-fabric-templates.git//default",
+		"github.com/deciphernow/gm-fabric-templates.git//default",
 	)
 
 	if configFilePath != "" {

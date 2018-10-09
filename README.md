@@ -88,7 +88,7 @@ The following instructions leverage external sources heavily so please open an i
     ```
 1. Clone this repository to `${GOPATH}/src/github.com/deciphernow/gm-fabric-go`.
     ```bash
-    mkdir -p ${GOPATH}/src/github.com/deciphernow && cd ${GOPATH}/src/github.com/deciphernow && git clone git@github.com:DecipherNow/gm-fabric-go.git
+    mkdir -p ${GOPATH}/src/github.com/deciphernow && cd ${GOPATH}/src/github.com/deciphernow && git clone https://github.com/DecipherNow/gm-fabric-go.git && cd gm-fabric-go
     ```
 1. Build and install the command line utilities.
     ```bash
@@ -103,13 +103,13 @@ Once you have installed the utilities you may rapidly initialize and update gRPC
 
 ### Initializing a Service
 
-The following instructions assume that we will be creating a service named `exemplar` and it will be hosted at `https://github.com/examples/exemplar.git`.
+The following instructions assume that we will be creating a service named `exemplar` and it will be created at `${GOPATH}/src/github.com/examples/exemplar`.
 
 1. Initialize the service with the `--init` flag.
     ```bash
-    fabric --init "exemplar" --template git@github.com:deciphernow/gm-fabric-templates.git//default --dir "${GOPATH}/src/github.com/examples"
+    fabric --init "exemplar" --template github.com/deciphernow/gm-fabric-templates.git//default --dir "${GOPATH}/src/github.com/examples"
     ```
-1. The above command will create a new service from the template. Confirm that the service directory exists and is not empty.
+2. The above command will create a new service from the template. Confirm that the service directory exists and is not empty.
     ```bash
     ls -ltra "${GOPATH}/src/github.com/examples/exemplar"
     ```
