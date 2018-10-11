@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"strings"
 	"testing"
 
 	"github.com/deciphernow/gm-fabric-go/middleware"
@@ -16,10 +15,8 @@ func TestNewWhitelist(t *testing.T) {
 	dns := getServers()
 
 	w := NewWhitelist(dns)
-	for i, dn := range w.servers {
-		if strings.Compare(dns[i], dn) != 0 {
-			t.Errorf("Wanted %s, got: %s", dns[i], dn)
-		}
+	if len(dns) != len(w.servers) {
+		t.Errorf("Expected whitelist to be of length: %d", len(w.servers))
 	}
 }
 
@@ -112,7 +109,7 @@ func getServers() []string {
 		"uid=server1,ou=Server,dc=example,dc=com",
 		"uid=server2,ou=Server,dc=example,dc=com",
 		"uid=server3,ou=Server,dc=example,dc=com",
-		"cn=localhost,ou=engineering,o=decipher technology studios,l=alexandria,st=virginia,c=us",
+		"cn=localhost, ou=engineering, o=decipher technology studios, l=alexandria, st=virginia,c=us",
 	}
 }
 
