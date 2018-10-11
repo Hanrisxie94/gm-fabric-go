@@ -127,11 +127,11 @@ func (r *Registration) toAnn() AnnounceData {
 //	defer cancel()
 //
 // This function is deprecated, it is kept for compatibility
-func Announce(servers []string, reg *Registration) (cancel func()) {
+func Announce(servers []string, reg *Registration, opts ...Opt) (cancel func()) {
 	logger := zerolog.New(os.Stderr).With().Timestamp().Logger().
 		Output(zerolog.ConsoleWriter{Out: os.Stderr})
 
-	return AnnounceWithLogger(servers, reg, logger)
+	return AnnounceWithLogger(servers, reg, logger, opts...)
 }
 
 // AnnounceWithLogger registers the service announcement with ZooKeeper.
@@ -153,7 +153,7 @@ func Announce(servers []string, reg *Registration) (cancel func()) {
 //		serviceLogger.
 // )
 //	defer cancel()
-func AnnounceWithLogger(servers []string, reg *Registration, logger zerolog.Logger) (cancel func()) {
+func AnnounceWithLogger(servers []string, reg *Registration, logger zerolog.Logger, opts ...Opt) (cancel func()) {
 	done := make(chan struct{})
 	cancel = func() {
 		close(done)
@@ -164,7 +164,7 @@ func AnnounceWithLogger(servers []string, reg *Registration, logger zerolog.Logg
 
 	go func() {
 		// Announce until cancelled.
-		for doAnn(done, annBytes, servers, reg, logger) {
+		for doAnn(done, annBytes, servers, reg, logger, opts...) {
 			select {
 			case <-done:
 				return
