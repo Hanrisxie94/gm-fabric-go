@@ -200,6 +200,8 @@ func doAnn(done chan struct{}, annBytes []byte, servers []string, reg *Registrat
 		conn, evCh, err = connectWithTLS(servers, 2*time.Second, zl, options.TLS)
 		if err != nil {
 			logger.Error().AnErr("zk.Connect", err).Msg("failed to connect with TLS")
+			// Time to reconnect.
+			return true
 		}
 	} else {
 		conn, evCh, err = zk.Connect(servers, 2*time.Second, zk.WithLogger(zl))
