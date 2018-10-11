@@ -1,4 +1,4 @@
-// Copyright 2017 Decipher Technology Studios LLC
+// Copyright 2018 Decipher Technology Studios LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,8 +15,10 @@
 package gk
 
 import (
+	"crypto/tls"
 	"encoding/json"
 	"errors"
+	"log"
 	"net"
 	"os"
 	"time"
@@ -64,9 +66,8 @@ type Address struct {
 // don't export; force the user to use one of the constants
 type status string
 
+// Alive refers to current service status in zk
 const Alive = status("ALIVE")
-
-// -----------------------------------------------------------------------------
 
 // GetIP returns an IPv4 Address in string format suitable for Gatekeeper to reach us at
 func GetIP() (string, error) {
@@ -95,6 +96,7 @@ func GetIP() (string, error) {
 	return "", errors.New("could not find IPv4 address")
 }
 
+// Registration struct holds the necessary info to perform a proper announcement to zookeeper
 type Registration struct {
 	Path   string
 	Status status
@@ -102,12 +104,12 @@ type Registration struct {
 	Port   int
 }
 
-func (self *Registration) toAnn() AnnounceData {
+func (r *Registration) toAnn() AnnounceData {
 	json := AnnounceData{
-		Status: self.Status,
+		Status: r.Status,
 		ServiceEndpoint: Address{
-			Host: self.Host,
-			Port: self.Port,
+			Host: r.Host,
+			Port: r.Port,
 		},
 	}
 	return json
@@ -151,18 +153,14 @@ func Announce(servers []string, reg *Registration) (cancel func()) {
 //		serviceLogger.
 // )
 //	defer cancel()
-func AnnounceWithLogger(
-	servers []string,
-	reg *Registration,
-	logger zerolog.Logger,
-) (cancel func()) {
+func AnnounceWithLogger(servers []string, reg *Registration, logger zerolog.Logger) (cancel func()) {
 	done := make(chan struct{})
 	cancel = func() {
 		close(done)
 	}
 
-	annJson := reg.toAnn()
-	annBytes, _ := json.Marshal(annJson)
+	annJSON := reg.toAnn()
+	annBytes, _ := json.Marshal(annJSON)
 
 	go func() {
 		// Announce until cancelled.
@@ -187,19 +185,29 @@ func (zl zkZeroLogger) Printf(format string, a ...interface{}) {
 	zl.logger.Debug().Msgf(format, a...)
 }
 
-func doAnn(
-	done chan struct{},
-	annBytes []byte,
-	servers []string,
-	reg *Registration,
-	logger zerolog.Logger,
-) bool {
+func doAnn(done chan struct{}, annBytes []byte, servers []string, reg *Registration, logger zerolog.Logger, opts ...Opt) bool {
+	// Set are options
+	var options Options
+	for _, o := range opts {
+		o(&options)
+	}
+
 	zl := zkZeroLogger{logger: logger}
-	conn, evCh, err := zk.Connect(servers, 2*time.Second, zk.WithLogger(zl))
-	if err != nil {
-		logger.Error().AnErr("zk.Connect", err).Msg("")
-		// Time to reconnect.
-		return true
+	var conn *zk.Conn
+	var err error
+	var evCh <-chan zk.Event
+	if options.TLS != nil {
+		conn, evCh, err = connectWithTLS(servers, 2*time.Second, zl, options.TLS)
+		if err != nil {
+			logger.Error().AnErr("zk.Connect", err).Msg("failed to connect with TLS")
+		}
+	} else {
+		conn, evCh, err = zk.Connect(servers, 2*time.Second, zk.WithLogger(zl))
+		if err != nil {
+			logger.Error().AnErr("zk.Connect", err).Msg("")
+			// Time to reconnect.
+			return true
+		}
 	}
 
 	defer conn.Close()
@@ -239,4 +247,35 @@ create:
 			}
 		}
 	}
+}
+
+// connectWithTLS will create a zookeeper connection with a TLS config
+func connectWithTLS(servers []string, t time.Duration, zl zkZeroLogger, cfg *tls.Config) (*zk.Conn, <-chan zk.Event, error) {
+	conn, evCh, err := zk.Connect(servers, 2*time.Second, zk.WithLogger(zl), zk.WithDialer(zk.Dialer(func(network string, address string, timeout time.Duration) (net.Conn, error) {
+		// Establish a TCP connection to the address with the specified timeout
+		// using the DialTimeout method
+		ipConn, err := net.DialTimeout(network, address, timeout)
+		if err != nil {
+			log.Printf("Could not connect to %v, %v\n", address, network)
+			return ipConn, err
+		}
+		log.Printf("TCP Connected to %v, %v\n", address, network)
+
+		// Use the TCP connection created above to establish the TLS connection
+		// Need to use the Client method since we already have the TCP connection
+		conn := tls.Client(ipConn, cfg)
+		err = conn.Handshake()
+		if err != nil {
+			return nil, err
+		}
+
+		return conn, nil
+	})))
+	if err != nil {
+		zl.logger.Error().AnErr("zk.Connect", err).Msg("")
+		// Time to reconnect.
+		return nil, nil, err
+	}
+
+	return conn, evCh, nil
 }
