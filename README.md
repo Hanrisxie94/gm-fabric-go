@@ -33,14 +33,14 @@ While it is possible to develop a fabric enabled microservice from scratch using
 
 ### MacOS
 
-For convienence, we provide a Homebrew tap for installing the command line utilities and their prerequisites. If you are not using Homebrew the [other](#other) installation instructions should work for you but there may be discrepancies.
+For convenience, we provide a Homebrew tap for installing the command line utilities and their prerequisites. If you are not using Homebrew the [other](#other) installation instructions should work for you but there may be discrepancies.
 
 1. If not installed, install Homebrew following the directions at [https://brew.sh](https://brew.sh).
-1. Tap the Decipher Homebrew tap to access the formulas.
+2. Tap the Decipher Homebrew tap to access the formulas.
     ```bash
     brew tap deciphernow/homebrew-decipher
     ```
-1. Install Go, Dep, Protobuf and the Fabric command line utilities.  Note that you should only do one of the following commands.
+3. Install Go, Dep, Protobuf and the Fabric command line utilities.  Note that you should only do one of the following commands.
     * To install the latest stable release run the following command:
         ```bash
         brew install deciphernow/homebrew-decipher/fabric
@@ -49,15 +49,15 @@ For convienence, we provide a Homebrew tap for installing the command line utili
         ```bash
         brew install --HEAD deciphernow/homebrew-decipher/fabric
         ```
-1. Verify that the installation worked.
+4. Verify that the installation worked.
     ```bash
     fabric --version
     ```
-1. Define your `GOPATH`, the path in which Go will download, build and install software, as described [here](https://github.com/golang/go/wiki/SettingGOPATH). For example:
+5. Define your `GOPATH`, the path in which Go will download, build and install software, as described [here](https://github.com/golang/go/wiki/SettingGOPATH). For example:
     ```bash
     export GOPATH="${HOME}/go" && echo "export GOPATH=${GOPATH}" >> ~/.bash_profile
     ```
-1. Add `${GOPATH}/bin` to `PATH` if you wish to have code you compile available from your shell. This is optional as the compiled code is executable regardless, but you will need to use the full path. For example:
+6. Add `${GOPATH}/bin` to `PATH` if you wish to have code you compile available from your shell. This is optional as the compiled code is executable regardless, but you will need to use the full path. For example:
     ```bash
     export PATH="${GOPATH}/bin:${PATH}" && echo "export PATH=\${GOPATH}/bin:\${PATH}" >> ~/.bash_profile
     ```
@@ -76,11 +76,12 @@ The following instructions leverage external sources heavily so please open an i
     ```bash
     export PATH="~/go/bin:${PATH}" && echo "export PATH=\${GOPATH}/bin:\${PATH}" >> ~/.bash_profile
     ```
-1. Download the `protoc` binary for your platform from [here](https://github.com/google/protobuf/releases)
-1. Place the binary somewhere safe in your file system (e.g., `~/bin`).
-1. If the directory into which you installed the binary is not already in your `PATH` add it now.
-    ```bash
-    export PATH="~/bin:~/go/bin:${PATH}" && echo "export PATH=\${GOPATH}/bin:\${PATH}" >> ~/.bash_profile
+1. run the following to install the protoc compiler and supporting files
+   ```bash
+    PROTOC_ZIP=protoc-3.6.1-linux-x86_64.zip
+    curl -OL https://github.com/google/protobuf/releases/download/v3.6.1/$PROTOC_ZIP
+    sudo unzip -o $PROTOC_ZIP -d /usr/local
+    rm -f $PROTOC_ZIP
     ```
 1. Install `dep` for dependency resolution.
     ```
@@ -88,7 +89,7 @@ The following instructions leverage external sources heavily so please open an i
     ```
 1. Clone this repository to `${GOPATH}/src/github.com/deciphernow/gm-fabric-go`.
     ```bash
-    mkdir -p ${GOPATH}/src/github.com/deciphernow && cd ${GOPATH}/src/github.com/deciphernow && git clone git@github.com:DecipherNow/gm-fabric-go.git
+    mkdir -p ${GOPATH}/src/github.com/deciphernow && cd ${GOPATH}/src/github.com/deciphernow && git clone https://github.com/DecipherNow/gm-fabric-go.git && cd gm-fabric-go
     ```
 1. Build and install the command line utilities.
     ```bash
@@ -103,13 +104,13 @@ Once you have installed the utilities you may rapidly initialize and update gRPC
 
 ### Initializing a Service
 
-The following instructions assume that we will be creating a service named `exemplar` and it will be hosted at `https://github.com/examples/exemplar.git`.
+The following instructions assume that we will be creating a service named `exemplar` and it will be created at `${GOPATH}/src/github.com/examples/exemplar`.
 
 1. Initialize the service with the `--init` flag.
     ```bash
-    fabric --init "exemplar" --template git@github.com:deciphernow/gm-fabric-templates.git//default --dir "${GOPATH}/src/github.com/examples"
+    fabric --init "exemplar" --template github.com/deciphernow/gm-fabric-templates.git//default --dir "${GOPATH}/src/github.com/examples"
     ```
-1. The above command will create a new service from the template. Confirm that the service directory exists and is not empty.
+2. The above command will create a new service from the template. Confirm that the service directory exists and is not empty.
     ```bash
     ls -ltra "${GOPATH}/src/github.com/examples/exemplar"
     ```
@@ -120,7 +121,7 @@ As stated previously, Grey Matter Fabric is based upon [gRPC](https://grpc.io/) 
 
 1. Switch to the parent directory of the service directory that was created by the `--init` command.
     ```bash
-    cd ${GOPATH}/src/github.com/examples"
+    cd ${GOPATH}/src/github.com/examples
     ```
 1. Edit the `${GOPATH}/src/github.com/examples/exemplar/protobuf/exemplar.proto` file to contain the following:
     ```protobuf

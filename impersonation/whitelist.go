@@ -3,6 +3,8 @@ package impersonation
 import (
 	"crypto/x509"
 	"net/http"
+	"strings"
+	"unicode"
 
 	"github.com/deciphernow/gm-fabric-go/middleware"
 	"github.com/rs/zerolog"
@@ -15,8 +17,14 @@ type Whitelist struct {
 
 // NewWhitelist will construct a whitelist object and return
 func NewWhitelist(servers []string) Whitelist {
+	srvrs := make([]string, 0)
+	for _, s := range servers {
+		s = normalize(s)
+		srvrs = append(srvrs, s)
+	}
+
 	return Whitelist{
-		servers: servers,
+		servers: srvrs,
 	}
 }
 
@@ -27,32 +35,30 @@ func CanImpersonate(caller Caller, whitelist Whitelist) bool {
 }
 
 func validate(caller Caller, whitelist Whitelist) bool {
-	if caller.ExternalSystemDistinguishedName == "" {
+	if caller.SystemDistinguishedName == "" && caller.ExternalSystemDistinguishedName == "" {
+		return false
+	} else if caller.ExternalSystemDistinguishedName == "" {
 		for _, server := range whitelist.servers {
-			if caller.SystemDistinguishedName == server {
+			if normalize(caller.SystemDistinguishedName) == server {
 				return true
 			}
 		}
+		return false
 	}
-
 	return validateExternalSystem(caller, whitelist)
 }
 
 func validateExternalSystem(caller Caller, whitelist Whitelist) bool {
 	var foundExternal bool
-	for _, s := range whitelist.servers {
-		if s == caller.ExternalSystemDistinguishedName {
-			foundExternal = true
-		}
-	}
-
 	var foundInternal bool
 	for _, s := range whitelist.servers {
-		if s == caller.SystemDistinguishedName {
+		if s == normalize(caller.ExternalSystemDistinguishedName) {
+			foundExternal = true
+		}
+		if s == normalize(caller.SystemDistinguishedName) {
 			foundInternal = true
 		}
 	}
-
 	return foundInternal && foundExternal
 }
 
@@ -76,4 +82,16 @@ func ValidateCaller(whitelist Whitelist, logger zerolog.Logger) middleware.Middl
 			}
 		})
 	})
+}
+
+// normalize will remove all whitespace from all DNs in the server list
+func normalize(s string) string {
+	s = strings.Map(func(r rune) rune {
+		if unicode.IsSpace(r) {
+			return -1
+		}
+		return r
+	}, s)
+
+	return strings.ToLower(s)
 }
