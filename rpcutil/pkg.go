@@ -48,7 +48,7 @@ func MatchHTTPHeaders(key string) (string, bool) {
 func FetchDNFromContext(ctx context.Context) (string, error) {
 	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
-		return "", errors.Errorf("rpcutil: %s", "failed to retrieve rpc metadta from incoming context")
+		return "", errors.Errorf("rpcutil: %s", "failed to retrieve rpc metadata from incoming context")
 	}
 
 	// Find user dn in metadata. If it doesn't exist, return and fail
