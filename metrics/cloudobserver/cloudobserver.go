@@ -382,40 +382,45 @@ func (co *cloudObs) AwsMetrics(reportInterval time.Duration) {
 	}
 }
 
-// AddAWSMetrics handles gm-fabric-go metrics based on their names as they show up in the dashboard
+// AddAWSMetrics handles the actual push of the metric up to cloudwatch.
 func (co *cloudObs) AddAWSMetrics() {
 	co.Lock()
 	defer co.Unlock()
 	for _, name := range co.metrics {
 		if name != "" {
+			err := errors.New("")
 			switch {
 			case name == "system/memory/used_percent":
-				co.putMetric(name, grabmetrics.MemUsedPercentVal(), "Percent")
+				err = co.putMetric(name, grabmetrics.MemUsedPercentVal(), "Percent")
 
 			case name == "all/errors.count":
-				co.putMetric(name, grabmetrics.ErrorsCountVal(co.grpc), "Count")
+				err = co.putMetric(name, grabmetrics.ErrorsCountVal(co.grpc), "Count")
 
 			case name == "all/in_throughput":
-				co.putMetric(name, grabmetrics.InThroughputVal(co.grpc), "Count")
+				err = co.putMetric(name, grabmetrics.InThroughputVal(co.grpc), "Count")
 
 			case name == "all/latency_ms.p50":
-				co.putMetric(name, grabmetrics.LatencyP50Val(co.grpc), "Count")
+				err = co.putMetric(name, grabmetrics.LatencyP50Val(co.grpc), "Count")
 
 			case name == "all/latency_ms.p95":
-				co.putMetric(name, grabmetrics.LatencyP95Val(co.grpc), "Count")
+				err = co.putMetric(name, grabmetrics.LatencyP95Val(co.grpc), "Count")
 
 			case name == "Total/requests":
-				co.putMetric(name, grabmetrics.TotalRequestsVal(co.grpc), "Count")
+				err = co.putMetric(name, grabmetrics.TotalRequestsVal(co.grpc), "Count")
 
 			default:
 				fmt.Println(name, "is not currently handled as a gm-fabric-go cloudwatch metric.  Skipping to the next one.")
+			}
+
+			if err != nil {
+				fmt.Println("Cloudwatch Reporting Error", err)
 			}
 		}
 	}
 }
 
 // putMetric is an abstraction of AWS's PutMetricData and does the work of sending a single metric value to AWS CloudWatch
-func (co *cloudObs) putMetric(MetricName string, Value float64, Unit string) {
+func (co *cloudObs) putMetric(MetricName string, Value float64, Unit string) error {
 	_, err := co.cwsess.PutMetricData(&cloudwatch.PutMetricDataInput{
 		Namespace: aws.String(co.namespace),
 		MetricData: []*cloudwatch.MetricDatum{
@@ -428,7 +433,7 @@ func (co *cloudObs) putMetric(MetricName string, Value float64, Unit string) {
 		},
 	})
 	if err != nil {
-		errors.Wrap(err, err.Error())
-		return
+		return errors.Wrap(err, err.Error())
 	}
+	return nil
 }
