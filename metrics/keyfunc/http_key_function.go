@@ -1,4 +1,4 @@
-package prometheus
+package keyfunc
 
 // Copyright 2017 Decipher Technology Studios LLC
 //
@@ -22,6 +22,9 @@ type HTTPKeyFunc func(*http.Request) string
 var (
 	// DefaultHTTPKeyFunc returns the URI as the metrics key
 	DefaultHTTPKeyFunc HTTPKeyFunc = func(req *http.Request) string {
+		if req.URL == nil {
+			return ""
+		}
 		return req.URL.EscapedPath()
 	}
 )

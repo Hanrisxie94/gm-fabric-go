@@ -22,12 +22,13 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/deciphernow/gm-fabric-go/metrics/httpmetrics"
+	"github.com/deciphernow/gm-fabric-go/metrics/keyfunc"
 )
 
 // HandlerState implments the httpHandler
 type HandlerState struct {
 	collector Collector
-	keyFunc   HTTPKeyFunc
+	keyFunc   keyfunc.HTTPKeyFunc
 	logger    zerolog.Logger
 	inner     http.Handler
 }
@@ -40,7 +41,7 @@ func NewHandler(
 ) *HandlerState {
 	handler := HandlerState{
 		collector: collector,
-		keyFunc:   DefaultHTTPKeyFunc,
+		keyFunc:   keyfunc.DefaultHTTPKeyFunc,
 		inner:     inner,
 	}
 
@@ -52,7 +53,7 @@ func NewHandler(
 }
 
 // KeyFuncOption returns a function that sets the key function
-func KeyFuncOption(keyFunc HTTPKeyFunc) func(*HandlerState) {
+func KeyFuncOption(keyFunc keyfunc.HTTPKeyFunc) func(*HandlerState) {
 	return func(s *HandlerState) {
 		s.keyFunc = keyFunc
 	}
