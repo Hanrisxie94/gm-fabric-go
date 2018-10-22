@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/deciphernow/gm-fabric-go/metrics/headers"
+	"github.com/deciphernow/gm-fabric-go/metrics/keyfunc"
 	"github.com/deciphernow/gm-fabric-go/metrics/subject"
 )
 
@@ -45,14 +46,14 @@ func (e HTPStatusError) Error() string {
 type HTTPMetrics struct {
 	metricsChan chan<- subject.MetricsEvent
 	tags        []string
-	KeyFunc     func(*http.Request) string
+	keyFunc     keyfunc.HTTPKeyFunc
 }
 
 // wrappedMetrics wraps a single Handler
 type wrappedMetrics struct {
 	h       *HTTPMetrics
 	next    http.Handler
-	keyFunc func(*http.Request) string
+	keyFunc keyfunc.HTTPKeyFunc
 }
 
 // New returns an object that supports HTTP metrics
@@ -88,7 +89,7 @@ func (h *HTTPMetrics) Handler(next http.Handler, options ...func(*HTTPMetrics)) 
 		option(h)
 	}
 	// Users need to be able to send metrics to specific counting keys
-	wm.keyFunc = h.KeyFunc
+	wm.keyFunc = h.keyFunc
 	return wm
 }
 
@@ -110,13 +111,11 @@ func (wm wrappedMetrics) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		req.Header.Add(headers.RequestIDHeader, requestID)
 	}
 
-	var key string
 	if wm.keyFunc == nil {
-		// This is the default keyFunc
-		key = req.URL.EscapedPath()
-	} else {
-		key = wm.keyFunc(req)
+		wm.keyFunc = keyfunc.DefaultHTTPKeyFunc
 	}
+	key := wm.keyFunc(req)
+
 	wm.h.metricsChan <- subject.MetricsEvent{
 		EventType: "rpc.InHeader",
 		Transport: transport,

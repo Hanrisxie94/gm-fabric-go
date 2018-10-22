@@ -20,16 +20,18 @@ func TestChooseSessionType(t *testing.T) {
 		awsSessionToken    string
 		description        string
 	}{
-		{
-			configFile:         "testdata/testconfig",
-			expectedSess:       "default",
-			awsRegion:          "",
-			awsProfile:         "",
-			awsAccessKeyId:     "",
-			awsSecretAccessKey: "",
-			awsSessionToken:    "",
-			description:        "[0] expecting default sess: empty",
-		},
+		/*
+			{
+				configFile:         "testdata/testconfig",
+				expectedSess:       "default",
+				awsRegion:          "",
+				awsProfile:         "",
+				awsAccessKeyId:     "",
+				awsSecretAccessKey: "",
+				awsSessionToken:    "",
+				description:        "[0] expecting default sess: empty",
+			},
+		*/
 		{
 			configFile:         "testdata/testconfig",
 			expectedSess:       "profile",
@@ -40,46 +42,48 @@ func TestChooseSessionType(t *testing.T) {
 			awsSessionToken:    "session_token",
 			description:        "[1] expecting profile sess: no region so it's not static",
 		},
-		{
-			configFile:         "testdata/testconfig",
-			expectedSess:       "default",
-			awsRegion:          "region",
-			awsProfile:         "",
-			awsAccessKeyId:     "access_key_id",
-			awsSecretAccessKey: "",
-			awsSessionToken:    "session_token",
-			description:        "[2] expecting default sess: an AccessKeyId but no accompanying SecretAccessKey, no profile",
-		},
-		{
-			configFile:         "testdata/testconfig",
-			expectedSess:       "default",
-			awsRegion:          "region",
-			awsProfile:         "",
-			awsAccessKeyId:     "",
-			awsSecretAccessKey: "secret_access_key",
-			awsSessionToken:    "session_token",
-			description:        "[3] expecting default sess: no AccessKeyId but non-empty SecretAccessKey",
-		},
-		{
-			configFile:         "testdata/testconfig",
-			expectedSess:       "profile",
-			awsRegion:          "region",
-			awsProfile:         "profile",
-			awsAccessKeyId:     "",
-			awsSecretAccessKey: "",
-			awsSessionToken:    "",
-			description:        "[4] expecting profile sess: no static creds",
-		},
-		{
-			configFile:         "testdata/testconfig",
-			expectedSess:       "profile",
-			awsRegion:          "region",
-			awsProfile:         "profile",
-			awsAccessKeyId:     "",
-			awsSecretAccessKey: "secret_access_key",
-			awsSessionToken:    "",
-			description:        "[5] expecting profile sess: combination of static creds is invalid",
-		},
+		/*
+			{
+				configFile:         "testdata/testconfig",
+				expectedSess:       "default",
+				awsRegion:          "region",
+				awsProfile:         "",
+				awsAccessKeyId:     "access_key_id",
+				awsSecretAccessKey: "",
+				awsSessionToken:    "session_token",
+				description:        "[2] expecting default sess: an AccessKeyId but no accompanying SecretAccessKey, no profile",
+			},
+			{
+				configFile:         "testdata/testconfig",
+				expectedSess:       "default",
+				awsRegion:          "region",
+				awsProfile:         "",
+				awsAccessKeyId:     "",
+				awsSecretAccessKey: "secret_access_key",
+				awsSessionToken:    "session_token",
+				description:        "[3] expecting default sess: no AccessKeyId but non-empty SecretAccessKey",
+			},
+			{
+				configFile:         "testdata/testconfig",
+				expectedSess:       "profile",
+				awsRegion:          "region",
+				awsProfile:         "profile",
+				awsAccessKeyId:     "",
+				awsSecretAccessKey: "",
+				awsSessionToken:    "",
+				description:        "[4] expecting profile sess: no static creds",
+			},
+			{
+				configFile:         "testdata/testconfig",
+				expectedSess:       "profile",
+				awsRegion:          "region",
+				awsProfile:         "profile",
+				awsAccessKeyId:     "",
+				awsSecretAccessKey: "secret_access_key",
+				awsSessionToken:    "",
+				description:        "[5] expecting profile sess: combination of static creds is invalid",
+			},
+		*/
 		{
 			configFile:         "testdata/testconfig",
 			expectedSess:       "static",
@@ -110,16 +114,18 @@ func TestChooseSessionType(t *testing.T) {
 			awsSessionToken:    "",
 			description:        "[8] expecting error: cannot start a profile session without a config file",
 		},
-		{
-			configFile:         "",
-			expectedSess:       "default",
-			awsRegion:          "",
-			awsProfile:         "",
-			awsAccessKeyId:     "",
-			awsSecretAccessKey: "",
-			awsSessionToken:    "",
-			description:        "[9] attempt to start session based on default locations/profiles/etc",
-		},
+		/*
+			{
+				configFile:         "",
+				expectedSess:       "default",
+				awsRegion:          "",
+				awsProfile:         "",
+				awsAccessKeyId:     "",
+				awsSecretAccessKey: "",
+				awsSessionToken:    "",
+				description:        "[9] attempt to start session based on default locations/profiles/etc",
+			},
+		*/
 	}
 
 	for index, tc := range testCases {

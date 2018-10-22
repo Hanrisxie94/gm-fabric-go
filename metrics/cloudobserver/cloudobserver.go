@@ -94,15 +94,6 @@ func NewDim(name string, value string) *cloudwatch.Dimension {
 	return dim
 }
 
-// A helper function for appending all given dimensions into a list
-func CloudDimensions(dims ...*cloudwatch.Dimension) []*cloudwatch.Dimension {
-	var dimensions []*cloudwatch.Dimension
-	for _, dim := range dims {
-		dimensions = append(dimensions, dim)
-	}
-	return dimensions
-}
-
 // This is a helper function for parsing a string of dimensions.
 // After checking that the string is in a parsable pattern with CheckDimStringIntegrity,
 // the function gleans dimension names and values from that string
@@ -116,15 +107,16 @@ func ParseDimsFromString(dims string) ([]*cloudwatch.Dimension, error) {
 
 	matched := CheckDimStringIntegrity(dims)
 	if matched == false && dims != "" {
-		err := errors.New("regex pattern matching error")
-		errors.Wrap(err, "The given dimensions string is not formatted correctly and can't be processed.  CloudWatch metrics reporting will be aborted.")
-		return dimensions, err
+		return nil, errors.Errorf("The given dimensions string is not formatted correctly and can't be processed.  CloudWatch metrics reporting will be aborted.")
 	}
 
 	divideByComma := strings.Split(dims, ",")
 	for _, dim := range divideByComma {
 		dim = strings.TrimSpace(dim)
 		divideByColon := strings.Split(dim, ":")
+		if len(divideByColon) < 2 {
+			return nil, errors.Errorf("Invalid format for divideByColon: '%s'", dim)
+		}
 		dimName := strings.TrimSpace(divideByColon[0])
 		dimVal := strings.TrimSpace(divideByColon[1])
 		cwDim := NewDim(dimName, dimVal)
@@ -146,18 +138,19 @@ func CheckDimStringIntegrity(dims string) bool {
 	return validPattern.MatchString(dims)
 }
 
-// A helper function for ClientValidity to ignore parameter errors.
-func handlerErr(r *request.Request) error {
-	if r.Error != nil && strings.Contains(r.Error.Error(), "InvalidParameterCombination") == false {
-		return r.Error
-	}
-	return nil
-}
-
 // A helper function to retry running handlers.
-func handlerRetry(r *request.Request) {
+func handlerRetry(r *request.Request) error {
 	r.Handlers.Retry.Run(r)
+	if r.Error != nil {
+		return errors.Wrap(r.Error, "r.Handlers.Retry.Run")
+	}
+
 	r.Handlers.AfterRetry.Run(r)
+	if r.Error != nil {
+		return errors.Wrap(r.Error, "r.Handlers.AfterRetry.Run")
+	}
+
+	return nil
 }
 
 // A function that checks if the cloudwatch client is valid by mimicing the act
@@ -174,35 +167,47 @@ func ClientValidity(c *cloudwatch.CloudWatch) error {
 	// A series of actions that might lead to a potential error message.
 	// from r.Build()
 	r.Handlers.Validate.Run(r)
-	err := handlerErr(r)
+	if r.Error != nil {
+		return errors.Wrap(r.Error, "r.Handlers.Validate.Run")
+	}
+
 	r.Handlers.Build.Run(r)
-	err = handlerErr(r)
+	if r.Error != nil {
+		return errors.Wrap(r.Error, "r.Handlers.Build.Run")
+	}
 
-	// from r.Sign()
 	r.Handlers.Sign.Run(r)
-	err = handlerErr(r)
+	if r.Error != nil {
+		return errors.Wrap(r.Error, "r.Handlers.Sign.Run")
+	}
 
-	// from r.Send()
 	r.Handlers.Send.Run(r)
 	if r.Error != nil {
-		handlerRetry(r)
-		err = handlerErr(r)
+		if err := handlerRetry(r); err != nil {
+			return errors.Wrap(r.Error, "r.Handlers.Send.Run")
+		}
 	}
 
 	r.Handlers.UnmarshalMeta.Run(r)
-	err = handlerErr(r)
+	if r.Error != nil {
+		return errors.Wrap(r.Error, "r.Handlers.UnmarshalMeta.Run")
+	}
+
 	r.Handlers.ValidateResponse.Run(r)
 	if r.Error != nil {
-		r.Handlers.UnmarshalError.Run(r)
-		handlerRetry(r)
-		err = handlerErr(r)
+		if err := handlerRetry(r); err != nil {
+			return errors.Wrap(r.Error, "r.Handlers.ValidateResponse.Run")
+		}
 	}
+
 	r.Handlers.Unmarshal.Run(r)
 	if r.Error != nil {
-		handlerRetry(r)
-		err = handlerErr(r)
+		if err := handlerRetry(r); err != nil {
+			return errors.Wrap(r.Error, "r.Handlers.Unmarshal.Run")
+		}
 	}
-	return err
+
+	return nil
 }
 
 // A helper function to choose a non default method of AWS session connection
@@ -215,30 +220,40 @@ func ClientValidity(c *cloudwatch.CloudWatch) error {
 // Along with an actual session, the function will return a string tag
 // that indicates what type of session was created ("default"", "static", or "profile")
 // and an error message if applicable.
-func ChooseSessionType(awsRegion string, awsProfile string, staticCreds *credentials.Credentials, validRegions []string) (*session.Session, string, error) {
+func ChooseSessionType(
+	awsRegion string,
+	awsProfile string,
+	staticCreds *credentials.Credentials,
+	validRegions []string,
+) (*session.Session, string, error) {
 	awsRegion, awsProfile, sess, sessType := presetValues(awsRegion, awsProfile)
 	st := sessAndType{sess: sess, sessType: sessType}
 
 	st, err, cont := useStaticSess(staticCreds, st, awsRegion, validRegions)
-	if cont != true {
-		return st.sess, st.sessType, err
+	if !cont {
+		if err != nil {
+			return nil, "", errors.Wrap(err, "useStaticSess")
+		}
+		return st.sess, st.sessType, nil
 	}
 
 	st, err, cont = tryConfigSess(st, awsProfile, awsRegion, validRegions)
-	if cont != true {
-		return st.sess, st.sessType, err
+	if !cont {
+		if err != nil {
+			return nil, "", errors.Wrap(err, "tryConfigSess")
+		}
+		return st.sess, st.sessType, nil
 	}
 
 	st, err, cont = noConfigExplicitlySet(st, awsProfile)
-	if cont != true {
-		return st.sess, st.sessType, err
+	if !cont {
+		if err != nil {
+			return nil, "", errors.Wrap(err, "noConfigExplicitlySet")
+		}
+		return st.sess, st.sessType, nil
 	}
 
-	err = errors.Wrap(
-		errors.New("Could not start AWS session based on combination of variables given."),
-		"Provide a valid combination of 'AWS_ ' environment variables.",
-	)
-	return sess, "", err
+	return nil, "", errors.Errorf("Could not start AWS session based on combination of variables given.")
 }
 
 func noConfigExplicitlySet(st sessAndType, awsProfile string) (sessAndType, error, bool) {
@@ -262,8 +277,11 @@ func tryConfigSess(st sessAndType, awsProfile string, awsRegion string, validReg
 				Profile: awsProfile,
 			}))
 			sessType, err := ValidRegion(awsRegion, validRegions, sessType)
+			if err != nil {
+				return sessAndType{}, errors.Wrap(err, "ValidRegion"), false
+			}
 			st := sessAndType{sess: sess, sessType: sessType}
-			return st, err, false
+			return st, nil, false
 		}
 		sess := session.Must(session.NewSessionWithOptions(session.Options{
 			SharedConfigState: session.SharedConfigEnable,
@@ -276,11 +294,15 @@ func tryConfigSess(st sessAndType, awsProfile string, awsRegion string, validReg
 	return st, nil, false
 }
 
-func useStaticSess(staticCreds *credentials.Credentials, st sessAndType, awsRegion string, validRegions []string) (sessAndType, error, bool) {
+func useStaticSess(
+	staticCreds *credentials.Credentials,
+	st sessAndType,
+	awsRegion string,
+	validRegions []string,
+) (sessAndType, error, bool) {
 	creds, err := staticCreds.Get()
 	if err != nil {
-		errors.Wrap(err, "The static credential variables (the AWS access key id, AWS secret access key, and AWS session token) were not set correctly.")
-		return st, err, true
+		return sessAndType{}, errors.Wrap(err, "The static credential variables (the AWS access key id, AWS secret access key, and AWS session token) were not set correctly."), false
 	}
 	if len(awsRegion) != 0 && len(creds.AccessKeyID) != 0 && len(creds.SecretAccessKey) != 0 {
 		sess := session.New(&aws.Config{
@@ -288,10 +310,13 @@ func useStaticSess(staticCreds *credentials.Credentials, st sessAndType, awsRegi
 			Credentials: staticCreds,
 		})
 		sessType, err := ValidRegion(awsRegion, validRegions, "static")
+		if err != nil {
+			return sessAndType{}, errors.Wrap(err, "ValidRegion"), false
+		}
 		st := sessAndType{sess: sess, sessType: sessType}
-		return st, err, false
+		return st, nil, false
 	}
-	return st, err, true
+	return st, nil, true
 }
 
 func presetValues(awsRegion string, awsProfile string) (string, string, *session.Session, string) {
@@ -322,22 +347,17 @@ func CreateStaticCreds(awsAccessKeyId string, awsSecretAccessKey string, awsSess
 
 // A helper function for creating an AWS session that will check if the provided region is valid.
 func ValidRegion(inputRegion string, validRegions []string, sessType string) (string, error) {
-	err := errors.New("No region provided.")
-	if len(inputRegion) != 0 {
-		for _, region := range validRegions {
-			if strings.ToLower(region) == strings.ToLower(inputRegion) {
-				return sessType, nil
-			}
-		}
-		err = errors.Wrap(
-			errors.New("Input region does not match any AWS regions allowed for this operation."),
-			"Check the spelling of the input region",
-		)
-		return "", err
+	if len(inputRegion) == 0 {
+		return "", errors.Errorf("No region provided.")
 	}
 
-	errors.Wrap(err, "A valid region must be specified to connect to AWS CloudWatch.")
-	return "", err
+	for _, region := range validRegions {
+		if strings.ToLower(region) == strings.ToLower(inputRegion) {
+			return sessType, nil
+		}
+	}
+
+	return "", errors.Errorf("Input region does not match any AWS regions allowed for this operation.")
 }
 
 // New returns an observer that feeds the go-metrics sink.
@@ -347,7 +367,7 @@ func New(reportInterval time.Duration, setters ...CloudOption) subject.Observer 
 		CWSess:     cloudwatch.New(session.Must(session.NewSessionWithOptions(session.Options{SharedConfigState: session.SharedConfigEnable}))),
 		GRPC:       grpcobserver.New(2048),
 		Metrics:    []string{""},
-		Dimensions: CloudDimensions(NewDim("ServiceName", "default")),
+		Dimensions: []*cloudwatch.Dimension{NewDim("ServiceName", "default")},
 		Namespace:  "Default",
 	}
 
@@ -433,7 +453,7 @@ func (co *cloudObs) putMetric(MetricName string, Value float64, Unit string) err
 		},
 	})
 	if err != nil {
-		return errors.Wrap(err, err.Error())
+		return errors.Wrap(err, "PutMetricData")
 	}
 	return nil
 }
