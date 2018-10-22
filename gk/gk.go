@@ -237,13 +237,14 @@ create:
 			// the ephemeral nodes will continue to exist.
 			// On the other hand, if the session expires, we need to recreate the
 			// node.
-			if ev.Err != nil {
+			switch {
+			case ev.Err != nil:
 				logger.Error().AnErr("Gatekeeper announcement", err).Msg("")
 				return true
-			} else if ev.State == zk.StateExpired {
+			case ev.State == zk.StateExpired:
 				logger.Info().Msg("Gatekeeper announcement expired")
 				expired = true
-			} else if expired && ev.State == zk.StateHasSession {
+			case expired && ev.State == zk.StateHasSession:
 				logger.Info().Msg("Re-announcing service")
 				goto create
 			}
