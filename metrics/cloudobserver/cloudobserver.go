@@ -7,12 +7,11 @@ import (
 	"os"
 	"regexp"
 	"strings"
-	"sync"
 	"time"
 
-	"github.com/deciphernow/gm-fabric-go/metrics/grabmetrics"
+	"github.com/rs/zerolog"
+
 	"github.com/deciphernow/gm-fabric-go/metrics/grpcobserver"
-	"github.com/deciphernow/gm-fabric-go/metrics/subject"
 	"github.com/pkg/errors"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -22,62 +21,16 @@ import (
 	"github.com/aws/aws-sdk-go/service/cloudwatch"
 )
 
-// function options struct
-type CloudOptions struct {
-	sync.Mutex
-	CWSess     *cloudwatch.CloudWatch
-	GRPC       *grpcobserver.GRPCObserver
-	Metrics    []string
-	Dimensions []*cloudwatch.Dimension
-	Namespace  string
-}
-
-// a single option of the CloudOptions struct
-type CloudOption func(*CloudOptions)
-
-// the CWSess option of CloudOptions
-func CWSess(cwsess *cloudwatch.CloudWatch) CloudOption {
-	return func(args *CloudOptions) {
-		args.CWSess = cwsess
-	}
-}
-
-// the GRPC option of CloudOptions
-func GRPC(grpc *grpcobserver.GRPCObserver) CloudOption {
-	return func(args *CloudOptions) {
-		args.GRPC = grpc
-	}
-}
-
-// the Metris option of CloudOptions
-func Metrics(metrics []string) CloudOption {
-	return func(args *CloudOptions) {
-		args.Metrics = metrics
-	}
-}
-
-// the Dimensions option of CloudOptions
-func Dimensions(dimensions []*cloudwatch.Dimension) CloudOption {
-	return func(args *CloudOptions) {
-		args.Dimensions = dimensions
-	}
-}
-
-// the Namespace option of CloudOptions
-func Namespace(namespace string) CloudOption {
-	return func(args *CloudOptions) {
-		args.Namespace = namespace
-	}
-}
-
-// The cloudObs struct can be used to define the AWS namespace and dimensions under which the defined metrics will reside
-type cloudObs struct {
-	sync.Mutex
-	cwsess     *cloudwatch.CloudWatch
-	grpc       *grpcobserver.GRPCObserver
-	metrics    []string
-	dimensions []*cloudwatch.Dimension
-	namespace  string
+// The CWReporter struct can be used to define the AWS namespace and dimensions under which the defined metrics will reside
+type CWReporter struct {
+	CWClient     *cloudwatch.CloudWatch
+	Getter       grpcobserver.LatencyStatsGetter
+	Dimensions   []*cloudwatch.Dimension
+	Namespace    string
+	Logger       zerolog.Logger
+	routesRegexp *regexp.Regexp
+	datumFuncs   []datumFuncType
+	Debug        bool
 }
 
 type sessAndType struct {
@@ -148,63 +101,6 @@ func handlerRetry(r *request.Request) error {
 	r.Handlers.AfterRetry.Run(r)
 	if r.Error != nil {
 		return errors.Wrap(r.Error, "r.Handlers.AfterRetry.Run")
-	}
-
-	return nil
-}
-
-// A function that checks if the cloudwatch client is valid by mimicing the act
-// of inserting a metric into a test namespace (should not actually do anything).
-// If not nil, the cloudwatch code should not continue.
-// Leverages the fact that AWS prioritizes credential errors over invalid parameter errors.
-func ClientValidity(c *cloudwatch.CloudWatch) error {
-	namespace := "test/EC2"
-	mn := "testing"
-	test := []*cloudwatch.MetricDatum{&cloudwatch.MetricDatum{MetricName: &mn, Value: nil}}
-	input := &cloudwatch.PutMetricDataInput{MetricData: test, Namespace: &namespace}
-	r, _ := c.PutMetricDataRequest(input)
-
-	// A series of actions that might lead to a potential error message.
-	// from r.Build()
-	r.Handlers.Validate.Run(r)
-	if r.Error != nil {
-		return errors.Wrap(r.Error, "r.Handlers.Validate.Run")
-	}
-
-	r.Handlers.Build.Run(r)
-	if r.Error != nil {
-		return errors.Wrap(r.Error, "r.Handlers.Build.Run")
-	}
-
-	r.Handlers.Sign.Run(r)
-	if r.Error != nil {
-		return errors.Wrap(r.Error, "r.Handlers.Sign.Run")
-	}
-
-	r.Handlers.Send.Run(r)
-	if r.Error != nil {
-		if err := handlerRetry(r); err != nil {
-			return errors.Wrap(r.Error, "r.Handlers.Send.Run")
-		}
-	}
-
-	r.Handlers.UnmarshalMeta.Run(r)
-	if r.Error != nil {
-		return errors.Wrap(r.Error, "r.Handlers.UnmarshalMeta.Run")
-	}
-
-	r.Handlers.ValidateResponse.Run(r)
-	if r.Error != nil {
-		if err := handlerRetry(r); err != nil {
-			return errors.Wrap(r.Error, "r.Handlers.ValidateResponse.Run")
-		}
-	}
-
-	r.Handlers.Unmarshal.Run(r)
-	if r.Error != nil {
-		if err := handlerRetry(r); err != nil {
-			return errors.Wrap(r.Error, "r.Handlers.Unmarshal.Run")
-		}
 	}
 
 	return nil
@@ -360,100 +256,290 @@ func ValidRegion(inputRegion string, validRegions []string, sessType string) (st
 	return "", errors.Errorf("Input region does not match any AWS regions allowed for this operation.")
 }
 
-// New returns an observer that feeds the go-metrics sink.
-func New(reportInterval time.Duration, setters ...CloudOption) subject.Observer {
-	// default options
-	args := &CloudOptions{
-		CWSess:     cloudwatch.New(session.Must(session.NewSessionWithOptions(session.Options{SharedConfigState: session.SharedConfigEnable}))),
-		GRPC:       grpcobserver.New(2048),
-		Metrics:    []string{""},
-		Dimensions: []*cloudwatch.Dimension{NewDim("ServiceName", "default")},
-		Namespace:  "Default",
+// New returns an object that can send metrics to AWS CloudWatch.
+func New(
+	cwReporter CWReporter,
+	routes string,
+	values string,
+) (*CWReporter, error) {
+	var err error
+
+	cwReporter.Logger.Debug().
+		Str("namespace", cwReporter.Namespace).
+		Str("routes", routes).
+		Str("values", values).
+		Bool("debug", cwReporter.Debug).
+		Msg("cloudobserver.New")
+
+	cwReporter.routesRegexp, err = regexp.Compile(routes)
+	if err != nil {
+		return nil, errors.Wrapf(err, "regexp.Compile(%s) failed", routes)
 	}
 
-	for _, setter := range setters {
-		setter(args)
+	// create a slice of normalized keys to datumFuncMap
+	rawDatumKeys := strings.Split(values, ",")
+	var datumKeys []string
+	for _, rawDatumKey := range rawDatumKeys {
+		datumKey := strings.TrimSpace(rawDatumKey)
+		datumKey = strings.ToLower(datumKey)
+		if datumKey == "" {
+			continue
+		}
+		datumKeys = append(datumKeys, datumKey)
+	}
+	if len(datumKeys) == 0 {
+		return nil, errors.Errorf("No CW data values specified '%v'", values)
 	}
 
-	obs := cloudObs{
-		cwsess:     args.CWSess,
-		grpc:       args.GRPC,
-		metrics:    args.Metrics,
-		dimensions: args.Dimensions,
-		namespace:  args.Namespace,
+	// fill the slice of active data values with data funcs
+	cwReporter.datumFuncs = make([]datumFuncType, len(datumKeys))
+	for i := 0; i < len(datumKeys); i++ {
+		datumFunc, ok := datumFuncMap[datumKeys[i]]
+		if !ok {
+			return nil, errors.Errorf("unknown value requested '%v' from '%v'",
+				datumKeys[i], values)
+		}
+		cwReporter.datumFuncs[i] = datumFunc
 	}
 
-	go obs.AwsMetrics(reportInterval)
-	return &obs
+	return &cwReporter, nil
 }
 
-// Observe implements the Observer pattern
-func (co *cloudObs) Observe(event subject.MetricsEvent) {
-	co.Lock()
-	defer co.Unlock()
-}
-
-// AWSMetrics will add defined metrics to AWS CloudWatch at the given interval
-func (co *cloudObs) AwsMetrics(reportInterval time.Duration) {
+// ReportToCloudWatch will report metrics to AWS CloudWatch at the given interval
+func (co *CWReporter) ReportToCloudWatch(reportInterval time.Duration) {
+	co.Logger.Debug().Msgf("ReportToCloudWatch: interval %s", reportInterval)
 	tickChan := time.Tick(reportInterval)
 	for {
 		<-tickChan
-		co.AddAWSMetrics()
+		if err := co.AddAWSMetrics(); err != nil {
+			co.Logger.Error().AnErr("AddAWSMetrics", err).Msg("")
+			continue
+		}
+		/*
+			if co.Debug {
+				if err := co.ListAWSMetrics(); err != nil {
+					co.Logger.Error().AnErr("ListAWSMetrics", err).Msg("")
+				}
+			}
+		*/
 	}
 }
 
 // AddAWSMetrics handles the actual push of the metric up to cloudwatch.
-func (co *cloudObs) AddAWSMetrics() {
-	co.Lock()
-	defer co.Unlock()
-	for _, name := range co.metrics {
-		if name != "" {
-			err := errors.New("")
-			switch {
-			case name == "system/memory/used_percent":
-				err = co.putMetric(name, grabmetrics.MemUsedPercentVal(), "Percent")
+func (co *CWReporter) AddAWSMetrics() error {
+	stats, err := co.Getter.GetLatencyStats()
+	if err != nil {
+		return errors.Wrap(err, "GetLatencyStats()")
+	}
 
-			case name == "all/errors.count":
-				err = co.putMetric(name, grabmetrics.ErrorsCountVal(co.grpc), "Count")
+KEY_LOOP:
+	for key := range stats {
 
-			case name == "all/in_throughput":
-				err = co.putMetric(name, grabmetrics.InThroughputVal(co.grpc), "Count")
-
-			case name == "all/latency_ms.p50":
-				err = co.putMetric(name, grabmetrics.LatencyP50Val(co.grpc), "Count")
-
-			case name == "all/latency_ms.p95":
-				err = co.putMetric(name, grabmetrics.LatencyP95Val(co.grpc), "Count")
-
-			case name == "Total/requests":
-				err = co.putMetric(name, grabmetrics.TotalRequestsVal(co.grpc), "Count")
-
-			default:
-				fmt.Println(name, "is not currently handled as a gm-fabric-go cloudwatch metric.  Skipping to the next one.")
+		if !co.routesRegexp.MatchString(key) {
+			if co.Debug {
+				co.Logger.Debug().Str("route", key).Msg("rejected: no match")
 			}
+			continue KEY_LOOP
+		}
 
-			if err != nil {
-				fmt.Println("Cloudwatch Reporting Error", err)
+		timestamp := time.Now()
+
+		if co.Debug {
+			co.Logger.Debug().
+				Str("key", key).
+				Time("timestamp", timestamp).
+				Float64("latency_ms.avg", stats[key].Avg).
+				Float64("latency_ms.count", float64(stats[key].Count)).
+				Float64("latency_ms.max", float64(stats[key].Max)).
+				Float64("latency_ms.min", float64(stats[key].Min)).
+				Float64("latency_ms.sum", float64(stats[key].Sum)).
+				Float64("latency_ms.p50", float64(stats[key].P50)).
+				Float64("latency_ms.p90", float64(stats[key].P90)).
+				Float64("latency_ms.p95", float64(stats[key].P95)).
+				Float64("latency_ms.p99", float64(stats[key].P99)).
+				Float64("latency_ms.p9990", float64(stats[key].P9990)).
+				Float64("latency_ms.p9999", float64(stats[key].P9999)).
+				Float64("errors.count", float64(stats[key].Errors)).
+				Float64("in_throughput", float64(stats[key].InThroughput)).
+				Float64("out_throughput", float64(stats[key].OutThroughput)).
+				Msg("AddAWSMetrics")
+		}
+
+		metricData := make([]*cloudwatch.MetricDatum, len(co.datumFuncs))
+		for i := 0; i < len(co.datumFuncs); i++ {
+			datum := co.datumFuncs[i](stats, co.Dimensions, key, timestamp)
+			if err := datum.Validate(); err != nil {
+				return errors.Wrapf(err, "datum %d invalid %s", i+1, datum.String())
 			}
+			metricData[i] = datum
+		}
+
+		output, err := co.CWClient.PutMetricData(
+			&cloudwatch.PutMetricDataInput{
+				Namespace:  aws.String(co.Namespace),
+				MetricData: metricData,
+			},
+		)
+		if err != nil {
+			return errors.Wrap(err, "PutMetricData")
+		}
+		if co.Debug {
+			co.Logger.Debug().Str("metric-output", output.String()).Msg("PutMetricData")
 		}
 	}
+
+	return nil
 }
 
-// putMetric is an abstraction of AWS's PutMetricData and does the work of sending a single metric value to AWS CloudWatch
-func (co *cloudObs) putMetric(MetricName string, Value float64, Unit string) error {
-	_, err := co.cwsess.PutMetricData(&cloudwatch.PutMetricDataInput{
-		Namespace: aws.String(co.namespace),
-		MetricData: []*cloudwatch.MetricDatum{
-			&cloudwatch.MetricDatum{
-				MetricName: aws.String(MetricName),
-				Unit:       aws.String(Unit),
-				Value:      aws.Float64(Value),
-				Dimensions: co.dimensions,
-			},
+// ListAWSMetrics lists available metrics for debugging
+func (co *CWReporter) ListAWSMetrics() error {
+	output, err := co.CWClient.ListMetrics(
+		&cloudwatch.ListMetricsInput{
+			// Dimensions: co.Dimensions,
+			// MetricName: aws.String(fmt.Sprintf("%s/%s", testKey, "latency_ms.avg")),
+			Namespace: aws.String(co.Namespace),
 		},
-	})
+	)
 	if err != nil {
-		return errors.Wrap(err, "PutMetricData")
+		return errors.Wrap(err, "ListMetricData")
 	}
+	co.Logger.Debug().Str("metric-output", output.String()).Msg("ListMetricData")
+	fmt.Println(output.String())
+
+	return nil
+}
+
+// GetAWSMetrics retrieves metrics for debugging
+func (co *CWReporter) GetAWSMetrics() error {
+	endTime := time.Now().Add(-(time.Hour))
+	startTime := endTime.Add(-(time.Hour))
+	returnData := true
+	const testKey = "test_key"
+	metric := cloudwatch.Metric{
+		// The dimensions for the metric.
+		Dimensions: co.Dimensions,
+
+		// The name of the metric.
+		MetricName: aws.String(fmt.Sprintf("%s/%s", testKey, "latency_ms.avg")),
+
+		// The namespace of the metric.
+		Namespace: aws.String(co.Namespace),
+	}
+	period := int64(300)
+	stat := cloudwatch.MetricStat{
+
+		// The metric to return, including the metric name, namespace, and dimensions.
+		//
+		// Metric is a required field
+		Metric: &metric,
+
+		// The period to use when retrieving the metric.
+		//
+		// Period is a required field
+		Period: &period,
+
+		// The statistic to return. It can include any CloudWatch statistic or extended
+		// statistic.
+		//
+		// Stat is a required field
+		Stat: aws.String("Sum"),
+
+		// The unit to use for the returned data points.
+		Unit: aws.String("Milliseconds"),
+	}
+	query := cloudwatch.MetricDataQuery{
+
+		// The math expression to be performed on the returned data, if this structure
+		// is performing a math expression. For more information about metric math expressions,
+		// see Metric Math Syntax and Functions (http://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/using-metric-math.html#metric-math-syntax)
+		// in the Amazon CloudWatch User Guide.
+		//
+		// Within one MetricDataQuery structure, you must specify either Expression
+		// or MetricStat but not both.
+		Expression: nil,
+
+		// A short name used to tie this structure to the results in the response. This
+		// name must be unique within a single call to GetMetricData. If you are performing
+		// math expressions on this set of data, this name represents that data and
+		// can serve as a variable in the mathematical expression. The valid characters
+		// are letters, numbers, and underscore. The first character must be a lowercase
+		// letter.
+		//
+		// Id is a required field
+		Id: aws.String("test_query"),
+
+		// A human-readable label for this metric or expression. This is especially
+		// useful if this is an expression, so that you know what the value represents.
+		// If the metric or expression is shown in a CloudWatch dashboard widget, the
+		// label is shown. If Label is omitted, CloudWatch generates a default.
+		Label: nil,
+
+		// The metric to be returned, along with statistics, period, and units. Use
+		// this parameter only if this structure is performing a data retrieval and
+		// not performing a math expression on the returned data.
+		//
+		// Within one MetricDataQuery structure, you must specify either Expression
+		// or MetricStat but not both.
+		MetricStat: &stat,
+
+		// Indicates whether to return the time stamps and raw data values of this metric.
+		// If you are performing this call just to do math expressions and do not also
+		// need the raw data returned, you can specify False. If you omit this, the
+		// default of True is used.
+		ReturnData: &returnData,
+	}
+
+	output, err := co.CWClient.GetMetricData(
+		&cloudwatch.GetMetricDataInput{
+			// The time stamp indicating the latest data to be returned.
+			//
+			// For better performance, specify StartTime and EndTime values that align with
+			// the value of the metric's Period and sync up with the beginning and end of
+			// an hour. For example, if the Period of a metric is 5 minutes, specifying
+			// 12:05 or 12:30 as EndTime can get a faster response from CloudWatch then
+			// setting 12:07 or 12:29 as the EndTime.
+			//
+			// EndTime is a required field
+			EndTime: &endTime,
+
+			// The maximum number of data points the request should return before paginating.
+			// If you omit this, the default of 100,800 is used.
+			MaxDatapoints: nil,
+
+			// The metric queries to be returned. A single GetMetricData call can include
+			// as many as 100 MetricDataQuery structures. Each of these structures can specify
+			// either a metric to retrieve, or a math expression to perform on retrieved
+			// data.
+			//
+			// MetricDataQueries is a required field
+			MetricDataQueries: []*cloudwatch.MetricDataQuery{&query},
+
+			// Include this value, if it was returned by the previous call, to get the next
+			// set of data points.
+			NextToken: nil,
+
+			// The order in which data points should be returned. TimestampDescending returns
+			// the newest data first and paginates when the MaxDatapoints limit is reached.
+			// TimestampAscending returns the oldest data first and paginates when the MaxDatapoints
+			// limit is reached.
+			ScanBy: aws.String("TimestampDescending"),
+
+			// The time stamp indicating the earliest data to be returned.
+			//
+			// For better performance, specify StartTime and EndTime values that align with
+			// the value of the metric's Period and sync up with the beginning and end of
+			// an hour. For example, if the Period of a metric is 5 minutes, specifying
+			// 12:05 or 12:30 as StartTime can get a faster response from CloudWatch then
+			// setting 12:07 or 12:29 as the StartTime.
+			//
+			// StartTime is a required field
+			StartTime: &startTime,
+		},
+	)
+	if err != nil {
+		return errors.Wrap(err, "GetMetricData")
+	}
+	co.Logger.Debug().Str("metric-output", output.String()).Msg("GetMetricData")
+
 	return nil
 }
