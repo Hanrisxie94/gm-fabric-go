@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/rs/zerolog"
+	"github.com/spf13/viper"
 
 	"github.com/deciphernow/gm-fabric-go/metrics/grpcobserver"
 	"github.com/pkg/errors"
@@ -161,6 +162,10 @@ func noConfigExplicitlySet(st sessAndType, awsProfile string) (sessAndType, erro
 }
 
 func tryConfigSess(st sessAndType, awsProfile string, awsRegion string, validRegions []string) (sessAndType, error, bool) {
+	if os.Getenv("AWS_CONFIG_FILE") == "" && len(viper.GetString("aws_config_file")) != 0 {
+		os.Setenv("AWS_CONFIG_FILE", viper.GetString("aws_config_file"))
+		defer os.Unsetenv("AWS_CONFIG_FILE")
+	}
 	if len(os.Getenv("AWS_CONFIG_FILE")) == 0 {
 		return st, nil, true
 	}
@@ -198,7 +203,9 @@ func useStaticSess(
 ) (sessAndType, error, bool) {
 	creds, err := staticCreds.Get()
 	if err != nil {
-		return sessAndType{}, errors.Wrap(err, "The static credential variables (the AWS access key id, AWS secret access key, and AWS session token) were not set correctly."), false
+		// if we ge an error here, assume that it's because access keys are not given
+		// so just return true to try the next type
+		return st, nil, true
 	}
 	if len(awsRegion) != 0 && len(creds.AccessKeyID) != 0 && len(creds.SecretAccessKey) != 0 {
 		sess := session.New(&aws.Config{
