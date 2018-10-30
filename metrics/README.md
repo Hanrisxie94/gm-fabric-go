@@ -111,76 +111,55 @@ The metrics components must be set up in a specific order to satisfy dependencie
  ```JSON
  $ curl 127.0.0.1:10001/metrics
 {
-	"all/latency_ms.avg": 3196.968974,
-	"all/latency_ms.count": 419,
-	"all/latency_ms.max": 5389,
-	"all/latency_ms.min": 637,
-	"all/latency_ms.sum": 1339530,
-	"all/latency_ms.p50": 3261,
-	"all/latency_ms.p90": 4415,
-	"all/latency_ms.p95": 4722,
-	"all/latency_ms.p99": 5067,
-	"all/latency_ms.p9990": 5389,
-	"all/latency_ms.p9999": 5389,
-	"all/errors.count": 0,
-	"all/in_throughput": 43254,
-	"all/out_throughput": 47971,
-	"/metricstester.MetricsTester/CatalogStream/latency_ms.avg": 2973.338095,
-	"/metricstester.MetricsTester/CatalogStream/latency_ms.count": 210,
-	"/metricstester.MetricsTester/CatalogStream/latency_ms.max": 5171,
-	"/metricstester.MetricsTester/CatalogStream/latency_ms.min": 867,
-	"/metricstester.MetricsTester/CatalogStream/latency_ms.sum": 624401,
-	"/metricstester.MetricsTester/CatalogStream/latency_ms.p50": 2953,
-	"/metricstester.MetricsTester/CatalogStream/latency_ms.p90": 4062,
-	"/metricstester.MetricsTester/CatalogStream/latency_ms.p95": 4534,
-	"/metricstester.MetricsTester/CatalogStream/latency_ms.p99": 5025,
-	"/metricstester.MetricsTester/CatalogStream/latency_ms.p9990": 5171,
-	"/metricstester.MetricsTester/CatalogStream/latency_ms.p9999": 5171,
-	"/metricstester.MetricsTester/CatalogStream/errors.count": 0,
-	"/metricstester.MetricsTester/CatalogStream/in_throughput": 21414,
-	"/metricstester.MetricsTester/CatalogStream/out_throughput": 45672,
-	"/metricstester.MetricsTester/OrderItem/latency_ms.avg": 3421.669856,
-	"/metricstester.MetricsTester/OrderItem/latency_ms.count": 209,
-	"/metricstester.MetricsTester/OrderItem/latency_ms.max": 5389,
-	"/metricstester.MetricsTester/OrderItem/latency_ms.min": 637,
-	"/metricstester.MetricsTester/OrderItem/latency_ms.sum": 715129,
-	"/metricstester.MetricsTester/OrderItem/latency_ms.p50": 3570,
-	"/metricstester.MetricsTester/OrderItem/latency_ms.p90": 4610,
-	"/metricstester.MetricsTester/OrderItem/latency_ms.p95": 4825,
-	"/metricstester.MetricsTester/OrderItem/latency_ms.p99": 5067,
-	"/metricstester.MetricsTester/OrderItem/latency_ms.p9990": 5389,
-	"/metricstester.MetricsTester/OrderItem/latency_ms.p9999": 5389,
-	"/metricstester.MetricsTester/OrderItem/errors.count": 0,
-	"/metricstester.MetricsTester/OrderItem/in_throughput": 21840,
-	"/metricstester.MetricsTester/OrderItem/out_throughput": 2299
+	"grey-matter-metrics-version": "1.0.0",
+	"Total/requests": 8014,
+	"HTTP/requests": 8014,
+	"HTTPS/requests": 0,
+	"RPC/requests": 0,
+	"RPC_TLS/requests": 0,
+	"route/acme/services/catalog/GET/requests": 4007,
+	"route/acme/services/catalog/GET/routes": "",
+	"route/acme/services/catalog/GET/status/200": 4007,
+	"route/acme/services/catalog/GET/status/2XX": 4007,
+	"route/acme/services/catalog/GET/latency_ms.avg": 1264.595703,
+	"route/acme/services/catalog/GET/latency_ms.count": 512,
+	"route/acme/services/catalog/GET/latency_ms.max": 2215,
+	"route/acme/services/catalog/GET/latency_ms.min": 516,
+	"route/acme/services/catalog/GET/latency_ms.sum": 647473,
+	"route/acme/services/catalog/GET/latency_ms.p50": 1272,
+	"route/acme/services/catalog/GET/latency_ms.p90": 1862,
+	"route/acme/services/catalog/GET/latency_ms.p95": 1937,
+	"route/acme/services/catalog/GET/latency_ms.p99": 1983,
+	"route/acme/services/catalog/GET/latency_ms.p9990": 2215,
+	"route/acme/services/catalog/GET/latency_ms.p9999": 2215,
+	"route/acme/services/catalog/GET/errors.count": 0,
+	"route/acme/services/catalog/GET/in_throughput": 0,
+    "route/acme/services/catalog/GET/out_throughput": 299008,
 }
  ```
 
- go-metrics
- ```JSON    
- $ curl 127.0.0.1:20001/gometrics
-{
-	"(Gauge)/test-http-server/c7c1e60c6d8b/runtime/heap_objects": 15482.000000,
-	"(Gauge)/test-http-server/c7c1e60c6d8b/runtime/total_gc_pause_ns": 2753584.000000,
-	"(Gauge)/test-http-server/c7c1e60c6d8b/runtime/total_gc_runs": 22.000000,
-	"(Gauge)/test-http-server/c7c1e60c6d8b/runtime/num_goroutines": 10.000000,
-	"(Gauge)/test-http-server/c7c1e60c6d8b/runtime/alloc_bytes": 1945464.000000,
-	"(Gauge)/test-http-server/c7c1e60c6d8b/runtime/sys_bytes": 8427768.000000,
-	"(Gauge)/test-http-server/c7c1e60c6d8b/runtime/malloc_count": 277101.000000,
-	"(Gauge)/test-http-server/c7c1e60c6d8b/runtime/free_count": 261619.000000,
-	"(EmitKey)/test-http-server/httpserver/GET": 0.000000,
-	"(EmitKey)/test-http-server/httpserver/POST": 0.000000,
-	"(IncrCounter)/test-http-server/httpserver/orderItem/1002": 54.000000,
-	"(IncrCounter)/test-http-server/httpserver/orderItem/1008": 39.000000,
-	"(IncrCounter)/test-http-server/httpserver/orderItem/1003": 57.000000,
-	"(IncrCounter)/test-http-server/httpserver/orderItem/1005": 45.000000,
-	"(IncrCounter)/test-http-server/httpserver/orderItem/1006": 55.000000,
-	"(IncrCounter)/test-http-server/httpserver/orderItem/1001": 52.000000,
-	"(IncrCounter)/test-http-server/httpserver/orderItem/1004": 46.000000,
-	"(IncrCounter)/test-http-server/httpserver/sendCatalog": 410.000000,
-	"(IncrCounter)/test-http-server/httpserver/orderItem/1007": 61.000000,
-	"(AddSample)/test-http-server/httpserver/GetCatalog": 4463.704102,
-	"(AddSample)/test-http-server/httpserver/OrderItem": 3199.076172,
-	"(AddSample)/test-http-server/runtime/gc_pause_ns": 107059.000000
-}
- ```
+### Computation
+
+#### service gRPC
+
+See: https://godoc.org/google.golang.org/grpc/stats
+
+* Latency = time at rpc.End - time at rpc.Begin
+* In-throughput =  wirelength at rpc.InHeader + rpc.InPayload + rpc.InTrailer
+* Out-Throughput = wirelength at rpc.OutPayload + rpc.OutTrailer
+ 
+#### service HTTP
+
+See: https://golang.org/pkg/net/http/#Handler
+
+* Latency = time after ServeHTTP - time before
+* In-Throughput = size of request body
+* Out-throughput = size of response body
+
+#### gm-proxy HTTP
+
+See: https://github.com/DecipherNow/gm-proxy/blob/master/docs/CreatingYourFirstFilter.md
+
+* Latency =  time at OnDestroy - time at DecodeHeaders
+* In-Throughput = bytes passed through DecodeData
+* Out-throughput = bytes passed through EncodeData
