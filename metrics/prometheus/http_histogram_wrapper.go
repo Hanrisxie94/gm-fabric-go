@@ -21,8 +21,10 @@ import (
 
 	"github.com/rs/zerolog"
 
+	"github.com/deciphernow/gm-fabric-go/metrics/apistats"
 	"github.com/deciphernow/gm-fabric-go/metrics/httpmetrics"
 	"github.com/deciphernow/gm-fabric-go/metrics/keyfunc"
+	"github.com/deciphernow/gm-fabric-go/metrics/subject"
 )
 
 // HandlerState implments the httpHandler
@@ -72,29 +74,33 @@ func HTTPLoggerOption(logger zerolog.Logger) func(*HandlerState) {
 //      http_request_size_bytes
 //      http_response_size_bytes
 func (hState *HandlerState) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	var entry CollectorEntry
+	var entry apistats.APIStatsEntry
 
 	responseWriter := httpmetrics.CountWriter{Next: w}
 
 	requestReader := httpmetrics.CountReader{Next: req.Body}
 	req.Body = &requestReader
 
-	entry.StartTime = time.Now()
+	entry.BeginTime = time.Now()
 	hState.inner.ServeHTTP(&responseWriter, req)
 	entry.EndTime = time.Now()
 
-	entry.Key = hState.keyFunc(req)
+	rawKey := hState.keyFunc(req)
 
-	entry.Method = normalizeMethod(req.Method)
+	method := normalizeMethod(req.Method)
 
-	entry.Status = normalizeStatus(responseWriter.Status)
+	entry.HTTPStatus = normalizeStatus(responseWriter.Status)
 
-	entry.BytesRead = uint64(requestReader.BytesRead)
-	entry.BytesWritten = uint64(responseWriter.BytesWritten)
+	entry.InWireLength = int64(requestReader.BytesRead)
+	entry.OutWireLength = int64(responseWriter.BytesWritten)
 
-	entry.TLS = req.TLS != nil
+	if req.TLS != nil {
+		entry.Transport = subject.EventTransportHTTPS
+	} else {
+		entry.Transport = subject.EventTransportHTTP
+	}
 
-	if err := hState.collector.Collect(entry); err != nil {
+	if err := hState.collector.Collect(entry, rawKey, method); err != nil {
 		hState.logger.Error().Err(err).Msg("Collect")
 	}
 }

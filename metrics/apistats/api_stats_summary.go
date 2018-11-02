@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package grpcobserver
+package apistats
 
 // APIEndpointStats represents stats for a single endpoint, or the total for all
 type APIEndpointStats struct {
@@ -40,4 +40,14 @@ type APIEndpointStats struct {
 // This is intended to be marshalled to JSON for external reporting
 type APIStatsSummary struct {
 	APIStats map[string]APIEndpointStats `json:"api"`
+}
+
+// EndpointStatsGetter provides access to latency statistics
+type EndpointStatsGetter interface {
+
+	// GetEndpointStats returns a snapshot of the current statistics
+	GetEndpointStats() (map[string]APIEndpointStats, error)
+
+	// GetCumulativeCounts returns cumulative counts of events
+	GetCumulativeCounts() CumulativeCounts
 }

@@ -23,6 +23,7 @@ import (
 
 	gometrics "github.com/armon/go-metrics"
 
+	"github.com/deciphernow/gm-fabric-go/metrics/apistats"
 	"github.com/deciphernow/gm-fabric-go/metrics/grpcobserver"
 	"github.com/deciphernow/gm-fabric-go/metrics/memvalues"
 	"github.com/deciphernow/gm-fabric-go/metrics/subject"
@@ -39,7 +40,7 @@ func init() {
 }
 
 type activeEntry struct {
-	stats  grpcobserver.APIStats
+	stats  apistats.APIStatsEntry
 	tagMap map[string]string
 }
 

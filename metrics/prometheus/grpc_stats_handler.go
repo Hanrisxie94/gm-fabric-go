@@ -28,8 +28,16 @@ import (
 
 	"github.com/rs/zerolog"
 
+	"github.com/deciphernow/gm-fabric-go/metrics/apistats"
 	"github.com/deciphernow/gm-fabric-go/metrics/headers"
 )
+
+// StatsEntry contains the stats for one event
+type StatsEntry struct {
+	entry  apistats.APIStatsEntry
+	rawKey string
+	method string
+}
 
 // StatsHandler implements the stats.Handler interface
 // https://godoc.org/google.golang.org/grpc/stats#Handler
@@ -37,7 +45,7 @@ type StatsHandler struct {
 	sync.Mutex
 	Collector Collector
 	Logger    zerolog.Logger
-	StatsData map[string]CollectorEntry
+	StatsData map[string]StatsEntry
 }
 
 // GRPCLoggerOption returns a StatsHandler option function that sets the logger
@@ -53,7 +61,7 @@ func NewStatsHandler(options ...func(*StatsHandler)) (*StatsHandler, error) {
 	var s StatsHandler
 	var err error
 
-	s.StatsData = make(map[string]CollectorEntry)
+	s.StatsData = make(map[string]StatsEntry)
 	if s.Collector, err = NewCollector(); err != nil {
 		return nil, errors.Wrap(err, "NewCollector")
 	}
@@ -136,26 +144,27 @@ func (h *StatsHandler) HandleRPC(
 	switch st := s.(type) {
 	case *stats.InHeader:
 		// TODO: check for TLS
-		statsEntry.Method = "gRPC"
-		statsEntry.Key = constructKey(st.FullMethod)
-		statsEntry.BytesRead += uint64(st.WireLength)
+		statsEntry.method = "gRPC"
+		statsEntry.rawKey = constructKey(st.FullMethod)
+		statsEntry.entry.InWireLength += int64(st.WireLength)
 	case *stats.Begin:
-		statsEntry.StartTime = st.BeginTime
+		statsEntry.entry.BeginTime = st.BeginTime
 	case *stats.InPayload:
-		statsEntry.BytesRead += uint64(st.WireLength)
+		statsEntry.entry.InWireLength += int64(st.WireLength)
 	case *stats.InTrailer:
-		statsEntry.BytesRead += uint64(st.WireLength)
+		statsEntry.entry.InWireLength += int64(st.WireLength)
 	case *stats.OutPayload:
-		statsEntry.BytesWritten += uint64(st.WireLength)
+		statsEntry.entry.OutWireLength += int64(st.WireLength)
 	case *stats.OutTrailer:
-		statsEntry.BytesWritten += uint64(st.WireLength)
+		statsEntry.entry.OutWireLength += int64(st.WireLength)
 	case *stats.End:
-		statsEntry.EndTime = st.EndTime
+		statsEntry.entry.EndTime = st.EndTime
 		statsEnd = true
 	}
 
 	if statsEnd {
-		if err := h.Collector.Collect(statsEntry); err != nil {
+		err := h.Collector.Collect(statsEntry.entry, statsEntry.rawKey, statsEntry.method)
+		if err != nil {
 			h.Logger.Error().Err(err).Str("method", "HandleRPC").Msg("Collect")
 		}
 		delete(h.StatsData, requestID)

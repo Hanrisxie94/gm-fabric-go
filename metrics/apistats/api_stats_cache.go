@@ -12,27 +12,29 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package grpcobserver
+package apistats
 
-// apiCache is a circular queue of APIStats
-type apiStatsCache struct {
+// APIStatsCache is a circular queue of APIStats
+type APIStatsCache struct {
 	start      int
 	end        int
 	activeSize int
-	cache      []APIStats
+	cache      []APIStatsEntry
 }
 
-func newAPIStatsCache(size int) *apiStatsCache {
-	var ec apiStatsCache
-	ec.cache = make([]APIStats, size)
+func NewAPIStatsCache(size int) *APIStatsCache {
+	var ec APIStatsCache
+	ec.cache = make([]APIStatsEntry, size)
 	return &ec
 }
 
-func (ec *apiStatsCache) size() int {
+// Size returns a count of the active entries in the cache
+func (ec *APIStatsCache) Size() int {
 	return ec.activeSize
 }
 
-func (ec *apiStatsCache) store(entry APIStats) {
+// Store appends a new entry to the cache, writing over the oldest if necessary
+func (ec *APIStatsCache) Store(entry APIStatsEntry) {
 	if ec.activeSize < len(ec.cache) {
 		ec.activeSize++
 		ec.end = ec.activeSize - 1
@@ -44,10 +46,10 @@ func (ec *apiStatsCache) store(entry APIStats) {
 	}
 }
 
-// traverse iterates through the cache, pushing entries into the channel
+// Traverse iterates through the cache, pushing entries into the channel
 // they should return in the order they were stored (in order by BeginTime)
-func (ec *apiStatsCache) traverse() <-chan APIStats {
-	ch := make(chan APIStats)
+func (ec *APIStatsCache) Traverse() <-chan APIStatsEntry {
+	ch := make(chan APIStatsEntry)
 	go func() {
 		if ec.activeSize == 0 {
 			close(ch)

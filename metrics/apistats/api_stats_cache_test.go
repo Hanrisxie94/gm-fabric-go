@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package grpcobserver
+package apistats
 
 import (
 	"fmt"
@@ -21,9 +21,9 @@ import (
 
 func TestAPICache(t *testing.T) {
 	const size = 3
-	testEntries := make([]APIStats, 2*size)
+	testEntries := make([]APIStatsEntry, 2*size)
 	for i := 0; i < len(testEntries); i++ {
-		testEntries[i] = APIStats{Key: fmt.Sprintf("%03d", i)}
+		testEntries[i] = APIStatsEntry{Key: fmt.Sprintf("%03d", i)}
 	}
 	testCases := []struct {
 		storeIndex      int
@@ -62,9 +62,9 @@ func TestAPICache(t *testing.T) {
 		},
 	}
 
-	c := newAPIStatsCache(size)
-	if c.size() != 0 {
-		t.Fatalf("size: expected 0 found %d", c.size())
+	c := NewAPIStatsCache(size)
+	if c.Size() != 0 {
+		t.Fatalf("size: expected 0 found %d", c.Size())
 	}
 	content := getCacheContent(c)
 	if len(content) != 0 {
@@ -73,9 +73,9 @@ func TestAPICache(t *testing.T) {
 
 	for i, tc := range testCases {
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
-			c.store(testEntries[tc.storeIndex])
-			if c.size() != tc.expectedSize {
-				t.Fatalf("size: expected %d found %d", tc.expectedSize, c.size())
+			c.Store(testEntries[tc.storeIndex])
+			if c.Size() != tc.expectedSize {
+				t.Fatalf("size: expected %d found %d", tc.expectedSize, c.Size())
 			}
 			content = getCacheContent(c)
 			if len(content) != len(tc.expectedContent) {
@@ -93,9 +93,9 @@ func TestAPICache(t *testing.T) {
 
 }
 
-func getCacheContent(c *apiStatsCache) []APIStats {
-	var content []APIStats
-	for entry := range c.traverse() {
+func getCacheContent(c *APIStatsCache) []APIStatsEntry {
+	var content []APIStatsEntry
+	for entry := range c.Traverse() {
 		content = append(content, entry)
 	}
 

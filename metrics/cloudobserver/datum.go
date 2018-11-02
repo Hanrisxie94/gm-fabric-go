@@ -7,13 +7,13 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudwatch"
-	"github.com/deciphernow/gm-fabric-go/metrics/grpcobserver"
+	"github.com/deciphernow/gm-fabric-go/metrics/apistats"
 	"github.com/deciphernow/gm-fabric-go/metrics/memvalues"
 	"github.com/shirou/gopsutil/cpu"
 )
 
 type datumFuncType func(
-	stats map[string]grpcobserver.APIEndpointStats,
+	stats map[string]apistats.APIEndpointStats,
 	dimensions []*cloudwatch.Dimension,
 	key string,
 	timestamp time.Time,
@@ -43,7 +43,7 @@ var datumFuncMap = map[string]datumFuncType{
 }
 
 func latencyMSAvg(
-	stats map[string]grpcobserver.APIEndpointStats,
+	stats map[string]apistats.APIEndpointStats,
 	dimensions []*cloudwatch.Dimension,
 	key string,
 	timestamp time.Time,
@@ -58,7 +58,7 @@ func latencyMSAvg(
 }
 
 func latencyMSCount(
-	stats map[string]grpcobserver.APIEndpointStats,
+	stats map[string]apistats.APIEndpointStats,
 	dimensions []*cloudwatch.Dimension,
 	key string,
 	timestamp time.Time,
@@ -73,7 +73,7 @@ func latencyMSCount(
 }
 
 func latencyMSMax(
-	stats map[string]grpcobserver.APIEndpointStats,
+	stats map[string]apistats.APIEndpointStats,
 	dimensions []*cloudwatch.Dimension,
 	key string,
 	timestamp time.Time,
@@ -88,7 +88,7 @@ func latencyMSMax(
 }
 
 func latencyMSMin(
-	stats map[string]grpcobserver.APIEndpointStats,
+	stats map[string]apistats.APIEndpointStats,
 	dimensions []*cloudwatch.Dimension,
 	key string,
 	timestamp time.Time,
@@ -103,7 +103,7 @@ func latencyMSMin(
 }
 
 func latencyMSSum(
-	stats map[string]grpcobserver.APIEndpointStats,
+	stats map[string]apistats.APIEndpointStats,
 	dimensions []*cloudwatch.Dimension,
 	key string,
 	timestamp time.Time,
@@ -118,7 +118,7 @@ func latencyMSSum(
 }
 
 func latencyMSP50(
-	stats map[string]grpcobserver.APIEndpointStats,
+	stats map[string]apistats.APIEndpointStats,
 	dimensions []*cloudwatch.Dimension,
 	key string,
 	timestamp time.Time,
@@ -133,7 +133,7 @@ func latencyMSP50(
 }
 
 func latencyMSP90(
-	stats map[string]grpcobserver.APIEndpointStats,
+	stats map[string]apistats.APIEndpointStats,
 	dimensions []*cloudwatch.Dimension,
 	key string,
 	timestamp time.Time,
@@ -148,7 +148,7 @@ func latencyMSP90(
 }
 
 func latencyMSP95(
-	stats map[string]grpcobserver.APIEndpointStats,
+	stats map[string]apistats.APIEndpointStats,
 	dimensions []*cloudwatch.Dimension,
 	key string,
 	timestamp time.Time,
@@ -163,7 +163,7 @@ func latencyMSP95(
 }
 
 func latencyMSP99(
-	stats map[string]grpcobserver.APIEndpointStats,
+	stats map[string]apistats.APIEndpointStats,
 	dimensions []*cloudwatch.Dimension,
 	key string,
 	timestamp time.Time,
@@ -178,7 +178,7 @@ func latencyMSP99(
 }
 
 func latencyMSP9990(
-	stats map[string]grpcobserver.APIEndpointStats,
+	stats map[string]apistats.APIEndpointStats,
 	dimensions []*cloudwatch.Dimension,
 	key string,
 	timestamp time.Time,
@@ -193,7 +193,7 @@ func latencyMSP9990(
 }
 
 func latencyMSP9999(
-	stats map[string]grpcobserver.APIEndpointStats,
+	stats map[string]apistats.APIEndpointStats,
 	dimensions []*cloudwatch.Dimension,
 	key string,
 	timestamp time.Time,
@@ -208,7 +208,7 @@ func latencyMSP9999(
 }
 
 func errorsCount(
-	stats map[string]grpcobserver.APIEndpointStats,
+	stats map[string]apistats.APIEndpointStats,
 	dimensions []*cloudwatch.Dimension,
 	key string,
 	timestamp time.Time,
@@ -223,7 +223,7 @@ func errorsCount(
 }
 
 func inThroughput(
-	stats map[string]grpcobserver.APIEndpointStats,
+	stats map[string]apistats.APIEndpointStats,
 	dimensions []*cloudwatch.Dimension,
 	key string,
 	timestamp time.Time,
@@ -238,7 +238,7 @@ func inThroughput(
 }
 
 func outThroughput(
-	stats map[string]grpcobserver.APIEndpointStats,
+	stats map[string]apistats.APIEndpointStats,
 	dimensions []*cloudwatch.Dimension,
 	key string,
 	timestamp time.Time,
@@ -253,7 +253,7 @@ func outThroughput(
 }
 
 func systemCPUPct(
-	_ map[string]grpcobserver.APIEndpointStats,
+	_ map[string]apistats.APIEndpointStats,
 	dimensions []*cloudwatch.Dimension,
 	key string,
 	timestamp time.Time,
@@ -272,7 +272,7 @@ func systemCPUPct(
 }
 
 func systemCPUCores(
-	_ map[string]grpcobserver.APIEndpointStats,
+	_ map[string]apistats.APIEndpointStats,
 	dimensions []*cloudwatch.Dimension,
 	key string,
 	timestamp time.Time,
@@ -287,7 +287,7 @@ func systemCPUCores(
 }
 
 func systemMemoryAvailable(
-	_ map[string]grpcobserver.APIEndpointStats,
+	_ map[string]apistats.APIEndpointStats,
 	dimensions []*cloudwatch.Dimension,
 	key string,
 	timestamp time.Time,
@@ -304,7 +304,7 @@ func systemMemoryAvailable(
 }
 
 func systemMemoryUsed(
-	_ map[string]grpcobserver.APIEndpointStats,
+	_ map[string]apistats.APIEndpointStats,
 	dimensions []*cloudwatch.Dimension,
 	key string,
 	timestamp time.Time,
@@ -321,7 +321,7 @@ func systemMemoryUsed(
 }
 
 func systemMemoryUsedPercent(
-	_ map[string]grpcobserver.APIEndpointStats,
+	_ map[string]apistats.APIEndpointStats,
 	dimensions []*cloudwatch.Dimension,
 	key string,
 	timestamp time.Time,
@@ -338,7 +338,7 @@ func systemMemoryUsedPercent(
 }
 
 func processMemoryUsed(
-	_ map[string]grpcobserver.APIEndpointStats,
+	_ map[string]apistats.APIEndpointStats,
 	dimensions []*cloudwatch.Dimension,
 	key string,
 	timestamp time.Time,

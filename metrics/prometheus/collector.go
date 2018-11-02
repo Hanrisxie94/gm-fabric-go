@@ -18,25 +18,13 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/deciphernow/gm-fabric-go/metrics/apistats"
 	"github.com/pkg/errors"
 	prom "github.com/prometheus/client_golang/prometheus"
 )
 
 // AllMetricsKey is a metrics key for the total of  observations
 const AllMetricsKey = "all"
-
-// CollectorEntry contains the stats data for one transaction
-type CollectorEntry struct {
-	StartTime    time.Time
-	EndTime      time.Time
-	Method       string
-	Status       int
-	Key          string
-	BytesRead    uint64
-	BytesWritten uint64
-	TLS          bool
-	Err          error
-}
 
 // SystemMetricsEntry contains system metrics, reported periodically
 type SystemMetricsEntry struct {
@@ -50,7 +38,12 @@ type SystemMetricsEntry struct {
 
 // Collector collects Prometheus stats
 type Collector interface {
-	Collect(CollectorEntry) error
+	Collect(
+		entry apistats.APIStatsEntry,
+		rawKey string,
+		method string,
+	) error
+
 	CollectSystemMetrics(SystemMetricsEntry)
 }
 
@@ -217,19 +210,23 @@ func createProcessMemoryUsedGauge() prom.Gauge {
 }
 
 // Collect statistics by sending them to Prometheus
-func (c *CollectorType) Collect(entry CollectorEntry) error {
-	elapsed := computeElapsed(entry.StartTime, entry.EndTime)
+func (c *CollectorType) Collect(
+	entry apistats.APIStatsEntry,
+	rawKey string,
+	method string,
+) error {
+	elapsed := computeElapsed(entry.BeginTime, entry.EndTime)
 	if elapsed > 0 {
 		for _, labels := range []prom.Labels{
 			prom.Labels{
-				"key":    entry.Key,
-				"method": entry.Method,
-				"status": fmt.Sprintf("%d", entry.Status),
+				"key":    rawKey,
+				"method": method,
+				"status": fmt.Sprintf("%d", entry.HTTPStatus),
 			},
 			prom.Labels{
 				"key":    AllMetricsKey,
 				"method": "",
-				"status": fmt.Sprintf("%d", entry.Status),
+				"status": fmt.Sprintf("%d", entry.HTTPStatus),
 			},
 		} {
 			requestDuration, err := c.requestDurationVec.GetMetricWith(labels)
@@ -241,15 +238,15 @@ func (c *CollectorType) Collect(entry CollectorEntry) error {
 			if err != nil {
 				return errors.Wrapf(err, "requestSizeVec.GetMetricWith(%s)", labels)
 			}
-			requestSize.Add(float64(entry.BytesRead))
+			requestSize.Add(float64(entry.InWireLength))
 			responseSize, err := c.responseSizeVec.GetMetricWith(labels)
 			if err != nil {
 				return errors.Wrapf(err, "responseSizeVec.GetMetricWith(%s)", labels)
 			}
-			responseSize.Add(float64(entry.BytesWritten))
+			responseSize.Add(float64(entry.OutWireLength))
 		}
 
-		if entry.TLS {
+		if method == "HTTPS" {
 			c.tlsCount.Inc()
 		} else {
 			c.nonTLSCount.Inc()

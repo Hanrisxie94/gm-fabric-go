@@ -12,7 +12,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/spf13/viper"
 
-	"github.com/deciphernow/gm-fabric-go/metrics/grpcobserver"
+	"github.com/deciphernow/gm-fabric-go/metrics/apistats"
 	"github.com/pkg/errors"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -25,7 +25,7 @@ import (
 // The CWReporter struct can be used to define the AWS namespace and dimensions under which the defined metrics will reside
 type CWReporter struct {
 	CWClient     *cloudwatch.CloudWatch
-	Getter       grpcobserver.LatencyStatsGetter
+	Getter       apistats.EndpointStatsGetter
 	Dimensions   []*cloudwatch.Dimension
 	Namespace    string
 	Logger       zerolog.Logger
@@ -334,9 +334,9 @@ func (co *CWReporter) ReportToCloudWatch(reportInterval time.Duration) {
 
 // AddAWSMetrics handles the actual push of the metric up to cloudwatch.
 func (co *CWReporter) AddAWSMetrics() error {
-	stats, err := co.Getter.GetLatencyStats()
+	stats, err := co.Getter.GetEndpointStats()
 	if err != nil {
-		return errors.Wrap(err, "GetLatencyStats()")
+		return errors.Wrap(err, "GetEndpointStats()")
 	}
 
 KEY_LOOP:
