@@ -215,7 +215,11 @@ func (c *CollectorType) Collect(
 	rawKey string,
 	method string,
 ) error {
-	elapsed := computeElapsed(entry.BeginTime, entry.EndTime)
+
+	// we compute elapsed time from the very start of the transaction
+	// to the time the response headers have been sent.
+	// gm-data could continue for a long time after the response
+	elapsed := computeElapsed(entry.BeginTime, entry.ResponseTime)
 	if elapsed > 0 {
 		for _, labels := range []prom.Labels{
 			prom.Labels{

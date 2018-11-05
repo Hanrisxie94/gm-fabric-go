@@ -16,7 +16,6 @@ package apistats
 
 import (
 	"fmt"
-	"strings"
 	"sync"
 	"time"
 
@@ -28,22 +27,69 @@ import (
 
 // APIStatsEntry reports stats on an individual API call
 type APIStatsEntry struct {
-	RequestID     string
-	Key           string
-	Transport     subject.EventTransport
-	HTTPStatus    int
-	PrevRoute     string
-	Err           error
-	BeginTime     time.Time
-	EndTime       time.Time
-	InWireLength  int64
+	RequestID  string
+	Key        string
+	Transport  subject.EventTransport
+	HTTPStatus int
+	PrevRoute  string
+	Err        error
+
+	// BeginTime is the earliest point that we can store a timestamp
+	BeginTime time.Time
+
+	// RequestTime is the time when an HTTP request is available, with all headers
+	// received
+	// Latency = RequestTime - BeginTime
+	RequestTime time.Time
+
+	// ResponseTime is the time when an HTTP response is ready to send
+	ResponseTime time.Time
+
+	// EndTime is the time when the transaction is completely ended
+	// We may not capture this time for long running transactions
+	EndTime time.Time
+
+	// InWireLength is the amount of data received from the request body
+	// at InCaptureTime
+	// WireLength is the length of data on wire (compressed, signed, encrypted).
+	// InThroughput = InWireLength / (InCaptureTime - RequestTime)
+	InWireLength int64
+
+	// InCaptureTime is the time when InWireLength is captured
+	// This may be the same as EndTime for short transactions
+	// but may be earlier for long running transactions.
+	InCaptureTime time.Time
+
+	// OutWireLength is the amount of data sent from the response body
+	// at OutCaptureTime
+	// WireLength is the length of data on wire (compressed, signed, encrypted).
+	// OutThroughput = OutWireLength / (OutCaptureTime - ResponseTime)
 	OutWireLength int64
+
+	// OutCaptureTime is the time when OutWireLength is captured
+	// This may be the same as EndTime for short transactions
+	// but may be earlier for long running transactions.
+	OutCaptureTime time.Time
 }
 
 type APIStats struct {
 	sync.Mutex
 	Cache  *APIStatsCache
 	Counts CumulativeCounts
+}
+
+type endpointResultType struct {
+	apiStats                map[string]APIEndpointStats
+	latencySamples          map[string][]float64
+	cumulativeReceivedSecs  int64
+	cumulativeBytesReceived int64
+	cumulativeSentSecs      int64
+	cumulativeBytesSent     int64
+}
+
+type allEndpointsResultType struct {
+	allEndpoints               APIEndpointStats
+	allEndpointsLatencySamples []float64
 }
 
 // indices to percentiles
@@ -92,119 +138,136 @@ func (st *APIStats) GetEndpointStats() (map[string]APIEndpointStats, error) {
 	st.Lock()
 	defer st.Unlock()
 
-	apiStats, apiElapsedMS := st.accumulateEndpointStats()
+	endpointResult := st.accumulateEndpointStats()
 
-	allEndpoints, allEndpointsElapsedMS, err := st.computeEndpointStats(apiStats, apiElapsedMS)
+	// computeEndpointStats modifies endpointResult
+	allEndpointsResult, err := st.computeEndpointStats(&endpointResult)
 	if err != nil {
 		return nil, errors.Wrapf(err, "computeEndpointStats")
 	}
 
-	if allEndpoints.Count > 0 {
-		allEndpoints.Avg = float64(allEndpoints.Sum) / float64(allEndpoints.Count)
-		percentileValues, err := computePercentiles(allEndpointsElapsedMS)
+	if allEndpointsResult.allEndpoints.Count > 0 {
+		allEndpointsResult.allEndpoints.Avg =
+			float64(allEndpointsResult.allEndpoints.Sum) / float64(allEndpointsResult.allEndpoints.Count)
+		percentileValues, err :=
+			computePercentiles(allEndpointsResult.allEndpointsLatencySamples)
 		if err != nil {
 			return nil, errors.Wrapf(err, "computePercentiles")
 		}
-		allEndpoints.P50 = percentileValues[p50]
-		allEndpoints.P90 = percentileValues[p90]
-		allEndpoints.P95 = percentileValues[p95]
-		allEndpoints.P99 = percentileValues[p99]
-		allEndpoints.P9990 = percentileValues[p9990]
-		allEndpoints.P9999 = percentileValues[p9999]
+		allEndpointsResult.allEndpoints.P50 = percentileValues[p50]
+		allEndpointsResult.allEndpoints.P90 = percentileValues[p90]
+		allEndpointsResult.allEndpoints.P95 = percentileValues[p95]
+		allEndpointsResult.allEndpoints.P99 = percentileValues[p99]
+		allEndpointsResult.allEndpoints.P9990 = percentileValues[p9990]
+		allEndpointsResult.allEndpoints.P9999 = percentileValues[p9999]
+
+		if endpointResult.cumulativeReceivedSecs > 0 {
+			allEndpointsResult.allEndpoints.InThroughput =
+				endpointResult.cumulativeBytesReceived / endpointResult.cumulativeReceivedSecs
+		}
+
+		if endpointResult.cumulativeSentSecs > 0 {
+			allEndpointsResult.allEndpoints.OutThroughput =
+				endpointResult.cumulativeBytesSent / endpointResult.cumulativeSentSecs
+		}
 	}
 
-	apiStats["all"] = allEndpoints
+	endpointResult.apiStats["all"] = allEndpointsResult.allEndpoints
 
-	return apiStats, nil
+	return endpointResult.apiStats, nil
 }
 
-func (st *APIStats) accumulateEndpointStats() (
-	map[string]APIEndpointStats,
-	map[string][]float64,
-) {
-	apiStats := make(map[string]APIEndpointStats)
-	apiElapsedMS := make(map[string][]float64)
-	keyPrefix := ""
+func (st *APIStats) accumulateEndpointStats() endpointResultType {
+	endpointResult := endpointResultType{
+		apiStats:       make(map[string]APIEndpointStats),
+		latencySamples: make(map[string][]float64),
+	}
 
 	// read through all cached transactions (trans) accumulating stats per
 	// endpoint
 	for trans := range st.Cache.Traverse() {
 
-		// we expect the key to be of the form 'route/...' or 'function/...'
-		if keyPrefix == "" {
-			s := strings.Split(trans.Key, "/")
-			if len(s) > 0 {
-				keyPrefix = s[0]
-			}
-		}
-
-		endpoint := apiStats[trans.Key]
+		endpoint := endpointResult.apiStats[trans.Key]
 		if endpoint.Routes == nil {
 			endpoint.Routes = make(map[string]struct{})
 		}
 		if trans.PrevRoute != "" {
 			endpoint.Routes[trans.PrevRoute] = struct{}{}
 		}
-		endpointElapsedMS := apiElapsedMS[trans.Key]
+		endpointLatencySamples := endpointResult.latencySamples[trans.Key]
 
-		elapsed := trans.EndTime.Sub(trans.BeginTime)
-		elapsedMS := duration2ms(elapsed)
+		latencyDuration := trans.RequestTime.Sub(trans.BeginTime)
+		latency := duration2ms(latencyDuration)
 
-		endpointElapsedMS = append(endpointElapsedMS, float64(elapsedMS))
+		endpointLatencySamples = append(endpointLatencySamples, float64(latency))
 
 		endpoint.Count++
-		endpoint.Sum += elapsedMS
+		endpoint.Sum += latency
 
-		if endpoint.Min == 0 || elapsedMS < endpoint.Min {
-			endpoint.Min = elapsedMS
+		if endpoint.Min == 0 || latency < endpoint.Min {
+			endpoint.Min = latency
 		}
-		if elapsedMS > endpoint.Max {
-			endpoint.Max = elapsedMS
+		if latency > endpoint.Max {
+			endpoint.Max = latency
 		}
 		if trans.Err != nil {
 			endpoint.Errors++
 		}
-		endpoint.InThroughput += trans.InWireLength
-		endpoint.OutThroughput += trans.OutWireLength
 
-		apiStats[trans.Key] = endpoint
-		apiElapsedMS[trans.Key] = endpointElapsedMS
+		if (!trans.InCaptureTime.IsZero()) && (!trans.RequestTime.IsZero()) {
+			requestSecs := int64(trans.InCaptureTime.Sub(trans.RequestTime).Seconds())
+			if requestSecs > 0 {
+				endpoint.InThroughput = trans.InWireLength / requestSecs
+				endpointResult.cumulativeReceivedSecs += requestSecs
+				endpointResult.cumulativeBytesReceived += trans.InWireLength
+			}
+		}
+
+		if (!trans.OutCaptureTime.IsZero()) && (!trans.ResponseTime.IsZero()) {
+			responseSecs := int64(trans.OutCaptureTime.Sub(trans.ResponseTime).Seconds())
+			if responseSecs > 0 {
+				endpoint.OutThroughput = trans.OutWireLength / responseSecs
+				endpointResult.cumulativeSentSecs += responseSecs
+				endpointResult.cumulativeBytesSent += trans.OutWireLength
+			}
+		}
+
+		endpointResult.apiStats[trans.Key] = endpoint
+		endpointResult.latencySamples[trans.Key] = endpointLatencySamples
 	}
 
-	return apiStats, apiElapsedMS
+	return endpointResult
 }
 
 func (st *APIStats) computeEndpointStats(
-	apiStats map[string]APIEndpointStats,
-	apiElapsedMS map[string][]float64,
-) (APIEndpointStats, []float64, error) {
-	var allEndpoints APIEndpointStats
-	var allEndpointsElapsedMS []float64
+	endpointResult *endpointResultType,
+) (allEndpointsResultType, error) {
+	var allEndpointsResult allEndpointsResultType
 
 	// read through accumulated endpoint stats computing statistical values
 	// (AVG, etc.), and accumulating total for all endpoints
 
-	for name := range apiStats {
-		endpoint := apiStats[name]
-		endpointElapsedMS := apiElapsedMS[name]
+	for name := range endpointResult.apiStats {
+		endpoint := endpointResult.apiStats[name]
+		endpointLatencySamples := endpointResult.latencySamples[name]
 
-		allEndpoints.Count += endpoint.Count
+		allEndpointsResult.allEndpoints.Count += endpoint.Count
 		if endpoint.Count > 0 {
 			endpoint.Avg = float64(endpoint.Sum) / float64(endpoint.Count)
 		}
 
-		if endpoint.Max > allEndpoints.Max {
-			allEndpoints.Max = endpoint.Max
+		if endpoint.Max > allEndpointsResult.allEndpoints.Max {
+			allEndpointsResult.allEndpoints.Max = endpoint.Max
 		}
-		if allEndpoints.Min == 0 || endpoint.Min < allEndpoints.Min {
-			allEndpoints.Min = endpoint.Min
+		if allEndpointsResult.allEndpoints.Min == 0 || endpoint.Min < allEndpointsResult.allEndpoints.Min {
+			allEndpointsResult.allEndpoints.Min = endpoint.Min
 		}
-		allEndpoints.Sum += endpoint.Sum
+		allEndpointsResult.allEndpoints.Sum += endpoint.Sum
 
 		if endpoint.Count > 0 {
-			percentileValues, err := computePercentiles(endpointElapsedMS)
+			percentileValues, err := computePercentiles(endpointLatencySamples)
 			if err != nil {
-				return APIEndpointStats{}, nil, errors.Wrapf(err, "computePercentiles")
+				return allEndpointsResultType{}, errors.Wrapf(err, "computePercentiles")
 			}
 			endpoint.P50 = percentileValues[p50]
 			endpoint.P90 = percentileValues[p90]
@@ -214,17 +277,15 @@ func (st *APIStats) computeEndpointStats(
 			endpoint.P9999 = percentileValues[p9999]
 		}
 
-		allEndpointsElapsedMS = append(allEndpointsElapsedMS, endpointElapsedMS...)
+		allEndpointsResult.allEndpointsLatencySamples =
+			append(allEndpointsResult.allEndpointsLatencySamples, endpointLatencySamples...)
 
-		allEndpoints.InThroughput += endpoint.InThroughput
-		allEndpoints.OutThroughput += endpoint.OutThroughput
+		allEndpointsResult.allEndpoints.Errors += endpoint.Errors
 
-		allEndpoints.Errors += endpoint.Errors
-
-		apiStats[name] = endpoint
+		endpointResult.apiStats[name] = endpoint
 	}
 
-	return allEndpoints, allEndpointsElapsedMS, nil
+	return allEndpointsResult, nil
 }
 
 // GetCumulativeCounts returns cumulative counts of events
