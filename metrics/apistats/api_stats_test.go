@@ -26,7 +26,7 @@ type probefunc func(APIEndpointStats) error
 
 type testEntry struct {
 	name   string
-	input  APIStatsEntry
+	input  []APIStatsEntry
 	probes []probefunc
 }
 
@@ -53,7 +53,7 @@ func TestAPIStats(t *testing.T) {
 		// We expect zero latency and zero throughput
 		testEntry{
 			name:  "zero data",
-			input: APIStatsEntry{Key: key},
+			input: []APIStatsEntry{APIStatsEntry{Key: key}},
 			probes: []probefunc{
 				func(ep APIEndpointStats) error {
 					if ep.Sum != 0 {
@@ -78,10 +78,12 @@ func TestAPIStats(t *testing.T) {
 		// expecting latency of 42ms,
 		testEntry{
 			name: "simple latency",
-			input: APIStatsEntry{
-				Key:         key,
-				BeginTime:   beginTime,
-				RequestTime: requestTime,
+			input: []APIStatsEntry{
+				APIStatsEntry{
+					Key:         key,
+					BeginTime:   beginTime,
+					RequestTime: requestTime,
+				},
 			},
 			probes: []probefunc{
 				func(ep APIEndpointStats) error {
@@ -102,12 +104,14 @@ func TestAPIStats(t *testing.T) {
 		// In throughput of (4096 / 2) bytes/sec = 2048
 		testEntry{
 			name: "simple incoming throughput",
-			input: APIStatsEntry{
-				Key:           key,
-				BeginTime:     beginTime,
-				RequestTime:   requestTime,
-				InWireLength:  inWireLength,
-				InCaptureTime: inCaptureTime,
+			input: []APIStatsEntry{
+				APIStatsEntry{
+					Key:           key,
+					BeginTime:     beginTime,
+					RequestTime:   requestTime,
+					InWireLength:  inWireLength,
+					InCaptureTime: inCaptureTime,
+				},
 			},
 			probes: []probefunc{
 				func(ep APIEndpointStats) error {
@@ -141,13 +145,15 @@ func TestAPIStats(t *testing.T) {
 		// OutIn throughput of (999999 / 3) bytes/sec = 333333
 		testEntry{
 			name: "simple outgoing throughput",
-			input: APIStatsEntry{
-				Key:            key,
-				BeginTime:      beginTime,
-				RequestTime:    requestTime,
-				ResponseTime:   responseTime,
-				OutWireLength:  outWireLength,
-				OutCaptureTime: outCaptureTime,
+			input: []APIStatsEntry{
+				APIStatsEntry{
+					Key:            key,
+					BeginTime:      beginTime,
+					RequestTime:    requestTime,
+					ResponseTime:   responseTime,
+					OutWireLength:  outWireLength,
+					OutCaptureTime: outCaptureTime,
+				},
 			},
 			probes: []probefunc{
 				func(ep APIEndpointStats) error {
@@ -179,21 +185,97 @@ func TestAPIStats(t *testing.T) {
 		// OutIn throughput of (999999 / 3) bytes/sec = 333333
 		testEntry{
 			name: "simple bidirectional throughput",
-			input: APIStatsEntry{
-				Key:            key,
-				BeginTime:      beginTime,
-				RequestTime:    requestTime,
-				InWireLength:   inWireLength,
-				InCaptureTime:  inCaptureTime,
-				ResponseTime:   responseTime,
-				OutWireLength:  outWireLength,
-				OutCaptureTime: outCaptureTime,
+			input: []APIStatsEntry{
+				APIStatsEntry{
+					Key:            key,
+					BeginTime:      beginTime,
+					RequestTime:    requestTime,
+					InWireLength:   inWireLength,
+					InCaptureTime:  inCaptureTime,
+					ResponseTime:   responseTime,
+					OutWireLength:  outWireLength,
+					OutCaptureTime: outCaptureTime,
+				},
 			},
 			probes: []probefunc{
 				func(ep APIEndpointStats) error {
 					if ep.Sum != expectedLatency {
 						return errors.Errorf("Expected latency %d: found %d",
 							expectedLatency, ep.Sum)
+					}
+					return nil
+				},
+				func(ep APIEndpointStats) error {
+					if ep.InThroughput != inExpectedThroughput {
+						return errors.Errorf("Expected %d in throughput: found %d",
+							inExpectedThroughput, ep.InThroughput)
+					}
+					if ep.OutThroughput != outExpectedThroughput {
+						return errors.Errorf("Expected %d out throughput: found %d",
+							outExpectedThroughput, ep.OutThroughput)
+					}
+					return nil
+				},
+			},
+		},
+		// test multiple bidirectional throughput
+		// We should get the same results for multiple transactions
+		// BeginTime = now,
+		// RequestTime = BeginTime + 42ms
+		// ResponseTime = RequestTime + 33ms
+		// OutCaptureTime = ResponseTime + 3s
+		// OutWireLength = 999999 bytes
+		// expecting latency of 42ms,
+		// OutIn throughput of (999999 / 3) bytes/sec = 333333
+		testEntry{
+			name: "simple bidirectional throughput",
+			input: []APIStatsEntry{
+				APIStatsEntry{
+					Key:            key,
+					BeginTime:      beginTime,
+					RequestTime:    requestTime,
+					InWireLength:   inWireLength,
+					InCaptureTime:  inCaptureTime,
+					ResponseTime:   responseTime,
+					OutWireLength:  outWireLength,
+					OutCaptureTime: outCaptureTime,
+				},
+				APIStatsEntry{
+					Key:            key,
+					BeginTime:      beginTime,
+					RequestTime:    requestTime,
+					InWireLength:   inWireLength,
+					InCaptureTime:  inCaptureTime,
+					ResponseTime:   responseTime,
+					OutWireLength:  outWireLength,
+					OutCaptureTime: outCaptureTime,
+				},
+				APIStatsEntry{
+					Key:            key,
+					BeginTime:      beginTime,
+					RequestTime:    requestTime,
+					InWireLength:   inWireLength,
+					InCaptureTime:  inCaptureTime,
+					ResponseTime:   responseTime,
+					OutWireLength:  outWireLength,
+					OutCaptureTime: outCaptureTime,
+				},
+				APIStatsEntry{
+					Key:            key,
+					BeginTime:      beginTime,
+					RequestTime:    requestTime,
+					InWireLength:   inWireLength,
+					InCaptureTime:  inCaptureTime,
+					ResponseTime:   responseTime,
+					OutWireLength:  outWireLength,
+					OutCaptureTime: outCaptureTime,
+				},
+			},
+			probes: []probefunc{
+				func(ep APIEndpointStats) error {
+					if int64(ep.Avg) != expectedLatency {
+						return errors.Errorf("Expected latency %d: found %d",
+							expectedLatency, int64(ep.Avg))
 					}
 					return nil
 				},
@@ -218,16 +300,18 @@ func TestAPIStats(t *testing.T) {
 		// expecting latency of 42ms, throughput of zero
 		testEntry{
 			name: "zero response time",
-			input: APIStatsEntry{
-				Key:         key,
-				BeginTime:   currentTime,
-				RequestTime: currentTime.Add(time.Millisecond * time.Duration(expectedLatency)),
+			input: []APIStatsEntry{
+				APIStatsEntry{
+					Key:         key,
+					BeginTime:   currentTime,
+					RequestTime: currentTime.Add(time.Millisecond * time.Duration(expectedLatency)),
+				},
 			},
 			probes: []probefunc{
 				func(ep APIEndpointStats) error {
-					if ep.Sum != expectedLatency {
+					if int64(ep.Avg) != expectedLatency {
 						return errors.Errorf("Expected latency %d: found %d",
-							expectedLatency, ep.Sum)
+							expectedLatency, int64(ep.Avg))
 					}
 					return nil
 				},
@@ -246,8 +330,10 @@ func TestAPIStats(t *testing.T) {
 
 	for i, tc := range testCases {
 		t.Run(fmt.Sprintf("%d: %s", i, tc.name), func(t *testing.T) {
-			stats := New(1)
-			stats.Store(tc.input)
+			stats := New(4096)
+			for _, event := range tc.input {
+				stats.Store(event)
+			}
 			result, err := stats.GetEndpointStats()
 			if err != nil {
 				t.Fatalf("stats.GetEndpointStats failed: %s", err)
