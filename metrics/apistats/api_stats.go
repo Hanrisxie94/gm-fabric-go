@@ -78,13 +78,17 @@ type APIStats struct {
 	Counts CumulativeCounts
 }
 
+type throughputAccum struct {
+	receivedSecs  int64
+	bytesReceived int64
+	sentSecs      int64
+	bytesSent     int64
+}
+
 type endpointResultType struct {
-	apiStats                map[string]APIEndpointStats
-	latencySamples          map[string][]float64
-	cumulativeReceivedSecs  int64
-	cumulativeBytesReceived int64
-	cumulativeSentSecs      int64
-	cumulativeBytesSent     int64
+	throughputAccum
+	apiStats       map[string]APIEndpointStats
+	latencySamples map[string][]float64
 }
 
 type allEndpointsResultType struct {
@@ -161,14 +165,14 @@ func (st *APIStats) GetEndpointStats() (map[string]APIEndpointStats, error) {
 		allEndpointsResult.allEndpoints.P9990 = percentileValues[p9990]
 		allEndpointsResult.allEndpoints.P9999 = percentileValues[p9999]
 
-		if endpointResult.cumulativeReceivedSecs > 0 {
+		if endpointResult.receivedSecs > 0 {
 			allEndpointsResult.allEndpoints.InThroughput =
-				endpointResult.cumulativeBytesReceived / endpointResult.cumulativeReceivedSecs
+				endpointResult.bytesReceived / endpointResult.receivedSecs
 		}
 
-		if endpointResult.cumulativeSentSecs > 0 {
+		if endpointResult.sentSecs > 0 {
 			allEndpointsResult.allEndpoints.OutThroughput =
-				endpointResult.cumulativeBytesSent / endpointResult.cumulativeSentSecs
+				endpointResult.bytesSent / endpointResult.sentSecs
 		}
 	}
 
@@ -182,6 +186,7 @@ func (st *APIStats) accumulateEndpointStats() endpointResultType {
 		apiStats:       make(map[string]APIEndpointStats),
 		latencySamples: make(map[string][]float64),
 	}
+	endpointAccumMap := make(map[string]throughputAccum)
 
 	// read through all cached transactions (trans) accumulating stats per
 	// endpoint
@@ -195,6 +200,7 @@ func (st *APIStats) accumulateEndpointStats() endpointResultType {
 			endpoint.Routes[trans.PrevRoute] = struct{}{}
 		}
 		endpointLatencySamples := endpointResult.latencySamples[trans.Key]
+		endpointAccum := endpointAccumMap[trans.Key]
 
 		latencyDuration := trans.RequestTime.Sub(trans.BeginTime)
 		latency := duration2ms(latencyDuration)
@@ -217,23 +223,41 @@ func (st *APIStats) accumulateEndpointStats() endpointResultType {
 		if (!trans.InCaptureTime.IsZero()) && (!trans.RequestTime.IsZero()) {
 			requestSecs := int64(trans.InCaptureTime.Sub(trans.RequestTime).Seconds())
 			if requestSecs > 0 {
-				endpoint.InThroughput = trans.InWireLength / requestSecs
-				endpointResult.cumulativeReceivedSecs += requestSecs
-				endpointResult.cumulativeBytesReceived += trans.InWireLength
+				endpointAccum.receivedSecs += requestSecs
+				endpointAccum.bytesReceived += trans.InWireLength
 			}
 		}
 
 		if (!trans.OutCaptureTime.IsZero()) && (!trans.ResponseTime.IsZero()) {
 			responseSecs := int64(trans.OutCaptureTime.Sub(trans.ResponseTime).Seconds())
 			if responseSecs > 0 {
-				endpoint.OutThroughput = trans.OutWireLength / responseSecs
-				endpointResult.cumulativeSentSecs += responseSecs
-				endpointResult.cumulativeBytesSent += trans.OutWireLength
+				endpointAccum.sentSecs += responseSecs
+				endpointAccum.bytesSent += trans.OutWireLength
 			}
 		}
 
+		endpointAccumMap[trans.Key] = endpointAccum
 		endpointResult.apiStats[trans.Key] = endpoint
 		endpointResult.latencySamples[trans.Key] = endpointLatencySamples
+	}
+
+	for key := range endpointAccumMap {
+		endpoint := endpointResult.apiStats[key]
+		endpointAccum := endpointAccumMap[key]
+
+		if endpointAccum.receivedSecs > 0 {
+			endpoint.InThroughput = endpointAccum.bytesReceived / endpointAccum.receivedSecs
+			endpointResult.receivedSecs += endpointAccum.receivedSecs
+			endpointResult.bytesReceived += endpointAccum.bytesReceived
+		}
+
+		if endpointAccum.sentSecs > 0 {
+			endpoint.OutThroughput = endpointAccum.bytesSent / endpointAccum.sentSecs
+			endpointResult.sentSecs += endpointAccum.sentSecs
+			endpointResult.bytesSent += endpointAccum.bytesSent
+		}
+
+		endpointResult.apiStats[key] = endpoint
 	}
 
 	return endpointResult
