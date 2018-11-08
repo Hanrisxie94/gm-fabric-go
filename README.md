@@ -211,10 +211,6 @@ Once you are happy with your implementation of your service you may build and ru
    ```bash
    curl http://localhost:8080/examples/services/hello?hello_text=ping
    ```
-1. Additionally, you may retrive your service's metrics.
-   ```bash
-   curl http://localhost:10001/metrics
-   ```
 
 ### Testing the Service
 
@@ -245,20 +241,20 @@ The generated service also provides stubs for creating tests of your service usi
         return nil
     }
     ```
-1. You must run the build scripts from the current directory.
+2. You must run the build scripts from the current directory.
     ```bash
     cd ${GOPATH}/src/github.com/examples/exemplar
     ```
-1. Build the tests.
+3. Build the tests.
     ```bash
      ./build_exemplar_grpc_client.sh
      ./build_exemplar_http_client.sh
     ```
-1. Run the exemplar service if not running.
+4. Run the exemplar service if not running.
    ```bash
     ${GOPATH}/bin/exemplar --config ${GOPATH}/src/github.com/examples/exemplar/settings.toml
     ```
-1. Run the grpc tests.
+5. Run the grpc tests.
    ```bash
    ${GOPATH}/bin/exemplar_grpc_client --address localhost:10000
    ```
@@ -279,9 +275,7 @@ With a basic microservice implemented you may extend the capabilities of that se
 | [fabric](https://github.com/DecipherNow/gm-fabric-go/cmd/fabric) | GM Fabric golang service generator (gRPC) |
 | [gk](gk/README.md)                 | Gatekeeper service announcement utility                            |
 | [impersonation](impersonation/README.md) | TLS impersonation utility                      |
-| [metrics](metrics/README.md)       | GM Fabric metrics (HTTP, gRPC)                                     |
 | [middleware](middleware/README.md) | HTTP middleware helpers                                            |
-| [oauth](oauth/README.md)           | OAuth 2.0 authorization code (recommended use with coreos/dex)     |
 | [rpcutil](rpcutil/README.md)       | Utility functions for GM Fabric gRPC services                      |
 | [sds](sds/README.md)               | Service discovery and announcement (GM Fabric 2.0)                 |
 | [tlsutil](tlsutil/README.md)       | TLS utility functions for easy integration with 2-way SSL          |
@@ -299,19 +293,19 @@ Due to Apple changing their security code and removing OpenSSL header files from
     ```bash
     if [ -f /usr/local/bin/openssl ];then mv /usr/local/bin/openssl /usr/local/bin/openssl.bak; fi
     ```
-1.  Install Homebrew if not already installed.
+2.  Install Homebrew if not already installed.
     ```bash
     which brew || /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
     ```
-1.  Install OpenSSL and PKG-Config. Homebrew may warn that this is keg-only. This is not an issue, just verify that `/usr/local/Cellar/openssl` exists.
+3.  Install OpenSSL and PKG-Config. Homebrew may warn that this is keg-only. This is not an issue, just verify that `/usr/local/Cellar/openssl` exists.
     ```bash
     brew install openssl pkg-config
     ```
-1.  Symlink the installed OpenSSL to `/usr/local/bin/openssl`.
+4.  Symlink the installed OpenSSL to `/usr/local/bin/openssl`.
     ```bash
     ln -s /usr/local/Cellar/openssl/{openssl_version}/bin/openssl /usr/local/bin/openssl
     ```
-1.  Add the new OpenSSL path to the `PKG_CONFIG_PATH`.
+5.  Add the new OpenSSL path to the `PKG_CONFIG_PATH`.
     ```bash
     export PKG_CONFIG_PATH="$(brew --prefix openssl)/lib/pkgconfig" && echo "export PKG_CONFIG_PATH=${PKG_CONFIG_PATH}" >> ${HOME}/.bash_profile
     ```
