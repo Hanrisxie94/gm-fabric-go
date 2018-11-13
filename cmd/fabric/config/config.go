@@ -78,7 +78,7 @@ func Load(logger zerolog.Logger) (Config, error) {
 	pflag.StringVar(&templateURL, "template", "",
 		"URL of the template to generate")
 	pflag.StringVar(&generateService, "generate", "",
-		"generate protobuff for service")
+		"generate protobuf for service")
 	pflag.StringVar(&protocIncludes, "protoc-includes", "",
 		"colon separated list of paths to be '-I' included in the protoc execution")
 	pflag.StringVar(&cfg.OwnerDir, "dir", "",

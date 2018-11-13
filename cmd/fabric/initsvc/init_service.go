@@ -77,7 +77,7 @@ func InitService(cfg config.Config, logger zerolog.Logger) error {
 	if err = within(cfg.ServicePath(), func() error {
 		// assume we got a template for Gopkg.toml
 		if output, err = exec.Command("dep", "ensure").CombinedOutput(); err != nil {
-			return errors.Wrapf(err, "Failed executing command with output %", string(output))
+			return errors.Wrapf(err, "Failed executing command with output %s", string(output))
 		}
 		return nil
 	}); err != nil {
@@ -129,7 +129,7 @@ func within(directory string, callback func() error) error {
 func install(directory string) error {
 	return within(directory, func() error {
 		if output, err := exec.Command("go", "install", "-v").CombinedOutput(); err != nil {
-			return errors.Wrapf(err, "Failed executing command with output %", string(output))
+			return errors.Wrapf(err, "Failed executing command with output %s", string(output))
 		}
 		return nil
 	})

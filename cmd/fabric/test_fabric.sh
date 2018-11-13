@@ -170,13 +170,9 @@ cat << METHOD1 > "$TESTDIR/$SERVICE_NAME/cmd/server/methods/hello_proxy.go"
 package methods
 
 import (
-    "time"
-
 	"golang.org/x/net/context"
 
 	"github.com/pkg/errors"
-
-    gometrics "github.com/armon/go-metrics"
 
 	pb "testdir/test_service/protobuf"
 )
@@ -184,33 +180,10 @@ import (
 // HelloProxy says "hello" in a form that is handled by the gateway proxy
 func (s *serverData) HelloProxy(_ context.Context, req *pb.HelloRequest) (*pb.HelloResponse, error) {
 
-    defer gometrics.MeasureSince(
-		[]string{
-			"test_service", // service name
-			"HelloProxy",
-            "elapsed",
-		},
-		time.Now(),
-	)
-
 	if req.HelloText == "ping" {
-        gometrics.IncrCounter(
-    		[]string{
-    			"test_service", // service name
-    			"valid-ping",
-    		},
-    		1,
-    	)
 		return &pb.HelloResponse{Text: "pong"}, nil
 	}
 
-    gometrics.IncrCounter(
-        []string{
-            "test_service", // service name
-            "invalid-ping",
-        },
-        1,
-    )
 	return nil, errors.New("invalid request")
 }
 METHOD1
@@ -221,24 +194,11 @@ cat << METHOD2 > "$TESTDIR/$SERVICE_NAME/cmd/server/methods/hello_stream.go"
 package methods
 
 import (
-    "time"
-
-	gometrics "github.com/armon/go-metrics"
-
 	pb "testdir/test_service/protobuf"
 )
 
 // HelloStream says "hello" repeatedly in a stream
 func (s *serverData) HelloStream(req *pb.HelloStreamRequest, stream pb.TestService_HelloStreamServer) error {
-
-    defer gometrics.MeasureSince(
-		[]string{
-			"test_service", // service name
-			"HelloStream",
-            "elapsed",
-		},
-		time.Now(),
-	)
 
     for i := int32(0); i < req.Count; i++ {
 		stream.Send(&pb.HelloResponse{Text: "pong"})
@@ -268,14 +228,6 @@ cat << SETTINGS > "$TESTDIR/$SERVICE_NAME/settings.toml"
     grpc_server_host = ""
     grpc_server_port = 10000
 
-# metrics-server
-    metrics_use_tls = true
-    metrics_server_host =  ""
-    metrics_server_port = 10001
-    metrics_cache_size =  1024
-    metrics_dashboard_uri_path = "/metrics"
-    metrics_prometheus_uri_path = "/prometheus"
-
 # gateway-proxy
     gateway_use_tls = true
     use_gateway_proxy = true
@@ -288,27 +240,6 @@ cat << SETTINGS > "$TESTDIR/$SERVICE_NAME/settings.toml"
 	server_cert_path = "$TESTDIR/$SERVICE_NAME/localhost.crt"
 	server_key_path = "$TESTDIR/$SERVICE_NAME/localhost.key"
 	server_cert_name = "localhost"
-
-# oauth
-    use_oauth = false
-    oauth_provider = "http://127.0.0.1:5556/dex"
-    oauth_client_id = "example-app"
-
-# zookeeper
-    use_zk = false
-    zk_connection_string = "zk:2181"
-    zk_announce_path="/services/fabric-service/1.0"
-    zk_announce_host = "127.0.0.1"
-
-# statsd
-    report_statsd = false
-    statsd_host = "127.0.0.1"
-    statsd_port = 8125
-    statsd_mem_interval = ""
-
-# prometheus
-    report_prometheus = true
-    prometheus_mem_interval = "10s"
 
 # misc
     verbose_logging = true
@@ -333,13 +264,7 @@ HTTP_CLIENT_BINARY="$GOPATH/bin/${SERVICE_NAME}_http_client"
 # hit the proxy
 $HTTP_CLIENT_BINARY --uri="https://127.0.0.1:8080/acme/services/hello?hello_text=ping" --test-cert-dir="$TESTDIR/$SERVICE_NAME" 
 
-# dump the dashboard output
-$HTTP_CLIENT_BINARY --uri="https://127.0.0.1:10001/metrics" --test-cert-dir="$TESTDIR/$SERVICE_NAME" 
-
-
-# stop the server gracefuly# dump the prometheus output
-$HTTP_CLIENT_BINARY --uri="https://127.0.0.1:10001/prometheus" --test-cert-dir="$TESTDIR/$SERVICE_NAME"
-
+# stop the server gracefuly
 
 kill $SERVICE_PID
 
