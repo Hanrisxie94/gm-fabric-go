@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.2.0 (November 13th, 2018)
+
+### Fixed
+
+- fix impersonation readme errors
+
+- specifically check for booleans in config template replacement
+
+- fabric: change the fabric default and README to use a non SSH form of the template URL
+
+- refactor metrics to work correctly with gm-data
+
+### Added
+
+- Moved config from environment variables code from gm-proxy
+
+### Changed
+
+- fabric: strip out all superfluous code (breaking change)
+
 ## 0.1.11 (September 8th, 2018)
 
 ### Fixed
