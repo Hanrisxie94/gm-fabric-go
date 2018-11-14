@@ -7,7 +7,7 @@
 [![Test Coverage](https://api.codeclimate.com/v1/badges/df5ae4362becbe58c481/test_coverage)](https://codeclimate.com/github/DecipherNow/gm-fabric-go/test_coverage)
 
 
-Grey Matter is an enterprise framework and ecosystem covering common use cases and patterns, so your team can focus on what they do best. This repository contains the source code for the Golang software development kit (SDK) and command line utilities for building fabric enabled microservices.
+Grey Matter is an enterprise framework and ecosystem covering common business use cases and patterns, so your team can focus on what they do best. This repository contains the source code for the Golang software development kit (SDK) and command line utilities for building fabric enabled microservices.
 
 1. [Prerequisites](#prerequisites)
 1. [Installation](#installation)
