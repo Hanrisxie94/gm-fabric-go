@@ -214,7 +214,7 @@ Once you are happy with your implementation of your service you may build and ru
 
 ### Testing the Service
 
-The generated service also provides stubs for creating tests of your service using the gRPC client that was generated. The following instructions will provide an example of adding tests to the exemplar service.
+The generated service also provides stubs for creating tests of the service using the generated gRPC client. The following instructions provide an example of adding tests to a sample service.
 
 1. Edit the test stub located here `${GOPATH}/src/github.com/examples/exemplar/cmd/grpc_client/test_grpc.go` as follows:
     ```go
